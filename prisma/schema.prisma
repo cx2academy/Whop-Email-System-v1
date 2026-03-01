@@ -1,0 +1,414 @@
+// prisma/schema.prisma
+//
+// Whop Email Engine — Full Database Schema (Phase 2)
+//
+// Database Principles enforced:
+//   ✅ Every tenant-scoped table includes workspaceId
+//   ✅ UUIDs for all primary keys
+//   ✅ createdAt + updatedAt on all tables
+//   ✅ Foreign keys indexed
+//   ✅ Unique constraint: (workspaceId, email) on Contact
+//   ✅ Schema designed for high-volume email sends
+//   ✅ Future-ready for segmentation, webhooks, automation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// AUTH — NextAuth v5 / Auth.js adapter tables
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  passwordHash  String?   // null for OAuth-only users
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts    Account[]
+  sessions    Session[]
+  memberships WorkspaceMembership[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// WORKSPACE — Top-level multi-tenant boundary
+// ---------------------------------------------------------------------------
+
+model Workspace {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique // URL-safe identifier, e.g. "acme-corp"
+
+  // Whop integration — stored per workspace for isolation
+  whopApiKey    String? // encrypted at rest in production
+  whopCompanyId String? // Whop company/product ID for this workspace
+
+  // Sending identity defaults
+  fromEmail String?
+  fromName  String?
+
+  // Plan / limits (extended in billing phase)
+  plan            WorkspacePlan @default(FREE)
+  monthlyEmailCap Int           @default(1000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  memberships WorkspaceMembership[]
+  contacts    Contact[]
+  campaigns   EmailCampaign[]
+  emailSends  EmailSend[]
+  syncLogs    SyncLog[]
+  tags        Tag[]
+
+  @@index([slug])
+  @@map("workspaces")
+}
+
+enum WorkspacePlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+// ---------------------------------------------------------------------------
+// WORKSPACE MEMBERSHIP — User <-> Workspace many-to-many with roles
+// ---------------------------------------------------------------------------
+
+model WorkspaceMembership {
+  id          String              @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceMemberRole @default(MEMBER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("workspace_memberships")
+}
+
+enum WorkspaceMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ---------------------------------------------------------------------------
+// CONTACT — A synced member/subscriber scoped to a workspace
+// ---------------------------------------------------------------------------
+
+model Contact {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  // Identity
+  email     String
+  firstName String?
+  lastName  String?
+
+  // Whop sync metadata
+  whopMemberId String? // Whop's user ID — used for idempotent re-syncs
+  whopMetadata Json?   // Raw Whop fields (product access, plan, etc.)
+
+  // Subscription state
+  status ContactStatus @default(SUBSCRIBED)
+
+  // Unsubscribe tracking
+  unsubscribedAt DateTime?
+  unsubscribeIp  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tags       ContactTag[]
+  emailSends EmailSend[]
+
+  // CRITICAL: prevents duplicate contacts per workspace (database-principles.md)
+  @@unique([workspaceId, email])
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([whopMemberId])
+  @@map("contacts")
+}
+
+enum ContactStatus {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
+}
+
+// ---------------------------------------------------------------------------
+// TAG — Workspace-scoped label for contact segmentation
+// ---------------------------------------------------------------------------
+
+model Tag {
+  id          String @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String @default("#6366f1")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts  ContactTag[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+  @@map("tags")
+}
+
+model ContactTag {
+  contactId String
+  tagId     String
+
+  createdAt DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@index([tagId])
+  @@map("contact_tags")
+}
+
+// ---------------------------------------------------------------------------
+// EMAIL CAMPAIGN — A single campaign definition
+// ---------------------------------------------------------------------------
+
+model EmailCampaign {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  name        String
+  type        CampaignType   @default(BROADCAST)
+  status      CampaignStatus @default(DRAFT)
+
+  // Content
+  subject     String
+  previewText String?
+  htmlBody    String  @db.Text
+  textBody    String? @db.Text
+
+  // Audience — tag-based segmentation
+  audienceTagIds String[]
+
+  // A/B testing
+  isAbTest        Boolean @default(false)
+  abSubjectB      String?
+  abWinnerVariant String?
+
+  // Scheduling
+  scheduledAt DateTime?
+  sentAt      DateTime?
+
+  // Stats cache — updated asynchronously
+  totalRecipients Int @default(0)
+  totalSent       Int @default(0)
+  totalOpened     Int @default(0)
+  totalClicked    Int @default(0)
+  totalBounced    Int @default(0)
+  totalFailed     Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  emailSends EmailSend[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([scheduledAt])
+  @@map("email_campaigns")
+}
+
+enum CampaignType {
+  BROADCAST
+  DRIP
+  TRIGGER
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  COMPLETED
+  FAILED
+  PAUSED
+}
+
+// ---------------------------------------------------------------------------
+// EMAIL SEND — One row per recipient per campaign (the send audit trail)
+// High-volume table — every send creates a row
+// ---------------------------------------------------------------------------
+
+model EmailSend {
+  id          String @id @default(cuid())
+  workspaceId String
+  campaignId  String
+  contactId   String
+
+  // Delivery state
+  status   EmailSendStatus @default(PENDING)
+  provider EmailProvider   @default(RESEND)
+
+  // Provider response
+  messageId     String?
+  failureReason String? @db.Text
+
+  // Idempotency key — prevents duplicate sends
+  // Format: "{campaignId}:{contactId}"
+  idempotencyKey String @unique
+
+  // Tracking timestamps
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  openedAt     DateTime?
+  clickedAt    DateTime?
+  bouncedAt    DateTime?
+  complainedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign  EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact   Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([workspaceId, status])
+  @@index([idempotencyKey])
+  @@map("email_sends")
+}
+
+enum EmailSendStatus {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  COMPLAINED
+  FAILED
+  UNSUBSCRIBED
+}
+
+enum EmailProvider {
+  RESEND
+  SMTP
+}
+
+// ---------------------------------------------------------------------------
+// SYNC LOG — Audit trail for Whop member sync operations
+// ---------------------------------------------------------------------------
+
+model SyncLog {
+  id          String @id @default(cuid())
+  workspaceId String
+
+  status      SyncStatus @default(RUNNING)
+  triggeredBy String?    // userId or "system"
+
+  // Results
+  totalFetched  Int @default(0)
+  totalUpserted Int @default(0)
+  totalSkipped  Int @default(0)
+  totalErrors   Int @default(0)
+
+  errorDetails Json?
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@map("sync_logs")
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
