@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const campaignId = searchParams.get("c");
   const contactId = searchParams.get("r");
-  const targetUrl = searchParams.get("url");
+  const targetUrl = searchParams.get("u") ?? searchParams.get("url");
 
   // Validate redirect URL — only allow http/https to prevent open redirect abuse
   const safeRedirect = (() => {
