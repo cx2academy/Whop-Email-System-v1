@@ -111,6 +111,52 @@ function buildTrackingPixelUrl(
   contactId: string
 ): string {
   return `${appUrl}/api/track/open?c=${campaignId}&r=${contactId}`;
+
+}
+
+// ---------------------------------------------------------------------------
+// Tracking injection
+// ---------------------------------------------------------------------------
+
+/**
+ * Injects a 1x1 tracking pixel just before </body>.
+ * If no </body> tag, appends to end of HTML.
+ */
+function injectTrackingPixel(html: string, pixelUrl: string): string {
+  const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:none;border:0;" />`;
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${pixel}</body>`);
+  }
+  return html + pixel;
+}
+
+/**
+ * Wraps every <a href="..."> link with the click tracking redirect,
+ * except unsubscribe links (which we never want to intercept).
+ */
+function injectClickTracking(
+  html: string,
+  appUrl: string,
+  campaignId: string,
+  contactId: string
+): string {
+  return html.replace(
+    /(<a\s[^>]*href=")([^"]+)("[^>]*>)/gi,
+    (match, prefix, url, suffix) => {
+      // Never wrap unsubscribe links or already-wrapped tracking links
+      if (
+        url.includes("/unsubscribe") ||
+        url.includes("/api/track/") ||
+        url.startsWith("mailto:") ||
+        url.startsWith("#")
+      ) {
+        return match;
+      }
+      const encoded = encodeURIComponent(url);
+      const trackUrl = `${appUrl}/api/track/click?c=${campaignId}&r=${contactId}&u=${encoded}`;
+      return `${prefix}${trackUrl}${suffix}`;
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -258,6 +304,10 @@ export async function sendCampaign(
           const unsubscribeUrl = buildUnsubscribeUrl(appUrl, campaignId, contact.id);
           const trackingPixelUrl = buildTrackingPixelUrl(appUrl, campaignId, contact.id);
 
+          // Inject open pixel + click tracking into HTML before sending
+          let trackedHtml = injectTrackingPixel(campaign.htmlBody, trackingPixelUrl);
+          trackedHtml = injectClickTracking(trackedHtml, appUrl, campaignId, contact.id);
+
           const plainText = buildPlainText({
             htmlBody: campaign.htmlBody,
             fromName,
@@ -267,7 +317,7 @@ export async function sendCampaign(
           const result = await sendEmail({
             to: contact.email,
             subject,
-            html: campaign.htmlBody,
+            html: trackedHtml,
             text: plainText,
             from,
             idempotencyKey,
