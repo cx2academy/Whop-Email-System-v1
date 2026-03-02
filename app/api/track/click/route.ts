@@ -17,6 +17,9 @@ export async function GET(req: NextRequest) {
   const contactId = searchParams.get("r");
   const targetUrl = searchParams.get("u") ?? searchParams.get("url");
 
+  // DEBUG — remove after confirming click tracking works
+  console.log("[track/click] hit:", { campaignId, contactId, targetUrl, url: req.url });
+
   // Validate redirect URL — only allow http/https to prevent open redirect abuse
   const safeRedirect = (() => {
     if (!targetUrl) return null;

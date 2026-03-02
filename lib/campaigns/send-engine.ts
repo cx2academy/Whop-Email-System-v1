@@ -308,6 +308,13 @@ export async function sendCampaign(
           let trackedHtml = injectTrackingPixel(campaign.htmlBody, trackingPixelUrl);
           trackedHtml = injectClickTracking(trackedHtml, appUrl, campaignId, contact.id);
 
+          // DEBUG — remove after confirming tracking works
+          console.log("[send-engine] appUrl:", appUrl);
+          console.log("[send-engine] pixelUrl:", trackingPixelUrl);
+          console.log("[send-engine] hasPixel:", trackedHtml.includes("/api/track/open"));
+          console.log("[send-engine] hasClickLinks:", trackedHtml.includes("/api/track/click"));
+          console.log("[send-engine] originalHtml snippet:", campaign.htmlBody.slice(0, 200));
+
           const plainText = buildPlainText({
             htmlBody: campaign.htmlBody,
             fromName,
