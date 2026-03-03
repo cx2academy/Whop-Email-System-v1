@@ -211,7 +211,7 @@ export async function sendCampaign(
     data: { status: "SENDING" },
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const fromEmail = workspace.fromEmail ?? process.env.RESEND_FROM_EMAIL ?? "noreply@example.com";
   const fromName = workspace.fromName ?? process.env.RESEND_FROM_NAME ?? workspace.name;
   const from = `${fromName} <${fromEmail}>`;
