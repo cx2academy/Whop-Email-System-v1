@@ -31,6 +31,7 @@ model User {
   name          String?
   image         String?
   passwordHash  String?   // null for OAuth-only users
+  hasAchievedFirstSend Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -341,6 +342,10 @@ model EmailSend {
   bouncedAt    DateTime?
   complainedAt DateTime?
 
+  // Bounce details (populated by webhook)
+  bounceType   String? // e.g. "hard", "soft"
+  bounceReason String? @db.Text
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -353,6 +358,7 @@ model EmailSend {
   @@index([contactId])
   @@index([workspaceId, status])
   @@index([idempotencyKey])
+  @@index([messageId])
   @@map("email_sends")
 }
 
@@ -412,3 +418,6 @@ enum SyncStatus {
   FAILED
   PARTIAL
 }
+
+// NOTE: bounceType and bounceReason added for webhook ingestion
+// Run: prisma migrate dev --name add_bounce_fields
