@@ -24,6 +24,7 @@ import {
   requireAdminAccess,
 } from "@/lib/auth/session";
 import { slugify } from "@/lib/utils";
+import { encrypt } from "@/lib/encryption";
 import type { ApiResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -203,9 +204,15 @@ export async function updateWorkspace(
     };
   }
 
+  // Encrypt whopApiKey before storing — never persisted in plaintext
+  const dataToSave = { ...parsed.data };
+  if (dataToSave.whopApiKey) {
+    dataToSave.whopApiKey = encrypt(dataToSave.whopApiKey);
+  }
+
   await db.workspace.update({
     where: { id: workspaceId },
-    data: parsed.data,
+    data: dataToSave,
   });
 
   revalidatePath("/dashboard/settings");

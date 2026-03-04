@@ -59,6 +59,56 @@ export default async function SettingsPage() {
         />
       </section>
 
+
+      {/* Data & Privacy */}
+      <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">Data &amp; Privacy</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          How your data is stored and protected in this workspace.
+        </p>
+        <div className="space-y-3 text-sm">
+          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
+            <span className="mt-0.5 text-base">🔐</span>
+            <div>
+              <p className="font-medium text-foreground">API keys encrypted at rest</p>
+              <p className="text-muted-foreground">
+                Your Whop API key is encrypted with AES-256-GCM before being stored in the database.
+                The plaintext key is never persisted.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
+            <span className="mt-0.5 text-base">🛡️</span>
+            <div>
+              <p className="font-medium text-foreground">Workspace isolation</p>
+              <p className="text-muted-foreground">
+                All contacts, campaigns, and settings are scoped to your workspace.
+                No data is shared between workspaces.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
+            <span className="mt-0.5 text-base">📧</span>
+            <div>
+              <p className="font-medium text-foreground">Email content</p>
+              <p className="text-muted-foreground">
+                Email bodies are not end-to-end encrypted — they are transmitted to Resend for delivery.
+                Resend is SOC 2 Type II compliant.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
+            <span className="mt-0.5 text-base">🚫</span>
+            <div>
+              <p className="font-medium text-foreground">Unsubscribes honoured immediately</p>
+              <p className="text-muted-foreground">
+                Contacts who unsubscribe are excluded from all future sends. Status is updated in real time.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Danger zone (owner only) */}
       {workspaceRole === "OWNER" && (
         <section className="rounded-lg border border-destructive/30 bg-card p-6">

@@ -9,6 +9,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { decrypt } from '@/lib/encryption';
 import { z } from "zod";
 
 import { db } from "@/lib/db/client";
@@ -54,7 +55,7 @@ export async function triggerSync(): Promise<
   // Run the sync — never throws, always returns a result
   const result = await runSync({
     workspaceId,
-    apiKey: workspace.whopApiKey,
+    apiKey: decrypt(workspace.whopApiKey) ?? workspace.whopApiKey,
     triggeredBy: userId,
   });
 
