@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { requireWorkspaceAccess } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { WorkspaceSettingsForm } from "./settings-form";
+import { ApiKeys } from "./api-keys";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -25,9 +26,18 @@ export default async function SettingsPage() {
       fromEmail: true,
       fromName: true,
       plan: true,
-      // Don't expose full API key in UI — show masked version only
       whopApiKey: true,
+      apiKeys: {
+        orderBy: { createdAt: 'desc' as const },
+        select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
+      },
     },
+  });
+
+  const apiKeys = await db.apiKey.findMany({
+    where: { workspaceId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
   });
 
   if (!workspace) return null;
@@ -59,6 +69,27 @@ export default async function SettingsPage() {
         />
       </section>
 
+
+      {/* API Keys */}
+      <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">API Keys</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Use API keys to access the{' '}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">/api/v1</code> endpoints
+          from external tools or AI agents.
+        </p>
+        {isAdmin ? (
+          <ApiKeys
+            initialKeys={apiKeys.map((k) => ({
+              ...k,
+              lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
+              createdAt: k.createdAt.toISOString(),
+            }))}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">Only admins can manage API keys.</p>
+        )}
+      </section>
 
       {/* Data & Privacy */}
       <section className="rounded-lg border border-border bg-card p-6">
@@ -107,6 +138,19 @@ export default async function SettingsPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* API Keys */}
+      <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">API Keys</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Use API keys to access the v1 REST API from external tools or agents.
+          See <code className="font-mono text-xs">/docs/api-v1.md</code> for endpoint reference.
+        </p>
+        <ApiKeysSection
+          initialKeys={workspace.apiKeys}
+          isAdmin={isAdmin}
+        />
       </section>
 
       {/* Danger zone (owner only) */}
