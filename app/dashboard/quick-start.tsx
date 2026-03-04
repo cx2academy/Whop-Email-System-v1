@@ -4,15 +4,17 @@
  * app/dashboard/quick-start.tsx
  *
  * Quick Start banner shown only when hasAchievedFirstSend = false.
- * Dismissed permanently after first successful send.
+ * Templates defined locally — not imported from server action file.
  */
 
 import { useState, useTransition } from 'react';
-import {
-  sendQuickStartEmail,
-  QUICK_START_TEMPLATES,
-  type QuickStartTemplateKey,
-} from '@/lib/quickstart/actions';
+import { sendQuickStartEmail, type QuickStartTemplateKey } from '@/lib/quickstart/actions';
+
+const TEMPLATES: { key: QuickStartTemplateKey; label: string; subject: string }[] = [
+  { key: 'welcome', label: 'Welcome email', subject: 'Welcome to the community!' },
+  { key: 'announcement', label: 'Announcement', subject: 'Big news from the community' },
+  { key: 'newsletter', label: 'Newsletter', subject: 'This week in the community' },
+];
 
 interface QuickStartProps {
   fromEmail: string | null;
@@ -27,10 +29,7 @@ export function QuickStart({ fromEmail, userEmail }: QuickStartProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isPending, startTransition] = useTransition();
 
-  const templates = Object.entries(QUICK_START_TEMPLATES) as [
-    QuickStartTemplateKey,
-    { label: string; subject: string }
-  ][];
+  const currentTemplate = TEMPLATES.find((t) => t.key === selected) ?? TEMPLATES[0];
 
   function handleSend() {
     startTransition(async () => {
@@ -110,12 +109,12 @@ export function QuickStart({ fromEmail, userEmail }: QuickStartProps) {
       )}
 
       <div className="mb-4 flex flex-wrap gap-2">
-        {templates.map(([key, t]) => (
+        {TEMPLATES.map((t) => (
           <button
-            key={key}
-            onClick={() => setSelected(key)}
+            key={t.key}
+            onClick={() => setSelected(t.key)}
             className={
-              selected === key
+              selected === t.key
                 ? 'rounded-md border border-indigo-500 bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white'
                 : 'rounded-md border border-indigo-200 bg-white px-3 py-1.5 text-sm font-medium text-indigo-700 hover:border-indigo-400'
             }
@@ -126,7 +125,7 @@ export function QuickStart({ fromEmail, userEmail }: QuickStartProps) {
       </div>
 
       <p className="mb-4 text-xs text-indigo-600">
-        Subject: <em>{QUICK_START_TEMPLATES[selected].subject}</em>
+        Subject: <em>{currentTemplate.subject}</em>
       </p>
 
       <button
