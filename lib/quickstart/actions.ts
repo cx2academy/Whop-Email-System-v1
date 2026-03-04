@@ -13,7 +13,7 @@ import { sendEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 
-export const QUICK_START_TEMPLATES = {
+const QUICK_START_TEMPLATES = {
   welcome: {
     label: 'Welcome email',
     subject: 'Welcome to the community!',
