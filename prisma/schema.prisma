@@ -32,6 +32,7 @@ model User {
   image         String?
   passwordHash  String?   // null for OAuth-only users
   hasAchievedFirstSend Boolean @default(false)
+  onboardingDismissedAt DateTime? // set when user explicitly dismisses the onboarding checklist
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

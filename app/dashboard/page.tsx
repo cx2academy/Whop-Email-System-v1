@@ -1,14 +1,15 @@
 /**
  * app/dashboard/page.tsx
  *
- * Dashboard home. Shows Quick Start banner for users where
- * hasAchievedFirstSend = false. Everything else unchanged.
+ * Dashboard home. Shows onboarding checklist until all steps are complete
+ * or user dismisses it.
  */
 
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { formatNumber, formatDate } from '@/lib/utils';
-import { QuickStart } from './quick-start';
+import { OnboardingChecklist } from './onboarding-checklist';
+import { deriveOnboardingState } from '@/lib/onboarding/steps';
 
 export const metadata = { title: 'Dashboard' };
 
@@ -19,7 +20,7 @@ export default async function DashboardPage() {
     await Promise.all([
       db.workspace.findUnique({
         where: { id: workspaceId },
-        select: { name: true, plan: true, monthlyEmailCap: true, fromEmail: true },
+        select: { name: true, plan: true, monthlyEmailCap: true, fromEmail: true, whopApiKey: true },
       }),
       db.contact.count({ where: { workspaceId, status: 'SUBSCRIBED' } }),
       db.emailCampaign.count({ where: { workspaceId } }),
@@ -35,7 +36,7 @@ export default async function DashboardPage() {
       }),
       db.user.findUnique({
         where: { id: userId },
-        select: { email: true, hasAchievedFirstSend: true },
+        select: { email: true, hasAchievedFirstSend: true, onboardingDismissedAt: true },
       }),
     ]);
 
@@ -46,6 +47,14 @@ export default async function DashboardPage() {
         }, 0) / recentCampaigns.length
       : 0;
 
+  const onboarding = deriveOnboardingState({
+    fromEmail: workspace?.fromEmail,
+    hasWhopApiKey: !!workspace?.whopApiKey,
+    contactCount,
+    hasAchievedFirstSend: user?.hasAchievedFirstSend ?? false,
+    onboardingDismissedAt: user?.onboardingDismissedAt,
+  });
+
   return (
     <div className='space-y-8'>
       <div>
@@ -53,8 +62,14 @@ export default async function DashboardPage() {
         <p className='mt-1 text-sm text-muted-foreground'>Here&apos;s an overview of your workspace</p>
       </div>
 
-      {!user?.hasAchievedFirstSend && user?.email && (
-        <QuickStart fromEmail={workspace?.fromEmail ?? null} userEmail={user.email} />
+      {onboarding.shouldShow && user?.email && (
+        <OnboardingChecklist
+          steps={onboarding.steps}
+          completedCount={onboarding.completedCount}
+          totalCount={onboarding.totalCount}
+          userEmail={user.email}
+          prefillFromEmail={user.email}
+        />
       )}
 
       <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
