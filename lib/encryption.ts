@@ -39,10 +39,7 @@ const TAG_LENGTH = 16; // 128-bit auth tag
 function getKey(): Buffer {
   const raw = process.env.ENCRYPTION_KEY;
   if (!raw) {
-    throw new Error(
-      'ENCRYPTION_KEY environment variable is not set. ' +
-      'Generate one with: node -e 'console.log(require('crypto').randomBytes(32).toString('hex'))''
-    );
+    throw new Error('ENCRYPTION_KEY environment variable is not set. Add it to .env.local and Vercel environment variables.');
   }
   return createHash('sha256').update(raw).digest();
 }
