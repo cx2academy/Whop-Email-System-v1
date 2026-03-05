@@ -27,10 +27,6 @@ export default async function SettingsPage() {
       fromName: true,
       plan: true,
       whopApiKey: true,
-      apiKeys: {
-        orderBy: { createdAt: 'desc' as const },
-        select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
-      },
     },
   });
 
@@ -148,7 +144,7 @@ export default async function SettingsPage() {
           See <code className="font-mono text-xs">/docs/api-v1.md</code> for endpoint reference.
         </p>
         <ApiKeysSection
-          initialKeys={workspace.apiKeys}
+          initialKeys={apiKeys.map((k) => ({ ...k, lastUsedAt: k.lastUsedAt?.toISOString() ?? null, createdAt: k.createdAt.toISOString() }))}
           isAdmin={isAdmin}
         />
       </section>
