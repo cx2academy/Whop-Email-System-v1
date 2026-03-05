@@ -41,8 +41,9 @@ export function middleware(req: NextRequest) {
 
   // Check for NextAuth session cookie (works in both dev and production)
   const sessionCookie =
-    req.cookies.get("next-auth.session-token") ??
-    req.cookies.get("__Secure-next-auth.session-token");
+    // NextAuth v5 uses authjs.* cookie names (not next-auth.*)
+    req.cookies.get("authjs.session-token") ??
+    req.cookies.get("__Secure-authjs.session-token");
 
   const isLoggedIn = !!sessionCookie;
 
