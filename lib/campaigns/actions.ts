@@ -15,6 +15,7 @@ import { db } from "@/lib/db/client";
 import { sendCampaign } from "@/lib/campaigns/send-engine";
 import { requireWorkspaceAccess, requireAdminAccess } from "@/lib/auth/session";
 import type { ApiResponse } from "@/types";
+import { track } from "@/lib/telemetry";
 import type { EmailCampaign, CampaignStatus, CampaignType } from "@prisma/client";
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,7 @@ export async function createCampaign(
     },
   });
 
+  track("campaign_created", { workspaceId, properties: { campaignId: campaign.id, type: data.type, isAbTest: data.isAbTest } });
   revalidatePath("/dashboard/campaigns");
   return { success: true, data: { campaignId: campaign.id } };
 }

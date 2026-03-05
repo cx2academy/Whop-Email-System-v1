@@ -10,6 +10,7 @@
 import { db } from '@/lib/db/client';
 import { encrypt } from '@/lib/encryption';
 import { logger } from '@/lib/logger';
+import { track } from '@/lib/telemetry';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { syncWhopMembers } from '@/lib/sync/actions';
 import { revalidatePath } from 'next/cache';
@@ -96,5 +97,6 @@ export async function dismissOnboarding(): Promise<void> {
   });
 
   logger.info('onboarding_dismissed', { workspaceId, userId });
+  track('onboarding_abandoned', { workspaceId, userId });
   revalidatePath('/dashboard');
 }

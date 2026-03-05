@@ -124,7 +124,8 @@ model Workspace {
   campaigns   EmailCampaign[]
   emailSends  EmailSend[]
   syncLogs    SyncLog[]
-  apiKeys     ApiKey[]
+  apiKeys         ApiKey[]
+  telemetryEvents TelemetryEvent[]
   tags        Tag[]
 
   @@index([slug])
@@ -465,4 +466,31 @@ model ApiLog {
   @@index([apiKeyId])
   @@index([createdAt])
   @@map("api_logs")
+}
+
+// ---------------------------------------------------------------------------
+// TELEMETRY EVENT — Lightweight behavioral event log for analytics + future ML
+// Append-only. Never updated. Index on (workspaceId, event, createdAt).
+// ---------------------------------------------------------------------------
+
+model TelemetryEvent {
+  id          String  @id @default(cuid())
+  workspaceId String
+  userId      String? // null for system-generated events
+
+  // Event name — use snake_case e.g. 'campaign_created'
+  event       String
+
+  // Arbitrary JSON properties for future ML feature extraction.
+  // Stored as String to avoid Prisma JSON type edge cases on all DB providers.
+  // Parse with JSON.parse() when reading.
+  properties  String  @default("{}")
+
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, event, createdAt])
+  @@index([createdAt])
+  @@map("telemetry_events")
 }

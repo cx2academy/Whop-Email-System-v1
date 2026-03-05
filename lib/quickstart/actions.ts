@@ -11,6 +11,7 @@
 import { db } from '@/lib/db/client';
 import { sendEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
+import { track } from '@/lib/telemetry';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 
 const QUICK_START_TEMPLATES = {
@@ -77,6 +78,7 @@ export async function sendQuickStartEmail(
   });
 
   logger.info('first_send_completed', { workspaceId, userId, templateKey });
+  track('first_send_completed', { workspaceId, userId, properties: { templateKey } });
 
   return { success: true };
 }

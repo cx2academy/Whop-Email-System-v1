@@ -71,6 +71,8 @@ export async function POST(req: NextRequest) {
     select: { id: true, name: true, keyPrefix: true, createdAt: true },
   });
 
+  track('api_key_created', { workspaceId, properties: { keyId: apiKey.id, name } });
+
   // Return the raw key ONCE — it cannot be recovered after this response
   return Response.json(
     {
