@@ -61,7 +61,6 @@ export default async function SettingsPage() {
             fromName: workspace.fromName,
             hasWhopApiKey: !!workspace.whopApiKey,
           }}
-          isAdmin={isAdmin}
         />
       </section>
 
@@ -143,7 +142,7 @@ export default async function SettingsPage() {
           Use API keys to access the v1 REST API from external tools or agents.
           See <code className="font-mono text-xs">/docs/api-v1.md</code> for endpoint reference.
         </p>
-        <ApiKeysSection
+        <ApiKeys
           initialKeys={apiKeys.map((k) => ({ ...k, lastUsedAt: k.lastUsedAt?.toISOString() ?? null, createdAt: k.createdAt.toISOString() }))}
           isAdmin={isAdmin}
         />
