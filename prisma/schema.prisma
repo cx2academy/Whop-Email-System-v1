@@ -124,6 +124,7 @@ model Workspace {
   campaigns   EmailCampaign[]
   emailSends  EmailSend[]
   syncLogs    SyncLog[]
+  apiKeys     ApiKey[]
   tags        Tag[]
 
   @@index([slug])
@@ -422,3 +423,46 @@ enum SyncStatus {
 
 // NOTE: bounceType and bounceReason added for webhook ingestion
 // Run: prisma migrate dev --name add_bounce_fields
+
+// ---------------------------------------------------------------------------
+// API KEY — User-generated keys for external API / agent access
+// ---------------------------------------------------------------------------
+
+model ApiKey {
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String  // human label e.g. 'My Agent'
+  keyHash     String  @unique // bcrypt hash of the full key
+  keyPrefix   String  // first 8 chars shown in UI e.g. 'wee_1234'
+  lastUsedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  logs      ApiLog[]
+
+  @@index([workspaceId])
+  @@map("api_keys")
+}
+
+// ---------------------------------------------------------------------------
+// API LOG — Audit trail for every v1 API call
+// ---------------------------------------------------------------------------
+
+model ApiLog {
+  id         String @id @default(cuid())
+  apiKeyId   String
+  method     String // GET POST etc
+  path       String // /api/v1/campaigns
+  statusCode Int
+  durationMs Int
+
+  createdAt DateTime @default(now())
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@index([apiKeyId])
+  @@index([createdAt])
+  @@map("api_logs")
+}
