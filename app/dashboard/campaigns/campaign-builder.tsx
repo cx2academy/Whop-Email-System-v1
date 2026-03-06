@@ -12,10 +12,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Tag } from "@prisma/client";
-import { createCampaign, sendCampaignNow } from "@/lib/campaigns/actions";
+import { createCampaign, updateCampaign, sendCampaignNow } from "@/lib/campaigns/actions";
+import { createUserTemplate } from "@/lib/templates/actions";
 
 interface CampaignBuilderProps {
   tags: Tag[];
+  /** If pre-filling from a template */
+  templateInitial?: {
+    subject?: string;
+    htmlBody?: string;
+    previewText?: string;
+    templateId?: string;
+    userTemplateId?: string;
+  };
   /** If provided, editing an existing draft */
   initial?: {
     id: string;
@@ -34,24 +43,27 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>
 <p>Keep it personal, valuable, and to the point.</p>
 `;
 
-export function CampaignBuilder({ tags, initial }: CampaignBuilderProps) {
+export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuilderProps) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [templateSaved, setTemplateSaved] = useState(false);
   const [savedCampaignId, setSavedCampaignId] = useState<string | null>(
     initial?.id ?? null
   );
 
   // Step 1: Details
   const [name, setName] = useState(initial?.name ?? "");
-  const [subject, setSubject] = useState(initial?.subject ?? "");
-  const [previewText, setPreviewText] = useState(initial?.previewText ?? "");
+  const [subject, setSubject] = useState(initial?.subject ?? templateInitial?.subject ?? "");
+  const [previewText, setPreviewText] = useState(initial?.previewText ?? templateInitial?.previewText ?? "");
   const [isAbTest, setIsAbTest] = useState(initial?.isAbTest ?? false);
   const [abSubjectB, setAbSubjectB] = useState(initial?.abSubjectB ?? "");
 
   // Step 2: Content
-  const [htmlBody, setHtmlBody] = useState(initial?.htmlBody ?? DEFAULT_HTML);
+  const [htmlBody, setHtmlBody] = useState(initial?.htmlBody ?? templateInitial?.htmlBody ?? DEFAULT_HTML);
   const [showPreview, setShowPreview] = useState(false);
 
   // Step 3: Audience
@@ -80,7 +92,7 @@ export function CampaignBuilder({ tags, initial }: CampaignBuilderProps) {
     setIsLoading(true);
 
     try {
-      const result = await createCampaign({
+      const payload = {
         name,
         subject,
         previewText: previewText || undefined,
@@ -88,7 +100,10 @@ export function CampaignBuilder({ tags, initial }: CampaignBuilderProps) {
         audienceTagIds: selectedTagIds,
         isAbTest,
         abSubjectB: isAbTest ? abSubjectB : undefined,
-      });
+      };
+      const result = initial?.id
+        ? await updateCampaign(initial.id, payload)
+        : await createCampaign(payload);
 
       if (!result.success) {
         setError(result.error);
@@ -330,23 +345,39 @@ export function CampaignBuilder({ tags, initial }: CampaignBuilderProps) {
             <p className="text-sm text-destructive">Email body is required</p>
           )}
 
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => setStep(1)}
               className="rounded-md border border-border px-5 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               ← Back
             </button>
-            <button
-              onClick={() => {
-                if (!htmlBody.trim()) return;
-                setStep(3);
-              }}
-              disabled={!htmlBody.trim()}
-              className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next: Review →
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  if (!subject.trim() || !htmlBody.trim()) return;
+                  const name_ = prompt('Template name:');
+                  if (!name_) return;
+                  const { createUserTemplate } = await import('@/lib/templates/actions');
+                  const r = await createUserTemplate({ name: name_, category: 'custom', subject, htmlBody, previewText: previewText || undefined });
+                  if (r.success) alert('Template saved!');
+                }}
+                disabled={!htmlBody.trim() || !subject.trim()}
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Save as template
+              </button>
+              <button
+                onClick={() => {
+                  if (!htmlBody.trim()) return;
+                  setStep(3);
+                }}
+                disabled={!htmlBody.trim()}
+                className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next: Review →
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -433,6 +464,14 @@ export function CampaignBuilder({ tags, initial }: CampaignBuilderProps) {
               ← Back
             </button>
             <div className="flex gap-3">
+              {/* Save as template */}
+              <button
+                onClick={() => { setTemplateName(name || subject); setShowSaveTemplate(true); }}
+                disabled={isLoading || !subject || !htmlBody}
+                className="rounded-md border border-border px-5 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Save as template
+              </button>
               {/* Save as draft */}
               {!savedCampaignId && (
                 <button
@@ -474,6 +513,46 @@ export function CampaignBuilder({ tags, initial }: CampaignBuilderProps) {
         </div>
       )}
     </div>
+
+      {/* Save as Template Modal */}
+      {showSaveTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-lg border border-border bg-card p-6 shadow-xl">
+            <h2 className="mb-4 text-base font-semibold text-foreground">Save as Template</h2>
+            {templateSaved ? (
+              <div className="space-y-3">
+                <p className="text-sm text-green-600">✓ Template saved to your library!</p>
+                <button
+                  onClick={() => { setShowSaveTemplate(false); setTemplateSaved(false); }}
+                  className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >Close</button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <input
+                  value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                  placeholder="Template name"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={async () => {
+                      const r = await createUserTemplate({ name: templateName || subject, category: "custom", subject, htmlBody, previewText: previewText || undefined });
+                      if (r.success) setTemplateSaved(true);
+                    }}
+                    className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                  >Save</button>
+                  <button
+                    onClick={() => { setShowSaveTemplate(false); setTemplateSaved(false); }}
+                    className="flex-1 rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  >Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
   );
 }
 
