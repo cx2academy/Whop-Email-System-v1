@@ -21,7 +21,8 @@ const GUEST_ONLY_ROUTES = ["/auth/login", "/auth/register"];
 // Routes that are always public — never intercepted
 const PUBLIC_PREFIXES = [
   "/api/auth",
-  "/api/v1",   // v1 API handles its own auth via API keys
+  "/api/v1",
+  "/api/automation",   // v1 API handles its own auth via API keys
   "/api/track",
   "/unsubscribe",
   "/_next",

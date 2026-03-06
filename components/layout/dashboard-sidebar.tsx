@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/campaigns", label: "Campaigns", icon: MailIcon },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChartIcon },
   { href: "/dashboard/deliverability", label: "Deliverability", icon: BarChartIcon },
+  { href: "/dashboard/automation", label: "Automation", icon: BarChartIcon },
   { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 

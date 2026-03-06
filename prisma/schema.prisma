@@ -126,7 +126,8 @@ model Workspace {
   syncLogs    SyncLog[]
   apiKeys         ApiKey[]
   telemetryEvents   TelemetryEvent[]
-  sendingDomains    SendingDomain[]
+  sendingDomains      SendingDomain[]
+  automationWorkflows AutomationWorkflow[]
   tags        Tag[]
 
   @@index([slug])
@@ -566,4 +567,148 @@ model InboxTestResult {
 
   @@index([campaignId])
   @@map("inbox_test_results")
+}
+
+// ===========================================================================
+// AUTOMATION SYSTEM
+// ===========================================================================
+
+enum AutomationStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+enum AutomationStepType {
+  TRIGGER
+  DELAY
+  SEND_EMAIL
+  ADD_TAG
+  WEBHOOK
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// AUTOMATION WORKFLOW
+// ---------------------------------------------------------------------------
+
+model AutomationWorkflow {
+  id          String           @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?
+  status      AutomationStatus @default(DRAFT)
+  errorCount  Int              @default(0)
+
+  // Stats
+  totalRuns       Int       @default(0)
+  totalEmailsSent Int       @default(0)
+  lastTriggeredAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  steps       AutomationStep[]
+  enrollments AutomationEnrollment[]
+  jobs        AutomationJob[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@map("automation_workflows")
+}
+
+// ---------------------------------------------------------------------------
+// AUTOMATION STEP — one node in the workflow
+// config is JSON stored as String:
+//   TRIGGER:    { triggerType: 'new_member'|'purchase'|'api'|'manual', filters?: {} }
+//   DELAY:      { amount: number, unit: 'minutes'|'hours'|'days' }
+//   SEND_EMAIL: { subject: string, html: string, fromName?: string }
+//   ADD_TAG:    { tagName: string }
+//   WEBHOOK:    { url: string, method: 'GET'|'POST', payload?: string }
+// ---------------------------------------------------------------------------
+
+model AutomationStep {
+  id         String             @id @default(cuid())
+  workflowId String
+  type       AutomationStepType
+  position   Int
+  config     String             @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow AutomationWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  jobs     AutomationJob[]
+
+  @@index([workflowId, position])
+  @@map("automation_steps")
+}
+
+// ---------------------------------------------------------------------------
+// AUTOMATION ENROLLMENT — one contact's journey through a workflow
+// ---------------------------------------------------------------------------
+
+model AutomationEnrollment {
+  id           String           @id @default(cuid())
+  workflowId   String
+  contactId    String
+  currentStep  Int              @default(0) // position of next step to execute
+  status       EnrollmentStatus @default(ACTIVE)
+  errorCount   Int              @default(0)
+  errorMessage String?          @db.Text
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  workflow AutomationWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contact  Contact            @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jobs     AutomationJob[]
+
+  // One active enrollment per contact per workflow
+  @@unique([workflowId, contactId])
+  @@index([workflowId])
+  @@index([contactId])
+  @@index([status])
+  @@map("automation_enrollments")
+}
+
+// ---------------------------------------------------------------------------
+// AUTOMATION JOB — a scheduled step execution (used for delays)
+// ---------------------------------------------------------------------------
+
+model AutomationJob {
+  id           String    @id @default(cuid())
+  workflowId   String
+  stepId       String
+  enrollmentId String
+  executeAt    DateTime
+  status       JobStatus @default(PENDING)
+  attempts     Int       @default(0)
+  errorMessage String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow   AutomationWorkflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  step       AutomationStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  enrollment AutomationEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([status, executeAt])
+  @@index([enrollmentId])
+  @@map("automation_jobs")
 }
