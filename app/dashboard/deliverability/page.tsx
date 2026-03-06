@@ -20,7 +20,7 @@ export default async function DeliverabilityPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [domains, recentReports, sendStats, inboxResults] = await Promise.all([
+  const [domains, recentReports, _sendCount, inboxResults] = await Promise.all([
     db.sendingDomain.findMany({
       where: { workspaceId },
       orderBy: { createdAt: 'desc' },
@@ -34,11 +34,7 @@ export default async function DeliverabilityPage() {
         campaign: { select: { name: true, id: true } },
       },
     }),
-    db.emailSend.aggregate({
-      where: { workspaceId, sentAt: { gte: thirtyDaysAgo } },
-      _count: { _all: true },
-      _sum: {},
-    }),
+db.emailSend.count({ where: { workspaceId, sentAt: { gte: thirtyDaysAgo } } }),
     db.inboxTestResult.findMany({
       where: { campaign: { workspaceId } },
       orderBy: { testedAt: 'desc' },
