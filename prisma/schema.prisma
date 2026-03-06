@@ -198,9 +198,7 @@ model Contact {
   // Relations
   workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tags       ContactTag[]
-  emailSends            EmailSend[]
-  deliverabilityReport  DeliverabilityReport?
-  inboxTestResults      InboxTestResult[]
+  emailSends EmailSend[]
 
   // CRITICAL: prevents duplicate contacts per workspace (database-principles.md)
   @@unique([workspaceId, email])
@@ -293,8 +291,10 @@ model EmailCampaign {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  emailSends EmailSend[]
+  workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  emailSends           EmailSend[]
+  deliverabilityReport DeliverabilityReport?
+  inboxTestResults     InboxTestResult[]
 
   @@index([workspaceId])
   @@index([workspaceId, status])
