@@ -198,8 +198,9 @@ model Contact {
 
   // Relations
   workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  tags       ContactTag[]
-  emailSends EmailSend[]
+  tags                  ContactTag[]
+  emailSends            EmailSend[]
+  automationEnrollments AutomationEnrollment[]
 
   // CRITICAL: prevents duplicate contacts per workspace (database-principles.md)
   @@unique([workspaceId, email])
