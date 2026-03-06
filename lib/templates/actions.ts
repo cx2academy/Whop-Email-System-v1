@@ -197,22 +197,25 @@ Respond ONLY with a JSON object in this exact format (no markdown, no preamble):
 }`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    if (!process.env.GROQ_API_KEY) {
+      return { success: false as const, error: 'GROQ_API_KEY is not set in environment variables' };
+    }
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
 
     const data = await res.json();
-    const text = data.content?.[0]?.text ?? '';
+    const text = data.choices?.[0]?.message?.content ?? '';
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean) as { subject: string; previewText: string; htmlBody: string };
 
@@ -226,7 +229,9 @@ Respond ONLY with a JSON object in this exact format (no markdown, no preamble):
       },
     };
   } catch (err) {
-    return { success: false as const, error: 'AI generation failed — try again' };
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[generateTemplate]', message);
+    return { success: false as const, error: `AI generation failed: ${message}` };
   }
 }
 
