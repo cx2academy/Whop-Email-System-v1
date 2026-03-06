@@ -128,6 +128,7 @@ model Workspace {
   telemetryEvents   TelemetryEvent[]
   sendingDomains      SendingDomain[]
   automationWorkflows AutomationWorkflow[]
+  emailTemplates      EmailTemplate[]
   tags        Tag[]
 
   @@index([slug])
@@ -275,6 +276,7 @@ model EmailCampaign {
 
   // A/B testing
   isAbTest        Boolean @default(false)
+  templateId      String? // links to EmailTemplate if created from one
   abSubjectB      String?
   abWinnerVariant String?
 
@@ -712,4 +714,37 @@ model AutomationJob {
   @@index([status, executeAt])
   @@index([enrollmentId])
   @@map("automation_jobs")
+}
+
+// ===========================================================================
+// EMAIL TEMPLATES
+// ===========================================================================
+
+model EmailTemplate {
+  id          String  @id @default(cuid())
+  workspaceId String  // null-equivalent: use a sentinel workspace for system templates
+  name        String
+  category    String  // 'course_launch' | 'promotion' | 'announcement' etc.
+  subject     String
+  htmlBody    String  @db.Text
+  previewText String?
+
+  // Ownership flags
+  isSystemTemplate Boolean @default(false) // system templates are read-only
+  isPublic         Boolean @default(false) // future marketplace
+  price            Int     @default(0)     // future marketplace (cents)
+
+  // Stats (updated when campaigns using this template complete)
+  usageCount  Int @default(0)
+  avgOpenRate Float @default(0)
+  avgClickRate Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, category])
+  @@map("email_templates")
 }
