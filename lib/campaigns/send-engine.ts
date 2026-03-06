@@ -25,6 +25,7 @@ import { db } from "@/lib/db/client";
 import { sendEmail } from "@/lib/email";
 import { buildPlainText } from "@/emails/broadcast";
 import { SEND_BATCH_SIZE, SEND_BATCH_DELAY_MS } from "@/lib/constants";
+import { checkThrottle } from "@/lib/deliverability/send-throttle";
 import { sleep } from "@/lib/utils";
 import type { Contact, EmailCampaign } from "@prisma/client";
 
@@ -236,6 +237,24 @@ export async function sendCampaign(
         },
       });
       return { status: "COMPLETED", totalSent: 0, totalFailed: 0, totalSkipped: 0 };
+    }
+
+    // -----------------------------------------------------------------------
+    // Throttle check — domain warmup limits
+    // -----------------------------------------------------------------------
+    const sendingDomain = await import('@/lib/db/client').then(({ db }) =>
+      db.sendingDomain.findFirst({ where: { workspaceId }, orderBy: { createdAt: 'desc' } })
+    );
+    if (sendingDomain) {
+      const throttle = await checkThrottle(workspaceId, sendingDomain.createdAt);
+      if (!throttle.allowed) {
+        console.warn(`[send-engine] Throttled: ${throttle.reason}`);
+        await db.emailCampaign.update({
+          where: { id: campaignId },
+          data: { status: 'PAUSED' },
+        });
+        return { status: 'FAILED', totalSent: 0, totalFailed: 0, totalSkipped: audience.length };
+      }
     }
 
     // -----------------------------------------------------------------------

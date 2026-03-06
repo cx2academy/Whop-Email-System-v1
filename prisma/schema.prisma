@@ -125,7 +125,8 @@ model Workspace {
   emailSends  EmailSend[]
   syncLogs    SyncLog[]
   apiKeys         ApiKey[]
-  telemetryEvents TelemetryEvent[]
+  telemetryEvents   TelemetryEvent[]
+  sendingDomains    SendingDomain[]
   tags        Tag[]
 
   @@index([slug])
@@ -197,7 +198,9 @@ model Contact {
   // Relations
   workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tags       ContactTag[]
-  emailSends EmailSend[]
+  emailSends            EmailSend[]
+  deliverabilityReport  DeliverabilityReport?
+  inboxTestResults      InboxTestResult[]
 
   // CRITICAL: prevents duplicate contacts per workspace (database-principles.md)
   @@unique([workspaceId, email])
@@ -493,4 +496,74 @@ model TelemetryEvent {
   @@index([workspaceId, event, createdAt])
   @@index([createdAt])
   @@map("telemetry_events")
+}
+
+// ---------------------------------------------------------------------------
+// SENDING DOMAIN — Per-workspace domain auth + reputation cache
+// ---------------------------------------------------------------------------
+
+model SendingDomain {
+  id          String  @id @default(cuid())
+  workspaceId String
+  domain      String  // e.g. "acme.com"
+
+  // DNS authentication status
+  spfVerified   Boolean @default(false)
+  dkimVerified  Boolean @default(false)
+  dkimSelector  String  @default("wee1") // DNS TXT record selector
+  dkimPublicKey String? @db.Text // published in DNS TXT record
+  dkimPrivateKey String? @db.Text // encrypted, used for signing
+
+  // Reputation (computed + cached by reputation engine)
+  reputationScore     Int       @default(100)
+  reputationUpdatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deliverabilityReports DeliverabilityReport[]
+
+  @@unique([workspaceId, domain])
+  @@index([workspaceId])
+  @@map("sending_domains")
+}
+
+// ---------------------------------------------------------------------------
+// DELIVERABILITY REPORT — Pre-send check result per campaign
+// ---------------------------------------------------------------------------
+
+model DeliverabilityReport {
+  id         String  @id @default(cuid())
+  campaignId String  @unique
+  domainId   String?
+
+  score    Int    // 0–100
+  warnings String @default("[]") // JSON array of warning strings
+  details  String @default("{}") // JSON — spam score, auth status, etc.
+
+  createdAt DateTime @default(now())
+
+  campaign EmailCampaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  domain   SendingDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+
+  @@map("deliverability_reports")
+}
+
+// ---------------------------------------------------------------------------
+// INBOX TEST RESULT — Simulated seed list placement results
+// ---------------------------------------------------------------------------
+
+model InboxTestResult {
+  id         String @id @default(cuid())
+  campaignId String
+  provider   String // gmail | outlook | yahoo
+  placement  String // inbox | spam | promotions
+
+  testedAt DateTime @default(now())
+
+  campaign EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("inbox_test_results")
 }
