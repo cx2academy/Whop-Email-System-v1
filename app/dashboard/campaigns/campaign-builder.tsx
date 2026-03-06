@@ -512,8 +512,6 @@ export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuil
           </div>
         </div>
       )}
-    </div>
-
       {/* Save as Template Modal */}
       {showSaveTemplate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -553,6 +551,7 @@ export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuil
           </div>
         </div>
       )}
+    </div>
   );
 }
 
