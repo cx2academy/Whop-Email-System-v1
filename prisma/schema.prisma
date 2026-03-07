@@ -778,7 +778,7 @@ model Segment {
   workspaceId String
   name        String
   description String?
-  rules       String  @default({}) // JSON
+  rules       String  @default("{}") // JSON
 
   // Cached contact count — updated when segment is previewed or used
   contactCount    Int       @default(0)
@@ -790,5 +790,5 @@ model Segment {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
-  @@map(segments)
+  @@map("segments")
 }
