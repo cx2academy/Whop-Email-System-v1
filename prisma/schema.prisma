@@ -129,6 +129,8 @@ model Workspace {
   sendingDomains      SendingDomain[]
   automationWorkflows AutomationWorkflow[]
   segments            Segment[]
+  purchases           Purchase[]
+  attributions        RevenueAttribution[]
   emailTemplates      EmailTemplate[]
   tags        Tag[]
 
@@ -203,6 +205,8 @@ model Contact {
   tags                  ContactTag[]
   emailSends            EmailSend[]
   automationEnrollments AutomationEnrollment[]
+  purchases             Purchase[]
+  attributions          RevenueAttribution[]
 
   // CRITICAL: prevents duplicate contacts per workspace (database-principles.md)
   @@unique([workspaceId, email])
@@ -293,12 +297,14 @@ model EmailCampaign {
   totalClicked    Int @default(0)
   totalBounced    Int @default(0)
   totalFailed     Int @default(0)
+  totalRevenue    Int @default(0) // cents — updated by attribution engine
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   emailSends           EmailSend[]
+  attributions         RevenueAttribution[]
   deliverabilityReport DeliverabilityReport?
   inboxTestResults     InboxTestResult[]
 
@@ -628,9 +634,10 @@ model AutomationWorkflow {
   updatedAt DateTime @updatedAt
 
   workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  steps       AutomationStep[]
-  enrollments AutomationEnrollment[]
-  jobs        AutomationJob[]
+  steps        AutomationStep[]
+  enrollments  AutomationEnrollment[]
+  jobs         AutomationJob[]
+  attributions RevenueAttribution[]
 
   @@index([workspaceId])
   @@index([workspaceId, status])
@@ -791,4 +798,60 @@ model Segment {
 
   @@index([workspaceId])
   @@map("segments")
+}
+
+// ===========================================================================
+// REVENUE ATTRIBUTION SYSTEM
+// ===========================================================================
+
+model Purchase {
+  id          String  @id @default(cuid())
+  workspaceId String
+  contactId   String?  // nullable — contact may not be in system yet
+  email       String   // always store for matching
+  productId   String?
+  productName String?
+  amount      Int      // cents
+  currency    String   @default(usd)
+  source      String   @default(api) // 'whop' | 'api' | 'webhook'
+  externalId  String?  // for idempotent dedup
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  workspace    Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact      Contact?             @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  attributions RevenueAttribution[]
+
+  @@unique([workspaceId, externalId])
+  @@index([workspaceId])
+  @@index([contactId])
+  @@index([workspaceId, createdAt])
+  @@map(purchases)
+}
+
+model RevenueAttribution {
+  id               String  @id @default(cuid())
+  workspaceId      String
+  purchaseId       String
+  contactId        String?
+  campaignId       String?
+  workflowId       String?
+  attributionModel String  @default(last_click)
+  revenue          Int     // cents
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  purchase  Purchase           @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  contact   Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  campaign  EmailCampaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  workflow  AutomationWorkflow? @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([workflowId])
+  @@index([contactId])
+  @@index([purchaseId])
+  @@map(revenue_attributions)
 }

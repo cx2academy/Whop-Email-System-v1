@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/deliverability", label: "Deliverability", icon: BarChartIcon },
   { href: "/dashboard/automation", label: "Automation", icon: BarChartIcon },
   { href: "/dashboard/segments", label: "Segments", icon: UsersIcon },
+  { href: "/dashboard/revenue", label: "Revenue", icon: BarChartIcon },
   { href: "/dashboard/templates", label: "Templates", icon: BarChartIcon },
   { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
