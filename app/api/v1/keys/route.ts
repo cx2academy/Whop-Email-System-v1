@@ -15,6 +15,7 @@ import { randomBytes } from 'crypto';
 import { hash } from 'bcryptjs';
 import { db } from '@/lib/db/client';
 import { auth } from '@/auth';
+import { track } from '@/lib/telemetry';
 
 async function getWorkspaceId(): Promise<string | null> {
   const session = await auth();
