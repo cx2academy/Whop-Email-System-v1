@@ -51,31 +51,38 @@ export interface SendCampaignResult {
 
 /**
  * Resolves the full audience for a campaign.
- * Applies tag-based segmentation — if audienceTagIds is empty, targets all
- * SUBSCRIBED contacts in the workspace.
+ * Combines tag-based and segment-based targeting.
+ * If both are empty, targets all SUBSCRIBED contacts.
  */
 async function resolveAudience(
   campaign: EmailCampaign,
   workspaceId: string
 ): Promise<Contact[]> {
-  const tagFilter =
-    campaign.audienceTagIds.length > 0
-      ? {
-          tags: {
-            some: {
-              tagId: { in: campaign.audienceTagIds },
-            },
-          },
-        }
-      : {};
+  const segmentIds: string[] = (campaign as any).audienceSegmentIds ?? [];
+  let segmentContactIds: string[] = [];
+  if (segmentIds.length > 0) {
+    const { resolveSegmentContacts } = await import('@/lib/segmentation/segment-engine');
+    segmentContactIds = await resolveSegmentContacts(workspaceId, segmentIds);
+  }
+
+  const hasTagFilter     = campaign.audienceTagIds.length > 0;
+  const hasSegmentFilter = segmentContactIds.length > 0;
+
+  let where: any = { workspaceId, status: 'SUBSCRIBED', email: { not: '' } };
+
+  if (hasTagFilter && hasSegmentFilter) {
+    where.OR = [
+      { tags: { some: { tagId: { in: campaign.audienceTagIds } } } },
+      { id: { in: segmentContactIds } },
+    ];
+  } else if (hasTagFilter) {
+    where.tags = { some: { tagId: { in: campaign.audienceTagIds } } };
+  } else if (hasSegmentFilter) {
+    where.id = { in: segmentContactIds };
+  }
 
   return db.contact.findMany({
-    where: {
-      workspaceId,
-      status: "SUBSCRIBED",
-      email: { not: "" },
-      ...tagFilter,
-    },
+    where,
     select: {
       id: true,
       email: true,

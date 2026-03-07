@@ -128,6 +128,7 @@ model Workspace {
   telemetryEvents   TelemetryEvent[]
   sendingDomains      SendingDomain[]
   automationWorkflows AutomationWorkflow[]
+  segments            Segment[]
   emailTemplates      EmailTemplate[]
   tags        Tag[]
 
@@ -271,8 +272,9 @@ model EmailCampaign {
   htmlBody    String  @db.Text
   textBody    String? @db.Text
 
-  // Audience — tag-based segmentation
-  audienceTagIds String[]
+  // Audience — tag-based and segment-based targeting
+  audienceTagIds     String[]
+  audienceSegmentIds String[]
 
   // A/B testing
   isAbTest        Boolean @default(false)
@@ -747,4 +749,46 @@ model EmailTemplate {
   @@index([workspaceId])
   @@index([workspaceId, category])
   @@map("email_templates")
+}
+
+// ===========================================================================
+// SEGMENTATION SYSTEM
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// SEGMENT — a saved filter that dynamically resolves to a set of contacts
+//
+// rules JSON shape:
+// {
+//   operator: 'AND' | 'OR',
+//   conditions: [
+//     { field: 'tag',          op: 'has' | 'not_has',     value: 'buyer' },
+//     { field: 'status',       op: 'eq',                  value: 'SUBSCRIBED' },
+//     { field: 'createdAt',    op: 'within_days',         value: 30 },
+//     { field: 'lastOpened',   op: 'within_days' | 'never', value: 30 },
+//     { field: 'lastClicked',  op: 'within_days' | 'never', value: 30 },
+//     { field: 'opensCount',   op: 'gt' | 'lt',           value: 3 },
+//     { field: 'emailsSent',   op: 'gt' | 'lt',           value: 5 }
+//   ]
+// }
+// ---------------------------------------------------------------------------
+
+model Segment {
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?
+  rules       String  @default({}) // JSON
+
+  // Cached contact count — updated when segment is previewed or used
+  contactCount    Int       @default(0)
+  lastEvaluatedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map(segments)
 }
