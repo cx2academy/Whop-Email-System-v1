@@ -812,8 +812,8 @@ model Purchase {
   productId   String?
   productName String?
   amount      Int      // cents
-  currency    String   @default(usd)
-  source      String   @default(api) // 'whop' | 'api' | 'webhook'
+  currency    String   @default("usd")
+  source      String   @default("api") // 'whop' | 'api' | 'webhook'
   externalId  String?  // for idempotent dedup
   metadata    Json?
 
@@ -827,7 +827,7 @@ model Purchase {
   @@index([workspaceId])
   @@index([contactId])
   @@index([workspaceId, createdAt])
-  @@map(purchases)
+  @@map("purchases")
 }
 
 model RevenueAttribution {
@@ -837,7 +837,7 @@ model RevenueAttribution {
   contactId        String?
   campaignId       String?
   workflowId       String?
-  attributionModel String  @default(last_click)
+  attributionModel String  @default("last_click")
   revenue          Int     // cents
 
   createdAt DateTime @default(now())
@@ -853,5 +853,5 @@ model RevenueAttribution {
   @@index([workflowId])
   @@index([contactId])
   @@index([purchaseId])
-  @@map(revenue_attributions)
+  @@map("revenue_attributions")
 }
