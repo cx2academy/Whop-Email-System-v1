@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { ChevronLeftIcon } from 'lucide-react';
 import { requireAdminAccess } from '@/lib/auth/session';
 import { getTags } from '@/lib/sync/actions';
+import { getSegmentsForCampaign } from '@/lib/segmentation/actions';
 import { CampaignBuilder } from '../campaign-builder';
 import { getTemplateById } from '@/lib/templates/library';
 import { db } from '@/lib/db/client';
@@ -30,7 +31,10 @@ interface Props {
 
 export default async function NewCampaignPage({ searchParams }: Props) {
   const { workspaceId } = await requireAdminAccess();
-  const tags = await getTags();
+  const [tags, segments] = await Promise.all([
+    getTags(),
+    getSegmentsForCampaign(),
+  ]);
 
   // Resolve template pre-fill
   let templateInitial: {
@@ -96,7 +100,7 @@ export default async function NewCampaignPage({ searchParams }: Props) {
         </p>
       </div>
 
-      <CampaignBuilder tags={tags} templateInitial={templateInitial} />
+      <CampaignBuilder tags={tags} segments={segments} templateInitial={templateInitial} />
     </div>
   );
 }

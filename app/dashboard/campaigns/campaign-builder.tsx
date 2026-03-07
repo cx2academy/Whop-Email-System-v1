@@ -17,6 +17,7 @@ import { createUserTemplate } from "@/lib/templates/actions";
 
 interface CampaignBuilderProps {
   tags: Tag[];
+  segments?: { id: string; name: string; contactCount: number }[];
   /** If pre-filling from a template */
   templateInitial?: {
     subject?: string;
@@ -33,6 +34,7 @@ interface CampaignBuilderProps {
     previewText?: string | null;
     htmlBody: string;
     audienceTagIds: string[];
+    audienceSegmentIds?: string[];
     isAbTest: boolean;
     abSubjectB?: string | null;
   };
@@ -43,7 +45,7 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>
 <p>Keep it personal, valuable, and to the point.</p>
 `;
 
-export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuilderProps) {
+export function CampaignBuilder({ tags, segments = [], initial, templateInitial }: CampaignBuilderProps) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +72,15 @@ export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuil
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     initial?.audienceTagIds ?? []
   );
+  const [selectedSegmentIds, setSelectedSegmentIds] = useState<string[]>(
+    initial?.audienceSegmentIds ?? []
+  );
+
+  function toggleSegment(segId: string) {
+    setSelectedSegmentIds((prev) =>
+      prev.includes(segId) ? prev.filter((id) => id !== segId) : [...prev, segId]
+    );
+  }
 
   // Step 3: Send result
   const [sendResult, setSendResult] = useState<{
@@ -98,6 +109,7 @@ export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuil
         previewText: previewText || undefined,
         htmlBody,
         audienceTagIds: selectedTagIds,
+        audienceSegmentIds: selectedSegmentIds,
         isAbTest,
         abSubjectB: isAbTest ? abSubjectB : undefined,
       };
@@ -391,12 +403,12 @@ export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuil
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <h2 className="font-semibold text-foreground">Audience</h2>
             <p className="text-sm text-muted-foreground">
-              {selectedTagIds.length === 0
+              {selectedTagIds.length === 0 && selectedSegmentIds.length === 0
                 ? "Sending to all subscribed contacts"
-                : `Sending to contacts tagged: ${selectedTagIds
-                    .map((id) => tags.find((t) => t.id === id)?.name)
-                    .filter(Boolean)
-                    .join(", ")}`}
+                : [
+                    selectedTagIds.length > 0 && `Tags: ${selectedTagIds.map((id) => tags.find((t) => t.id === id)?.name).filter(Boolean).join(", ")}`,
+                    selectedSegmentIds.length > 0 && `Segments: ${selectedSegmentIds.map((id) => segments.find((s) => s.id === id)?.name).filter(Boolean).join(", ")}`,
+                  ].filter(Boolean).join(" · ")}
             </p>
 
             {tags.length > 0 && (
@@ -426,6 +438,32 @@ export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuil
                 </div>
               </div>
             )}
+
+            {segments.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  Filter by segment (optional)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {segments.map((seg) => (
+                    <button
+                      key={seg.id}
+                      onClick={() => toggleSegment(seg.id)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                        selectedSegmentIds.includes(seg.id)
+                          ? "bg-primary text-primary-foreground ring-2 ring-offset-1 ring-primary"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {seg.name}
+                      {seg.contactCount > 0 && (
+                        <span className="ml-1 opacity-60">({seg.contactCount})</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Review summary */}
@@ -439,9 +477,9 @@ export function CampaignBuilder({ tags, initial, templateInitial }: CampaignBuil
             <ReviewRow
               label="Audience"
               value={
-                selectedTagIds.length === 0
+                selectedTagIds.length === 0 && selectedSegmentIds.length === 0
                   ? "All subscribed contacts"
-                  : `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""} selected`
+                  : [`${selectedTagIds.length} tag(s)`, selectedSegmentIds.length > 0 && `${selectedSegmentIds.length} segment(s)`].filter(Boolean).join(" + ")
               }
             />
           </div>
