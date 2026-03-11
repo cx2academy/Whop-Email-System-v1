@@ -9,6 +9,7 @@ import { requireWorkspaceAccess } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { WorkspaceSettingsForm } from "./settings-form";
 import { ApiKeys } from "./api-keys";
+import { WhopWebhookSettings } from "./whop-webhook";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -27,6 +28,7 @@ export default async function SettingsPage() {
       fromName: true,
       plan: true,
       whopApiKey: true,
+      webhookSecret: true,
     },
   });
 
@@ -166,6 +168,18 @@ export default async function SettingsPage() {
           </button>
         </section>
       )}
+      {/* Whop Webhook Integration */}
+      <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">Whop Webhook Integration</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Automatically attribute revenue to your campaigns when subscribers buy your Whop products.
+        </p>
+        <WhopWebhookSettings
+          workspaceId={workspace.id}
+          hasSecret={!!workspace.webhookSecret}
+          appUrl={process.env.NEXTAUTH_URL ?? 'https://whop-email-system-v1.vercel.app'}
+        />
+      </section>
     </div>
   );
 }

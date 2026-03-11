@@ -104,8 +104,9 @@ model Workspace {
   slug String @unique // URL-safe identifier, e.g. "acme-corp"
 
   // Whop integration — stored per workspace for isolation
-  whopApiKey    String? // encrypted at rest in production
-  whopCompanyId String? // Whop company/product ID for this workspace
+  whopApiKey      String? // encrypted at rest in production
+  whopCompanyId   String?
+  webhookSecret   String? // per-workspace secret for Whop webhook verification // Whop company/product ID for this workspace
 
   // Sending identity defaults
   fromEmail String?

@@ -23,7 +23,8 @@ const PUBLIC_PREFIXES = [
   "/api/auth",
   "/api/v1",
   "/api/automation",
-  "/api/attribution",   // v1 API handles its own auth via API keys
+  "/api/attribution",
+  "/api/whop",   // v1 API handles its own auth via API keys
   "/api/track",
   "/unsubscribe",
   "/_next",
