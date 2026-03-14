@@ -79,6 +79,7 @@ export default function SequencePage() {
   // Per-card generation state
   const [cardStates, setCardStates] = useState<Record<number, CardState>>({});
   const [cardError,  setCardError]  = useState<Record<number, string>>({});
+  const [cardNotes,  setCardNotes]  = useState<Record<number, { layout: string; designNotes: string; ctaText: string }>>({});
 
   // ---------------------------------------------------------------------------
   // Generate sequence
@@ -128,6 +129,7 @@ export default function SequencePage() {
     }
 
     setCardStates((s) => ({ ...s, [idx]: 'done' }));
+    setCardNotes((n) => ({ ...n, [idx]: { layout: r.data.layout, designNotes: r.data.designNotes, ctaText: r.data.ctaText } }));
 
     // Navigate to editor with full draft
     const params = new URLSearchParams({
@@ -294,6 +296,19 @@ export default function SequencePage() {
                       </ul>
 
                       {err && <p className="text-xs text-destructive">{err}</p>}
+
+                      {/* Design notes — shown after AI generation */}
+                      {cardNotes[idx] && (
+                        <div className="rounded-lg bg-muted/50 px-3 py-2 space-y-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">AI design notes</p>
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">Layout:</span> {cardNotes[idx].layout}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">CTA:</span> "{cardNotes[idx].ctaText}" — {cardNotes[idx].designNotes}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action buttons */}

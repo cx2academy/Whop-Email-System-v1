@@ -361,7 +361,47 @@ export interface CampaignBrief {
 export interface EmailDraft {
   subject: string;
   htmlBody: string;
+  ctaText: string;
+  layout: string;       // e.g. "headline → story → value → cta → closing"
+  designNotes: string;  // one sentence: why the CTA is placed where it is
 }
+
+// Shared HTML scaffold — enforces proven email structure on every AI generation
+const EMAIL_SCAFFOLD = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:0;background:#ffffff;">
+  <div style="padding:24px 32px 8px;">
+    <p style="margin:0;font-size:13px;color:#6b7280;">{{senderName}}</p>
+  </div>
+  <div style="padding:16px 32px 8px;">
+    <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;line-height:1.25;color:#111827;">[HEADLINE]</h1>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:#374151;">Hi {{firstName | fallback: 'there'}},</p>
+    <p style="margin:12px 0 0;font-size:16px;line-height:1.6;color:#374151;">[OPENING HOOK — 2-3 sentences]</p>
+  </div>
+  <div style="padding:16px 32px;">
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#374151;">[BODY PARAGRAPH 1]</p>
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#374151;">[BODY PARAGRAPH 2]</p>
+    <ul style="margin:0 0 14px;padding-left:20px;">
+      <li style="font-size:15px;line-height:1.8;color:#374151;">[BENEFIT 1]</li>
+      <li style="font-size:15px;line-height:1.8;color:#374151;">[BENEFIT 2]</li>
+      <li style="font-size:15px;line-height:1.8;color:#374151;">[BENEFIT 3]</li>
+    </ul>
+  </div>
+  <div style="padding:8px 32px 24px;text-align:center;">
+    <a href="{{cta_url}}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:16px;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;">[CTA BUTTON TEXT]</a>
+  </div>
+  <div style="padding:0 32px 16px;">
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#374151;">[OPTIONAL ADDITIONAL CONTENT — delete if not needed]</p>
+  </div>
+  <div style="padding:8px 32px 32px;">
+    <p style="margin:0;font-size:15px;line-height:1.65;color:#374151;">[CLOSING SENTENCE]</p>
+    <p style="margin:12px 0 0;font-size:15px;color:#374151;">— {{senderName}}</p>
+  </div>
+  <div style="border-top:1px solid #e5e7eb;margin:0 32px;"></div>
+  <div style="padding:16px 32px;text-align:center;">
+    <p style="margin:0;font-size:12px;color:#9ca3af;">You received this because you're a member of our community.</p>
+    <p style="margin:6px 0 0;font-size:12px;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a></p>
+  </div>
+</div>`.trim();
 
 export async function generateEmailDraft(
   brief: CampaignBrief,
@@ -373,38 +413,44 @@ export async function generateEmailDraft(
   try {
     await requireWorkspaceAccess();
 
-    const text = await groq(`You are an expert email copywriter for online creators and course sellers.
+    const text = await groq(`You are a conversion-focused email copywriter and designer for online creators.
 
-Write a complete, high-converting email using the following campaign brief and email specification.
+You follow these proven email marketing principles on every email you write:
+1. SIMPLICITY — short paragraphs (2-3 sentences max), generous whitespace, no clutter
+2. VISUAL HIERARCHY — headline → hook → value content → CTA → closing
+3. MOBILE FIRST — all styles already set for mobile in the scaffold below
+4. CTA DESIGN — action-oriented verb phrases (e.g. "Start Closing Deals"), high-contrast blue button
+5. CTA PLACEMENT — after the main value section, never buried
+6. PERSONALIZATION — use {{firstName | fallback: 'there'}} in the opening
+7. READABILITY — 15-16px body text, bullet points for lists, no walls of text
+8. BENEFITS not features — "walk away with your first deal closed" not "12 modules"
 
 CAMPAIGN BRIEF:
 - Product: ${brief.product}
 - Audience: ${brief.audience}
 - Tone: ${brief.tone}
 - Goal: ${brief.goal}
-${brief.keyPoints ? `- Key points to include: ${brief.keyPoints}` : ''}
+${brief.keyPoints ? `- Key points: ${brief.keyPoints}` : ''}
 
 THIS EMAIL:
 - Type: ${emailType}
 - Purpose: ${emailPurpose}
 - Suggested subject: ${suggestedSubject}
-- Key elements to include: ${keyElements.join(', ')}
+- Key elements: ${keyElements.join(', ')}
 
-WRITING RULES:
-- Write in ${brief.tone} tone
-- Use {{firstName | fallback: 'there'}} for personalization
-- Keep paragraphs short (2-3 sentences max)
-- Make benefits concrete and specific, not generic
-- End with a clear single CTA
-- Include a natural sign-off as {{senderName}}
-- Do NOT use placeholder text like [insert story here] — write the actual content
-- Do NOT use markdown — write plain prose paragraphs that work as email copy
+SCAFFOLD TO FILL IN:
+Use this exact HTML structure. Replace every [PLACEHOLDER] with real copy. Keep all inline styles exactly as-is. Delete the optional section if not needed. Do NOT add new HTML structure or change styles.
 
-Respond ONLY with a JSON object (no markdown backticks):
+${EMAIL_SCAFFOLD}
+
+Respond ONLY with a JSON object (no markdown backticks, no extra text):
 {
-  "subject": "<the final subject line>",
-  "htmlBody": "<complete HTML email body using inline styles, structured with <h2>, <p>, and optionally a styled CTA button div. Max-width 600px implied. Use the personalization tokens.>"
-}`, 2000);
+  "subject": "<final subject line — specific, curiosity-driven, max 60 chars>",
+  "ctaText": "<action-oriented CTA text used in the button, max 6 words>",
+  "layout": "<describe the layout used e.g. headline → story → benefits → cta → closing>",
+  "designNotes": "<one sentence explaining the key design decision e.g. why CTA is placed where it is>",
+  "htmlBody": "<the complete filled-in HTML from the scaffold above>"
+}`, 2500);
 
     const parsed = JSON.parse(text) as EmailDraft;
     return { success: true, data: parsed };

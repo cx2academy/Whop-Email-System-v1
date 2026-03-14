@@ -181,19 +181,56 @@ export async function generateTemplate(opts: {
 }) {
   await requireAdminAccess();
 
-  const prompt = `You are an expert email copywriter for online creators and course sellers.
+  const EMAIL_SCAFFOLD = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:0;background:#ffffff;">
+  <div style="padding:24px 32px 8px;"><p style="margin:0;font-size:13px;color:#6b7280;">{{sender_name}}</p></div>
+  <div style="padding:16px 32px 8px;">
+    <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;line-height:1.25;color:#111827;">[HEADLINE]</h1>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:#374151;">Hi {{first_name}},</p>
+    <p style="margin:12px 0 0;font-size:16px;line-height:1.6;color:#374151;">[OPENING HOOK]</p>
+  </div>
+  <div style="padding:16px 32px;">
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#374151;">[BODY PARAGRAPH 1]</p>
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#374151;">[BODY PARAGRAPH 2]</p>
+    <ul style="margin:0 0 14px;padding-left:20px;"><li style="font-size:15px;line-height:1.8;color:#374151;">[BENEFIT 1]</li><li style="font-size:15px;line-height:1.8;color:#374151;">[BENEFIT 2]</li></ul>
+  </div>
+  <div style="padding:8px 32px 24px;text-align:center;">
+    <a href="{{cta_url}}" style="display:inline-block;background:#2563eb;color:#ffffff;font-size:16px;font-weight:700;padding:14px 36px;border-radius:8px;text-decoration:none;">[CTA]</a>
+  </div>
+  <div style="padding:8px 32px 32px;">
+    <p style="margin:0;font-size:15px;color:#374151;">[CLOSING]</p>
+    <p style="margin:12px 0 0;font-size:15px;color:#374151;">— {{sender_name}}</p>
+  </div>
+  <div style="border-top:1px solid #e5e7eb;margin:0 32px;"></div>
+  <div style="padding:16px 32px;text-align:center;">
+    <p style="margin:0;font-size:12px;color:#9ca3af;">You received this because you are a member.</p>
+    <p style="margin:6px 0 0;font-size:12px;"><a href="{{unsubscribe_url}}" style="color:#9ca3af;">Unsubscribe</a></p>
+  </div>
+</div>`;
 
-Generate a high-converting email template based on these inputs:
-- Campaign goal: ${opts.goal}
-- Product type: ${opts.productType}
-- Tone of voice: ${opts.tone}
-- Target audience: ${opts.audience}
+  const prompt = `You are a conversion-focused email copywriter for online creators and course sellers.
 
-Respond ONLY with a JSON object in this exact format (no markdown, no preamble):
+Proven design rules you ALWAYS follow:
+- Short paragraphs (2-3 sentences max), clear hierarchy, no clutter
+- Layout: headline → opening hook → value/benefits → CTA button → closing
+- CTA uses action verbs: "Start Closing Deals", "Join the Community", "Get the Guide"
+- Benefits-first: what the reader gains, not product features
+- Personalization with {{first_name}} in the opening
+
+Inputs:
+- Goal: ${opts.goal}
+- Product: ${opts.productType}
+- Tone: ${opts.tone}
+- Audience: ${opts.audience}
+
+Fill in this exact HTML scaffold — replace every [PLACEHOLDER] with real copy, keep all inline styles unchanged:
+
+${EMAIL_SCAFFOLD}
+
+Respond ONLY with JSON (no markdown):
 {
-  "subject": "the subject line",
-  "previewText": "preview text under 90 chars",
-  "htmlBody": "complete HTML email body using inline styles, max-width 600px, with {{first_name}}, {{product_name}}, {{cta_url}}, {{sender_name}}, {{unsubscribe_url}} variables where appropriate"
+  "subject": "<specific curiosity-driven subject under 60 chars>",
+  "previewText": "<preview text under 90 chars>",
+  "htmlBody": "<the complete filled-in HTML>"
 }`;
 
   try {
