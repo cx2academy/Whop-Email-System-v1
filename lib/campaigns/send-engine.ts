@@ -28,6 +28,7 @@ import { SEND_BATCH_SIZE, SEND_BATCH_DELAY_MS } from "@/lib/constants";
 import { checkThrottle } from "@/lib/deliverability/send-throttle";
 import { sleep } from "@/lib/utils";
 import type { Contact, EmailCampaign } from "@prisma/client";
+import { parseVariables, buildSendVariables } from "@/lib/templates/variable-parser";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -330,8 +331,24 @@ export async function sendCampaign(
           const unsubscribeUrl = buildUnsubscribeUrl(appUrl, campaignId, contact.id);
           const trackingPixelUrl = buildTrackingPixelUrl(appUrl, campaignId, contact.id);
 
+          // -----------------------------------------------------------------
+          // Personalization — replace {{variables}} with real contact data
+          // -----------------------------------------------------------------
+          const vars = buildSendVariables({
+            firstName:      contact.firstName,
+            lastName:       contact.lastName,
+            email:          contact.email,
+            senderName:     fromName,
+            unsubscribeUrl,
+            ctaUrl:         '#',
+            communityName:  workspace.name,
+          });
+
+          const personalizedSubject = parseVariables(subject, vars);
+          const personalizedHtml    = parseVariables(campaign.htmlBody, vars);
+
           // Inject open pixel + click tracking into HTML before sending
-          let trackedHtml = injectTrackingPixel(campaign.htmlBody, trackingPixelUrl);
+          let trackedHtml = injectTrackingPixel(personalizedHtml, trackingPixelUrl);
           trackedHtml = injectClickTracking(trackedHtml, appUrl, campaignId, contact.id);
 
           // DEBUG — remove after confirming tracking works
@@ -342,14 +359,14 @@ export async function sendCampaign(
           console.log("[send-engine] originalHtml snippet:", campaign.htmlBody.slice(0, 200));
 
           const plainText = buildPlainText({
-            htmlBody: campaign.htmlBody,
+            htmlBody: personalizedHtml,
             fromName,
             unsubscribeUrl,
           });
 
           const result = await sendEmail({
             to: contact.email,
-            subject,
+            subject: personalizedSubject,
             html: trackedHtml,
             text: plainText,
             from,
