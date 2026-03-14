@@ -142,23 +142,3 @@ export const PREVIEW_VARIABLES: TemplateVariables = {
   time_until:      '2 hours',
 };
 
-/**
- * Build template variables from a contact + workspace at send time.
- */
-export function buildSendVariables(opts: {
-  firstName?: string | null;
-  lastName?: string | null;
-  email: string;
-  workspaceName?: string;
-  senderName?: string;
-  unsubscribeUrl?: string;
-}): TemplateVariables {
-  return {
-    first_name:      opts.firstName ?? 'there',
-    last_name:       opts.lastName ?? '',
-    email:           opts.email,
-    community_name:  opts.workspaceName ?? '',
-    sender_name:     opts.senderName ?? opts.workspaceName ?? '',
-    unsubscribe_url: opts.unsubscribeUrl ?? '#',
-  };
-}
