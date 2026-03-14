@@ -1,84 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* shadcn/ui design tokens — default light theme */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background:     0 0% 99%;
+    --foreground:     220 20% 10%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card:           0 0% 100%;
+    --card-foreground: 220 20% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover:        0 0% 100%;
+    --popover-foreground: 220 20% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary:        220 90% 52%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary:      220 14% 96%;
+    --secondary-foreground: 220 20% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted:          220 14% 96%;
+    --muted-foreground: 220 10% 52%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent:         220 14% 94%;
+    --accent-foreground: 220 20% 15%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive:    0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border:         220 13% 91%;
+    --input:          220 13% 91%;
+    --ring:           220 90% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
+
+    /* Revenue green */
+    --revenue:        142 76% 36%;
+    --revenue-light:  142 76% 95%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background:     222 20% 8%;
+    --foreground:     210 20% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card:           222 20% 10%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover:        222 20% 10%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary:        217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary:      222 20% 14%;
+    --secondary-foreground: 210 20% 80%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted:          222 20% 14%;
+    --muted-foreground: 215 15% 55%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent:         222 20% 16%;
+    --accent-foreground: 210 20% 90%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive:    0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border:         222 20% 18%;
+    --input:          222 20% 18%;
+    --ring:           217 91% 60%;
+
+    --revenue:        142 70% 45%;
+    --revenue-light:  142 70% 12%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  * { @apply border-border; }
+
+  html {
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
   }
 
-  /* Improve text rendering */
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  code, kbd, pre {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+  }
+}
+
+@layer utilities {
+  .text-revenue { color: hsl(var(--revenue)); }
+  .bg-revenue-light { background-color: hsl(var(--revenue-light)); }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    @apply rounded-md bg-muted relative overflow-hidden;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.6), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Tooltip base */
+  .tooltip-trigger { @apply relative cursor-default; }
+  .tooltip-trigger:hover .tooltip-content { @apply opacity-100 visible; }
+  .tooltip-content {
+    @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1
+           rounded text-xs bg-foreground text-background whitespace-nowrap
+           opacity-0 invisible transition-opacity duration-150 z-50 pointer-events-none;
   }
 }
