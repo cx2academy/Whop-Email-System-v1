@@ -345,3 +345,70 @@ Respond ONLY with JSON (no markdown):
     return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
   }
 }
+
+// ---------------------------------------------------------------------------
+// 6. Generate Full Email Draft
+// ---------------------------------------------------------------------------
+
+export interface CampaignBrief {
+  product: string;
+  audience: string;
+  tone: string;
+  goal: string;
+  keyPoints?: string;
+}
+
+export interface EmailDraft {
+  subject: string;
+  htmlBody: string;
+}
+
+export async function generateEmailDraft(
+  brief: CampaignBrief,
+  emailType: string,
+  emailPurpose: string,
+  suggestedSubject: string,
+  keyElements: string[]
+): Promise<{ success: true; data: EmailDraft } | { success: false; error: string }> {
+  try {
+    await requireWorkspaceAccess();
+
+    const text = await groq(`You are an expert email copywriter for online creators and course sellers.
+
+Write a complete, high-converting email using the following campaign brief and email specification.
+
+CAMPAIGN BRIEF:
+- Product: ${brief.product}
+- Audience: ${brief.audience}
+- Tone: ${brief.tone}
+- Goal: ${brief.goal}
+${brief.keyPoints ? `- Key points to include: ${brief.keyPoints}` : ''}
+
+THIS EMAIL:
+- Type: ${emailType}
+- Purpose: ${emailPurpose}
+- Suggested subject: ${suggestedSubject}
+- Key elements to include: ${keyElements.join(', ')}
+
+WRITING RULES:
+- Write in ${brief.tone} tone
+- Use {{firstName | fallback: 'there'}} for personalization
+- Keep paragraphs short (2-3 sentences max)
+- Make benefits concrete and specific, not generic
+- End with a clear single CTA
+- Include a natural sign-off as {{senderName}}
+- Do NOT use placeholder text like [insert story here] — write the actual content
+- Do NOT use markdown — write plain prose paragraphs that work as email copy
+
+Respond ONLY with a JSON object (no markdown backticks):
+{
+  "subject": "<the final subject line>",
+  "htmlBody": "<complete HTML email body using inline styles, structured with <h2>, <p>, and optionally a styled CTA button div. Max-width 600px implied. Use the personalization tokens.>"
+}`, 2000);
+
+    const parsed = JSON.parse(text) as EmailDraft;
+    return { success: true, data: parsed };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
+  }
+}
