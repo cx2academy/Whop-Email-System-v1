@@ -19,6 +19,7 @@ import { createCampaign, updateCampaign, sendCampaignNow } from '@/lib/campaigns
 import { createUserTemplate } from '@/lib/templates/actions';
 import { VisualEditor } from '@/components/email-editor/visual-editor';
 import { EmailPreview } from '@/components/email-editor/email-preview';
+import { AiPanel } from '@/components/email-editor/ai-panel';
 import {
   CodeIcon, EyeIcon, LayoutTemplateIcon, SparklesIcon,
   CheckIcon, ChevronLeftIcon, PlusIcon,
@@ -34,6 +35,7 @@ interface CampaignBuilderProps {
   segments?: { id: string; name: string; contactCount: number }[];
   fromName?: string;
   fromEmail?: string;
+  audienceSize?: number;
   templateInitial?: {
     subject?: string;
     htmlBody?: string;
@@ -69,6 +71,7 @@ export function CampaignBuilder({
   segments = [],
   fromName = 'Your Name',
   fromEmail = 'you@example.com',
+  audienceSize = 0,
   initial,
   templateInitial,
 }: CampaignBuilderProps) {
@@ -347,6 +350,13 @@ export function CampaignBuilder({
                     placeholder="Enter HTML here…" />
                 </div>
               )}
+              {/* AI Panel — collapsible drawer at bottom of editor */}
+              <AiPanel
+                subject={subject}
+                htmlBody={htmlBody}
+                audienceSize={audienceSize}
+                onApplySubject={(s) => { setSubject(s); setStep(1); setTimeout(() => setStep(2), 50); }}
+              />
             </div>
 
             {/* Preview — no border, no bg box, just the preview itself */}

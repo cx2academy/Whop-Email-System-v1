@@ -12,6 +12,7 @@ import { getCampaigns } from "@/lib/campaigns/actions";
 import { CAMPAIGN_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatNumber } from "@/lib/utils";
 import type { CampaignStatus } from "@prisma/client";
+import { StrategyAdvisor } from "./strategy-advisor";
 
 export const metadata: Metadata = {
   title: "Campaigns",
@@ -34,15 +35,27 @@ export default async function CampaignsPage() {
         </div>
 
         {isAdmin && (
-          <Link
-            href="/dashboard/campaigns/new"
-            className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            New campaign
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/campaigns/sequence"
+              className="flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            >
+              ✦ AI Sequence
+            </Link>
+            <Link
+              href="/dashboard/campaigns/new"
+              className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              New campaign
+            </Link>
+          </div>
         )}
       </div>
+
+      {/* Strategy advisor */}
+      {/* @ts-expect-error async server component */}
+      <StrategyAdvisor />
 
       {/* Campaign list */}
       {campaigns.length === 0 ? (
