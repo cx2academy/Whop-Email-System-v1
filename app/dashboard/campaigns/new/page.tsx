@@ -31,6 +31,10 @@ interface Props {
 
 export default async function NewCampaignPage({ searchParams }: Props) {
   const { workspaceId } = await requireAdminAccess();
+  const workspace = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { fromName: true, fromEmail: true },
+  });
   const [tags, segments] = await Promise.all([
     getTags(),
     getSegmentsForCampaign(),
@@ -100,7 +104,7 @@ export default async function NewCampaignPage({ searchParams }: Props) {
         </p>
       </div>
 
-      <CampaignBuilder tags={tags} segments={segments} templateInitial={templateInitial} />
+      <CampaignBuilder tags={tags} segments={segments} templateInitial={templateInitial} fromName={workspace?.fromName ?? undefined} fromEmail={workspace?.fromEmail ?? undefined} />
     </div>
   );
 }
