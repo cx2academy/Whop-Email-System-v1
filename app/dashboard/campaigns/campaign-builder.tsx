@@ -54,6 +54,7 @@ interface CampaignBuilderProps {
     isAbTest: boolean;
     abSubjectB?: string | null;
   };
+  startStep?: number;
 }
 
 const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>
@@ -74,9 +75,10 @@ export function CampaignBuilder({
   audienceSize = 0,
   initial,
   templateInitial,
+  startStep = 1,
 }: CampaignBuilderProps) {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(startStep);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
