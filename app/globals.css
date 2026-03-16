@@ -6,81 +6,48 @@
 
 @layer base {
   :root {
-    /* ── RevTray light theme ─────────────────────────────── */
-    --background:     210 20% 98%;     /* #F8FAFC */
-    --foreground:     222 47% 11%;     /* #0F172A */
+    --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+    --font-sans:    'DM Sans', system-ui, sans-serif;
 
-    --card:           0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* ── RevTray dark design system ─────────────────────── */
+    --background:          222 47% 6%;     /* #0A0E1A */
+    --foreground:          213 20% 91%;    /* #E2E8F0 */
 
-    --popover:        0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --card:                222 35% 9%;     /* #111827 */
+    --card-foreground:     213 20% 91%;
 
-    /* Primary = RevTray emerald */
-    --primary:        160 84% 39%;     /* #10B981 */
-    --primary-foreground: 0 0% 100%;
+    --popover:             222 35% 9%;
+    --popover-foreground:  213 20% 91%;
 
-    --secondary:      215 20% 95%;
-    --secondary-foreground: 222 30% 20%;
+    /* Emerald green — RevTray primary */
+    --primary:             142 76% 46%;    /* #22C55E */
+    --primary-foreground:  0 0% 100%;
 
-    --muted:          215 20% 95%;
-    --muted-foreground: 215 14% 48%;   /* #475569 */
+    --secondary:           222 30% 13%;
+    --secondary-foreground: 213 20% 70%;
 
-    --accent:         215 20% 93%;
-    --accent-foreground: 222 30% 15%;
+    --muted:               222 30% 13%;
+    --muted-foreground:    215 14% 48%;    /* #6B7280 / slightly lighter */
 
-    --destructive:    0 84% 60%;
+    --accent:              222 30% 15%;
+    --accent-foreground:   213 20% 88%;
+
+    --destructive:         0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border:         215 20% 88%;     /* #E2E8F0 */
-    --input:          215 20% 88%;
-    --ring:           160 84% 39%;
+    --border:              222 25% 16%;    /* #1F2937 */
+    --input:               222 25% 16%;
+    --ring:                142 76% 46%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
-    /* Revenue green (same as primary in RevTray) */
-    --revenue:        160 84% 39%;
-    --revenue-light:  160 84% 94%;
+    /* Revenue / positive green */
+    --revenue:             142 76% 46%;
+    --revenue-light:       142 76% 10%;
 
-    /* Sidebar — always dark regardless of light/dark mode */
-    --sidebar-bg:        222 47% 9%;   /* #0D1625 */
-    --sidebar-border:    222 40% 14%;
-    --sidebar-text:      215 20% 55%;
-    --sidebar-text-active: 142 76% 60%; /* bright emerald */
-    --sidebar-active-bg: 160 84% 39% / 0.12;
-  }
-
-  .dark {
-    --background:     222 47% 8%;      /* #0A0F1E */
-    --foreground:     210 20% 95%;
-
-    --card:           222 40% 10%;     /* #0D1625 */
-    --card-foreground: 210 20% 95%;
-
-    --popover:        222 40% 10%;
-    --popover-foreground: 210 20% 95%;
-
-    --primary:        160 84% 45%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary:      222 30% 14%;
-    --secondary-foreground: 210 20% 80%;
-
-    --muted:          222 30% 14%;
-    --muted-foreground: 215 15% 52%;
-
-    --accent:         222 30% 16%;
-    --accent-foreground: 210 20% 90%;
-
-    --destructive:    0 62% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border:         222 30% 18%;
-    --input:          222 30% 18%;
-    --ring:           160 84% 45%;
-
-    --revenue:        160 84% 50%;
-    --revenue-light:  160 84% 12%;
+    /* Sidebar tokens */
+    --sidebar-bg:          222 47% 7%;
+    --sidebar-border:      222 35% 11%;
   }
 }
 
@@ -88,7 +55,7 @@
   * { @apply border-border; }
 
   html {
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -98,10 +65,8 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Display headings use Bricolage Grotesque */
   h1, h2, h3 {
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-    @apply tracking-tight;
     letter-spacing: -0.03em;
     font-weight: 700;
   }
@@ -112,24 +77,30 @@
   }
 
   code, kbd, pre {
-    font-family: 'DM Mono', ui-monospace, monospace;
+    font-family: ui-monospace, 'Cascadia Code', monospace;
+    font-size: 0.875em;
   }
 }
 
 @layer utilities {
-  .font-display {
-    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-  }
+  .font-display { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
 
   .text-revenue { color: hsl(var(--revenue)); }
   .bg-revenue-light { background-color: hsl(var(--revenue-light)); }
 
-  /* Emerald glow for primary buttons */
-  .shadow-emerald {
-    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  /* Emerald glow */
+  .glow-emerald {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
   }
-  .shadow-emerald:hover {
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+
+  /* Card hover lift */
+  .card-hover {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-1px);
+    border-color: hsl(222 25% 22%);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
   }
 
   /* Skeleton shimmer */
@@ -140,7 +111,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.6), transparent);
+    background: linear-gradient(90deg, transparent, hsl(var(--muted-foreground) / 0.08), transparent);
     animation: shimmer 1.6s infinite;
   }
   @keyframes shimmer {
@@ -152,17 +123,31 @@
   .tooltip-trigger { @apply relative cursor-default; }
   .tooltip-trigger:hover .tooltip-content { @apply opacity-100 visible; }
   .tooltip-content {
-    @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1
-           rounded text-xs bg-foreground text-background whitespace-nowrap
-           opacity-0 invisible transition-opacity duration-150 z-50 pointer-events-none;
+    @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5
+           rounded-lg text-xs font-medium bg-card border border-border text-foreground
+           whitespace-nowrap opacity-0 invisible transition-all duration-150 z-50 pointer-events-none
+           shadow-xl;
   }
 
-  /* Pulse animation for live indicators */
+  /* Pulse for live indicators */
   @keyframes pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.5; transform: scale(1.4); }
+    50%       { opacity: 0.4; transform: scale(1.5); }
   }
-  .animate-pulse-dot {
-    animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  .animate-pulse-dot { animation: pulse-dot 2s ease infinite; }
+
+  /* Page fade-in */
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
+  .animate-fade-in { animation: fade-in 0.3s ease forwards; }
+
+  /* Status badge colours (dark-mode safe) */
+  .badge-draft      { @apply bg-zinc-800 text-zinc-400; }
+  .badge-scheduled  { @apply bg-blue-950 text-blue-400; }
+  .badge-sending    { @apply bg-amber-950 text-amber-400; }
+  .badge-completed  { @apply bg-emerald-950 text-emerald-400; }
+  .badge-failed     { @apply bg-red-950 text-red-400; }
+  .badge-paused     { @apply bg-orange-950 text-orange-400; }
 }
