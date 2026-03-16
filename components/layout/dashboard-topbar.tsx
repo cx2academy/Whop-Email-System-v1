@@ -27,18 +27,10 @@ export async function DashboardTopbar() {
         {/* Primary CTA — RevTray emerald */}
         <Link
           href="/dashboard/campaigns/new"
-          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all active:scale-95"
+          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all active:scale-95 hover:opacity-90"
           style={{
             background: '#10B981',
             boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = '#059669';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(16,185,129,0.45)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = '#10B981';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(16,185,129,0.35)';
           }}
         >
           <PlusIcon className="h-3.5 w-3.5" />
