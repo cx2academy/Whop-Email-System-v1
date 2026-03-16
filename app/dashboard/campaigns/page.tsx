@@ -104,10 +104,8 @@ export default async function CampaignsPage() {
 
                 return (
                   <tr key={campaign.id}
-                    className="group transition-colors duration-100"
+                    className="group transition-colors duration-100 hover:bg-white/[0.03]"
                     style={{ borderBottom: isLast ? undefined : '1px solid hsl(222 25% 13%)' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'hsl(222 35% 11%)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td className="px-5 py-4">
                       <Link href={`/dashboard/campaigns/${campaign.id}`}

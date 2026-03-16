@@ -163,8 +163,7 @@ export default async function DashboardPage() {
                     style={{
                       borderBottom: i < recentCampaigns.length - 1 ? '1px solid hsl(222 25% 13%)' : undefined,
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'hsl(222 35% 11%)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+
                   >
                     <td className="px-4 py-3.5">
                       <Link href={`/dashboard/campaigns/${c.id}`} className="font-medium text-zinc-200 hover:text-emerald-400 transition-colors">{c.name}</Link>
