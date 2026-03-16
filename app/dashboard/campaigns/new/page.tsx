@@ -1,16 +1,7 @@
 /**
  * app/dashboard/campaigns/new/page.tsx
- * New campaign builder — supports template pre-fill via URL params.
- *
- * URL params:
- *   ?templateId=<system-template-id>      — pre-fill from system template
- *   ?userTemplateId=<db-template-id>      — pre-fill from user template
- *   ?generatedSubject=...&generatedHtml=  — pre-fill from AI generator
  */
-
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { ChevronLeftIcon } from 'lucide-react';
 import { requireAdminAccess } from '@/lib/auth/session';
 import { getTags } from '@/lib/sync/actions';
 import { getSegmentsForCampaign } from '@/lib/segmentation/actions';
@@ -41,81 +32,33 @@ export default async function NewCampaignPage({ searchParams }: Props) {
     db.contact.count({ where: { workspaceId, status: 'SUBSCRIBED' } }),
   ]);
 
-  // Resolve template pre-fill
   let templateInitial: {
-    subject?: string;
-    htmlBody?: string;
-    previewText?: string;
-    templateId?: string;
-    userTemplateId?: string;
+    subject?: string; htmlBody?: string; previewText?: string;
+    templateId?: string; userTemplateId?: string;
   } | undefined;
 
   if (searchParams.templateId) {
     const tpl = getTemplateById(searchParams.templateId);
-    if (tpl) {
-      templateInitial = {
-        subject: tpl.subject,
-        htmlBody: tpl.htmlBody,
-        previewText: tpl.previewText,
-        templateId: tpl.id,
-      };
-    }
+    if (tpl) templateInitial = { subject: tpl.subject, htmlBody: tpl.htmlBody, previewText: tpl.previewText, templateId: tpl.id };
   } else if (searchParams.userTemplateId) {
-    const tpl = await db.emailTemplate.findFirst({
-      where: { id: searchParams.userTemplateId, workspaceId },
-    });
-    if (tpl) {
-      templateInitial = {
-        subject: tpl.subject,
-        htmlBody: tpl.htmlBody,
-        previewText: tpl.previewText ?? undefined,
-        userTemplateId: tpl.id,
-      };
-    }
+    const tpl = await db.emailTemplate.findFirst({ where: { id: searchParams.userTemplateId, workspaceId } });
+    if (tpl) templateInitial = { subject: tpl.subject, htmlBody: tpl.htmlBody, previewText: tpl.previewText ?? undefined, userTemplateId: tpl.id };
   } else if (searchParams.generatedSubject) {
     templateInitial = {
       subject: decodeURIComponent(searchParams.generatedSubject),
-      htmlBody: searchParams.generatedHtml
-        ? decodeURIComponent(searchParams.generatedHtml)
-        : undefined,
+      htmlBody: searchParams.generatedHtml ? decodeURIComponent(searchParams.generatedHtml) : undefined,
     };
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/dashboard/campaigns" className="flex items-center gap-1 hover:text-foreground">
-          <ChevronLeftIcon className="h-4 w-4" />
-          Campaigns
-        </Link>
-        <span>/</span>
-        <span className="text-foreground">New campaign</span>
-        {templateInitial && (
-          <>
-            <span>·</span>
-            <span className="text-primary text-xs font-medium">from template</span>
-          </>
-        )}
-      </div>
-
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Create campaign</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {templateInitial
-            ? 'Template pre-filled — customize and send'
-            : 'Build and send an email campaign to your community'}
-        </p>
-      </div>
-
-      <CampaignBuilder
-        tags={tags}
-        segments={segments}
-        templateInitial={templateInitial}
-        fromName={workspace?.fromName ?? undefined}
-        fromEmail={workspace?.fromEmail ?? undefined}
-        audienceSize={audienceSize}
-        startStep={searchParams.generatedSubject && !searchParams.generatedHtml ? 2 : 1}
-      />
-    </div>
+    <CampaignBuilder
+      tags={tags}
+      segments={segments}
+      templateInitial={templateInitial}
+      fromName={workspace?.fromName ?? undefined}
+      fromEmail={workspace?.fromEmail ?? undefined}
+      audienceSize={audienceSize}
+      startStep={searchParams.generatedSubject && !searchParams.generatedHtml ? 2 : 1}
+    />
   );
 }

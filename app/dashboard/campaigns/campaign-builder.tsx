@@ -193,106 +193,104 @@ export function CampaignBuilder({
   );
 
   // ── Step 2 — full-bleed writing workspace ─────────────────────────────────
+  // Escapes the dashboard main's p-6 padding on all sides
 
   if (step === 2) return (
-    <div className="flex flex-col -mx-6 -mt-6" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="flex flex-col -mx-6 -mt-6 -mb-6"
+      style={{ height: 'calc(100vh - 56px)' }}>
 
-      {/* ── Zone 1: Minimal header strip ── */}
-      <div className="flex items-center justify-between px-6 py-2.5 flex-shrink-0"
-        style={{ background: '#060C15', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-4">
-          <button onClick={() => setStep(1)}
-            className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-300 transition-colors">
-            <ChevronLeftIcon className="h-3.5 w-3.5" /> Details
-          </button>
-          <div className="h-3 w-px bg-zinc-800" />
-          <StepIndicator />
-        </div>
-        <div className="flex items-center gap-1">
-          <Link href="/dashboard/templates"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-all">
-            <LayoutTemplateIcon className="h-3 w-3" /> Templates
-          </Link>
-          <Link href="/dashboard/templates/generate"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-all">
-            <SparklesIcon className="h-3 w-3" /> AI Write
-          </Link>
-          <div className="mx-1 h-3 w-px bg-zinc-800" />
-          <div className="flex items-center rounded-lg overflow-hidden"
-            style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
-            {(['visual', 'html'] as const).map(mode => (
-              <button key={mode} onClick={() => setEditorMode(mode)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all"
-                style={{ color: editorMode === mode ? '#E2E8F0' : '#4B5563', background: editorMode === mode ? 'rgba(255,255,255,0.08)' : 'transparent' }}>
-                {mode === 'visual' ? <EyeIcon className="h-3 w-3" /> : <CodeIcon className="h-3 w-3" />}
-                {mode === 'visual' ? 'Visual' : 'HTML'}
-              </button>
-            ))}
-          </div>
+      {/* ── Single compact header: steps + context + tools — ONE row ── */}
+      <div className="flex items-center gap-3 px-4 flex-shrink-0 flex-wrap"
+        style={{ background: '#0A0E1A', borderBottom: '1px solid rgba(255,255,255,0.07)', minHeight: 44 }}>
+
+        {/* Steps */}
+        <button onClick={() => setStep(1)}
+          className="flex items-center gap-1.5 text-[11px] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0">
+          <ChevronLeftIcon className="h-3 w-3" />
+        </button>
+        <StepIndicator />
+
+        <div className="h-3 w-px shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }} />
+
+        {/* Campaign context — inline, minimal */}
+        <button onClick={() => setStep(1)}
+          className="flex items-center gap-1.5 min-w-0 shrink group" title="Edit subject">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-700 shrink-0">Subj</span>
+          <span className="text-[11px] font-medium text-zinc-500 group-hover:text-emerald-400 transition-colors truncate max-w-[180px]">
+            {subject || '—'}
+          </span>
+        </button>
+
+        {audienceSize > 0 && <>
+          <span className="text-zinc-800 shrink-0">·</span>
+          <span className="text-[11px] text-zinc-600 shrink-0">{audienceSize.toLocaleString()} subs</span>
+        </>}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Tools — right-aligned */}
+        <Link href="/dashboard/templates"
+          className="flex items-center gap-1 text-[11px] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0">
+          <LayoutTemplateIcon className="h-3 w-3" /> Templates
+        </Link>
+        <Link href="/dashboard/templates/generate"
+          className="flex items-center gap-1 text-[11px] text-zinc-600 hover:text-zinc-300 transition-colors shrink-0">
+          <SparklesIcon className="h-3 w-3" /> AI
+        </Link>
+
+        <div className="h-3 w-px shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }} />
+
+        {/* Mode toggle */}
+        <div className="flex items-center rounded-lg overflow-hidden shrink-0"
+          style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}>
+          {(['visual', 'html'] as const).map(mode => (
+            <button key={mode} onClick={() => setEditorMode(mode)}
+              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium transition-all"
+              style={{ color: editorMode === mode ? '#E2E8F0' : '#4B5563', background: editorMode === mode ? 'rgba(255,255,255,0.08)' : 'transparent' }}>
+              {mode === 'visual' ? <EyeIcon className="h-3 w-3" /> : <CodeIcon className="h-3 w-3" />}
+              {mode === 'visual' ? 'Visual' : 'HTML'}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Zone 2: Writing workspace ── */}
+      {/* ── Workspace: editor left + preview right ── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
 
-        {/* Editor column ~60% */}
+        {/* Editor ~60% */}
         <div className="flex flex-col flex-[3] overflow-hidden min-w-0"
           style={{ borderRight: '1px solid rgba(255,255,255,0.06)' }}>
 
-          {/* Context strip — light bg matches writing surface */}
-          <div className="flex items-center gap-4 px-5 py-2 flex-shrink-0 flex-wrap"
-            style={{ background: '#F1F5F9', borderBottom: '1px solid #E2E8F0' }}>
-            <button onClick={() => setStep(1)} className="flex items-center gap-1.5 group" title="Edit subject">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Subject</span>
-              <span className="text-xs font-medium text-slate-600 group-hover:text-emerald-600 transition-colors truncate max-w-[220px]">
-                {subject || <span className="text-slate-300">No subject — click to add</span>}
-              </span>
-            </button>
-            {audienceSize > 0 && <>
-              <span className="text-slate-300">·</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Audience</span>
-                <span className="text-xs text-slate-500">{audienceSize.toLocaleString()} subscribers</span>
-              </div>
-            </>}
-            {fromEmail && <>
-              <span className="text-slate-300">·</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">From</span>
-                <span className="text-xs text-slate-500 truncate max-w-[160px]">{fromEmail}</span>
-              </div>
-            </>}
-          </div>
-
-          {/* Writing surface */}
+          {/* Writing surface — fills all space */}
           <div className="flex-1 overflow-hidden">
             {editorMode === 'visual' ? (
               <VisualEditor value={htmlBody} onChange={setHtmlBody} />
             ) : (
               <div className="flex flex-col h-full">
-                <div className="px-5 py-2 flex-shrink-0"
+                <div className="px-4 py-1.5 flex-shrink-0"
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: '#0F1929' }}>
-                  <span className="text-[10px] font-mono font-medium text-zinc-700">HTML Source</span>
+                  <span className="text-[10px] font-mono text-zinc-700">HTML</span>
                 </div>
                 <textarea value={htmlBody} onChange={e => setHtmlBody(e.target.value)}
                   spellCheck={false} className="flex-1 resize-none focus:outline-none"
-                  style={{ background: '#080E1A', padding: '20px 28px', fontFamily: 'ui-monospace,monospace', fontSize: 12, lineHeight: 1.8, color: '#6EE7B7' }}
+                  style={{ background: '#080E1A', padding: '16px 24px', fontFamily: 'ui-monospace,monospace', fontSize: 12, lineHeight: 1.8, color: '#6EE7B7' }}
                   placeholder="Enter HTML here…" />
               </div>
             )}
           </div>
 
-          {/* AI panel */}
+          {/* AI panel — collapsed by default */}
           <div className="flex-shrink-0">
             <AiPanel subject={subject} htmlBody={htmlBody} audienceSize={audienceSize}
               onApplySubject={s => { setSubject(s); setStep(1); setTimeout(() => setStep(2), 50); }} />
           </div>
 
-          {/* ── Zone 3: Bottom nav ── */}
-          <div className="flex items-center justify-between px-6 py-3 flex-shrink-0"
-            style={{ background: '#060C15', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          {/* Bottom nav */}
+          <div className="flex items-center justify-between px-5 py-2.5 flex-shrink-0"
+            style={{ background: '#0A0E1A', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <button onClick={() => setStep(1)}
-              className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-zinc-600 hover:text-zinc-200 transition-all active:scale-95"
+              className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-200 transition-all active:scale-95"
               style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
               <ChevronLeftIcon className="h-4 w-4" /> Back
             </button>
@@ -309,15 +307,15 @@ export function CampaignBuilder({
             </button>
             <button onClick={() => { if (!htmlBody.trim()) return; setStep(3); }}
               disabled={!htmlBody.trim()}
-              className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40 active:scale-95"
-              style={{ background: '#22C55E', boxShadow: '0 4px 16px rgba(34,197,94,0.35)' }}>
+              className="flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40 active:scale-95"
+              style={{ background: '#22C55E', boxShadow: '0 3px 12px rgba(34,197,94,0.35)' }}>
               Next: Review
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           </div>
         </div>
 
-        {/* Preview column ~40% */}
+        {/* Preview ~40% */}
         <div className="flex-[2] overflow-hidden flex flex-col min-w-0">
           <EmailPreview subject={subject} fromName={fromName} fromEmail={fromEmail}
             htmlBody={htmlBody} device={device} onDeviceChange={setDevice} />

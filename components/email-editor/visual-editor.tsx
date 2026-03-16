@@ -70,13 +70,13 @@ export function VisualEditor({ value, onChange }: Props) {
   return (
     <div className="flex flex-col h-full" style={{ background: '#F9FAFB' }}>
 
-      {/* ── Toolbar ── */}
+      {/* ── Toolbar — compact ── */}
       <div
-        className="flex items-center gap-0.5 px-4 py-2 flex-shrink-0"
+        className="flex items-center gap-0.5 px-3 py-1.5 flex-shrink-0"
         style={{
           background: '#FFFFFF',
           borderBottom: '1px solid #E5E7EB',
-          boxShadow: focused ? '0 1px 0 #22C55E' : '0 1px 0 transparent',
+          boxShadow: focused ? '0 1px 0 #22C55E' : 'none',
           transition: 'box-shadow 0.2s',
         }}
       >
@@ -133,7 +133,7 @@ export function VisualEditor({ value, onChange }: Props) {
       >
         {/* Constrained document surface */}
         <div
-          className="mx-auto my-8 rounded-xl overflow-hidden"
+          className="mx-auto my-4 rounded-xl overflow-hidden"
           style={{
             maxWidth: 600,
             background: '#FFFFFF',

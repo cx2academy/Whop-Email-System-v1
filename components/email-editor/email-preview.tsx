@@ -116,7 +116,7 @@ export function EmailPreview({ subject, fromName, fromEmail, htmlBody, device: d
       <div className="flex h-full flex-col" style={{ background: '#060C15' }}>
 
         {/* Panel chrome */}
-        <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
+        <div className="flex items-center justify-between px-4 py-2 flex-shrink-0"
           style={{ background: '#0D1525', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           {/* Traffic lights */}
           <div className="flex items-center gap-3">
