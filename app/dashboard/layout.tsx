@@ -4,6 +4,7 @@
 import { requireWorkspaceAccess } from "@/lib/auth/session";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/layout/dashboard-topbar";
+import { CommandPalette } from "@/components/ui/command-palette";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   await requireWorkspaceAccess();
@@ -16,6 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </main>
       </div>
+      <CommandPalette />
     </div>
   );
 }
