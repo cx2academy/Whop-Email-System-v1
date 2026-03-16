@@ -49,7 +49,7 @@ export function VisualEditor({ value, onChange }: Props) {
 
   const Btn = ({ onPress, title, children }: { onPress: () => void; title: string; children: React.ReactNode }) => (
     <button type="button" title={title} onMouseDown={(e) => { e.preventDefault(); onPress(); }}
-      className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
+      className="flex h-7 w-7 items-center justify-center rounded transition-colors" style={{ color: "#6B7280" }}>
       {children}
     </button>
   );
@@ -57,7 +57,7 @@ export function VisualEditor({ value, onChange }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 border-b border-border/60 px-3 py-2">
+      <div className="flex items-center gap-0.5 px-3 py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#111827" }}>
         <Btn onPress={() => exec('bold')} title="Bold"><BoldIcon className="h-3.5 w-3.5" /></Btn>
         <Btn onPress={() => exec('italic')} title="Italic"><ItalicIcon className="h-3.5 w-3.5" /></Btn>
         <Btn onPress={insertLink} title="Link"><LinkIcon className="h-3.5 w-3.5" /></Btn>
@@ -74,7 +74,7 @@ export function VisualEditor({ value, onChange }: Props) {
             More <ChevronDownIcon className="h-3 w-3" />
           </button>
           {showMore && (
-            <div className="absolute left-0 top-full z-30 mt-1 w-40 overflow-hidden rounded-lg border border-border bg-card shadow-lg py-1">
+            <div className="absolute left-0 top-full z-30 mt-1 w-40 overflow-hidden rounded-lg shadow-xl py-1" style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.1)" }}>
               {[
                 { label: 'Heading',     icon: <Heading2Icon className="h-3.5 w-3.5" />,    fn: () => exec('formatBlock', 'h2') },
                 { label: 'Underline',   icon: <UnderlineIcon className="h-3.5 w-3.5" />,   fn: () => exec('underline') },
@@ -84,7 +84,7 @@ export function VisualEditor({ value, onChange }: Props) {
               ].map(({ label, icon, fn }) => (
                 <button key={label} type="button"
                   onMouseDown={(e) => { e.preventDefault(); fn(); }}
-                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-xs text-foreground hover:bg-accent">
+                  className="flex w-full items-center gap-2.5 px-3 py-1.5 text-xs transition-colors" style={{ color: "#9CA3AF" }}>
                   <span className="text-muted-foreground">{icon}</span>{label}
                 </button>
               ))}
@@ -97,7 +97,7 @@ export function VisualEditor({ value, onChange }: Props) {
       <div ref={editorRef} contentEditable suppressContentEditableWarning
         onInput={sync} onBlur={sync} onClick={() => setShowMore(false)}
         data-placeholder="Start writing your email…"
-        className="flex-1 overflow-y-auto px-7 py-6 text-[15px] leading-7 text-foreground focus:outline-none min-h-[440px]"
+        className="flex-1 overflow-y-auto px-7 py-6 text-[15px] leading-7 focus:outline-none min-h-[440px]" style={{ color: "#E2E8F0", background: "#0D1625", caretColor: "#22C55E" }}
       />
 
       <style jsx>{`

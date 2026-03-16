@@ -294,65 +294,102 @@ export function CampaignBuilder({
 
       {/* ── Step 2: Editor + Preview ────────────────────────────────────── */}
       {step === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-0">
 
-          {/* Top bar — subject display + mode toggle + secondary links */}
-          <div className="flex items-center justify-between gap-4">
-            {/* Subject pill */}
-            <button onClick={() => setStep(1)}
-              className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors max-w-sm truncate">
-              <span className="text-muted-foreground text-xs">Subject:</span>
-              <span className="truncate font-medium">{subject || 'No subject'}</span>
-              <span className="text-xs text-primary shrink-0">Edit</span>
-            </button>
+          {/* Context bar — campaign info strip */}
+          <div
+            className="flex items-center justify-between gap-4 rounded-t-xl px-4 py-2.5 flex-wrap"
+            style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.07)', borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}
+          >
+            {/* Left — campaign context */}
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[11px] text-zinc-600 shrink-0">Subject</span>
+                <button onClick={() => setStep(1)}
+                  className="text-xs font-medium text-zinc-300 hover:text-emerald-400 transition-colors truncate max-w-[200px]">
+                  {subject || <span className="text-zinc-600">No subject</span>}
+                </button>
+              </div>
+              {audienceSize > 0 && (
+                <>
+                  <div className="h-3 w-px bg-zinc-800" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-zinc-600">Audience</span>
+                    <span className="text-xs font-medium text-zinc-300">{audienceSize.toLocaleString()} subscribers</span>
+                  </div>
+                </>
+              )}
+              {fromEmail && (
+                <>
+                  <div className="h-3 w-px bg-zinc-800" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-zinc-600">From</span>
+                    <span className="text-xs text-zinc-400 truncate max-w-[180px]">{fromEmail}</span>
+                  </div>
+                </>
+              )}
+            </div>
 
-            {/* Right controls */}
+            {/* Right — controls */}
             <div className="flex items-center gap-3 shrink-0">
-              {/* Secondary links — no borders, just text */}
-              <Link href={`/dashboard/templates`}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <Link href="/dashboard/templates"
+                className="flex items-center gap-1 text-[11px] text-zinc-600 hover:text-zinc-300 transition-colors">
                 <LayoutTemplateIcon className="h-3 w-3" /> Templates
               </Link>
               <Link href="/dashboard/templates/generate"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <SparklesIcon className="h-3 w-3" /> Generate
+                className="flex items-center gap-1 text-[11px] text-zinc-600 hover:text-zinc-300 transition-colors">
+                <SparklesIcon className="h-3 w-3" /> AI Generate
               </Link>
+              <div className="h-3 w-px bg-zinc-800" />
               {/* Mode toggle */}
-              <div className="flex items-center gap-0.5 rounded-lg border border-border bg-muted/50 p-0.5">
+              <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <button onClick={() => setEditorMode('visual')}
-                  className={cn('rounded px-2.5 py-1 text-xs font-medium transition-all',
-                    editorMode === 'visual' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                  className={cn('rounded px-2.5 py-1 text-[11px] font-medium transition-all',
+                    editorMode === 'visual' ? 'text-white' : 'text-zinc-600 hover:text-zinc-300')}
+                  style={editorMode === 'visual' ? { background: 'rgba(255,255,255,0.1)' } : {}}>
                   <EyeIcon className="inline h-3 w-3 mr-1" />Visual
                 </button>
                 <button onClick={() => setEditorMode('html')}
-                  className={cn('rounded px-2.5 py-1 text-xs font-medium transition-all',
-                    editorMode === 'html' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                  className={cn('rounded px-2.5 py-1 text-[11px] font-medium transition-all',
+                    editorMode === 'html' ? 'text-white' : 'text-zinc-600 hover:text-zinc-300')}
+                  style={editorMode === 'html' ? { background: 'rgba(255,255,255,0.1)' } : {}}>
                   <CodeIcon className="inline h-3 w-3 mr-1" />HTML
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Main workspace — editor 70% / preview 30% */}
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]" style={{ minHeight: 560 }}>
-
-            {/* Editor — clean white card, no heavy border */}
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style={{ minHeight: 540 }}>
-              {editorMode === 'visual' ? (
-                <VisualEditor value={htmlBody} onChange={setHtmlBody} />
-              ) : (
-                <div className="flex flex-col h-full">
-                  <div className="border-b border-border/60 px-4 py-2">
-                    <span className="text-xs text-muted-foreground font-mono">HTML</span>
+          {/* Main workspace */}
+          <div
+            className="grid grid-cols-1 lg:grid-cols-[1fr_380px]"
+            style={{ border: '1px solid rgba(255,255,255,0.07)', borderTop: 'none', borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: 'hidden', minHeight: 620 }}
+          >
+            {/* Editor panel */}
+            <div
+              className="flex flex-col"
+              style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: '#0D1625' }}
+            >
+              <div className="flex-1">
+                {editorMode === 'visual' ? (
+                  <VisualEditor value={htmlBody} onChange={setHtmlBody} />
+                ) : (
+                  <div className="flex flex-col h-full">
+                    <div className="px-4 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                      <span className="text-[11px] font-mono text-zinc-600">HTML Editor</span>
+                    </div>
+                    <textarea
+                      value={htmlBody}
+                      onChange={(e) => setHtmlBody(e.target.value)}
+                      spellCheck={false}
+                      className="flex-1 resize-none bg-transparent px-5 py-4 font-mono text-xs leading-relaxed text-zinc-300 focus:outline-none"
+                      style={{ minHeight: 540 }}
+                      placeholder="Enter HTML here…"
+                    />
                   </div>
-                  <textarea value={htmlBody} onChange={(e) => setHtmlBody(e.target.value)}
-                    spellCheck={false}
-                    className="flex-1 resize-none bg-background px-5 py-4 font-mono text-xs leading-relaxed text-foreground focus:outline-none"
-                    style={{ minHeight: 500 }}
-                    placeholder="Enter HTML here…" />
-                </div>
-              )}
-              {/* AI Panel — collapsible drawer at bottom of editor */}
+                )}
+              </div>
+
+              {/* AI Panel */}
               <AiPanel
                 subject={subject}
                 htmlBody={htmlBody}
@@ -361,21 +398,32 @@ export function CampaignBuilder({
               />
             </div>
 
-            {/* Preview — no border, no bg box, just the preview itself */}
-            <div style={{ minHeight: 540 }}>
-              <EmailPreview subject={subject} fromName={fromName} fromEmail={fromEmail} htmlBody={htmlBody} />
+            {/* Preview panel — fills full height */}
+            <div className="p-4 flex flex-col" style={{ background: '#0A0E1A', minHeight: 620 }}>
+              <EmailPreview
+                subject={subject}
+                fromName={fromName}
+                fromEmail={fromEmail}
+                htmlBody={htmlBody}
+              />
             </div>
           </div>
 
-          {!htmlBody.trim() && <p className="text-sm text-destructive">Email body is required</p>}
+          {!htmlBody.trim() && (
+            <p className="text-sm text-red-400 pt-2">Email body is required</p>
+          )}
 
-          {/* Bottom actions — one primary, one quiet secondary */}
-          <div className="flex items-center justify-between pt-1">
+          {/* Bottom nav — strong and clear */}
+          <div
+            className="flex items-center justify-between pt-5"
+          >
             <button onClick={() => setStep(1)}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+              style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
               <ChevronLeftIcon className="h-4 w-4" /> Back
             </button>
-            <div className="flex items-center gap-4">
+
+            <div className="flex items-center gap-3">
               <button
                 onClick={async () => {
                   if (!subject.trim() || !htmlBody.trim()) return;
@@ -385,14 +433,19 @@ export function CampaignBuilder({
                   if (r.success) alert('Template saved!');
                 }}
                 disabled={!htmlBody.trim() || !subject.trim()}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-200 transition-colors disabled:opacity-30"
+                style={{ border: '1px solid rgba(255,255,255,0.07)' }}
               >
                 Save as template
               </button>
-              <button onClick={() => { if (!htmlBody.trim()) return; setStep(3); }}
+              <button
+                onClick={() => { if (!htmlBody.trim()) return; setStep(3); }}
                 disabled={!htmlBody.trim()}
-                className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
-                Next: Review →
+                className="flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                style={{ background: '#22C55E', boxShadow: '0 2px 12px rgba(34,197,94,0.35)' }}
+              >
+                Next: Review
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </div>
           </div>
