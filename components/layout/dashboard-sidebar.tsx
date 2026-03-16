@@ -3,7 +3,8 @@
 /**
  * components/layout/dashboard-sidebar.tsx
  *
- * Redesigned sidebar — 7 top-level items, grouped sub-nav, active states.
+ * RevTray dark sidebar — matches the landing page mock dashboard aesthetic.
+ * Dark navy background, emerald active states, Bricolage Grotesque logo.
  */
 
 import Link from 'next/link';
@@ -19,27 +20,13 @@ import {
   ChevronRightIcon,
   DollarSignIcon,
   ShieldCheckIcon,
-  TagIcon,
   ListFilterIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// ---------------------------------------------------------------------------
-// Nav structure — 7 top-level items, some with children
-// ---------------------------------------------------------------------------
-
 const NAV = [
-  {
-    href: '/dashboard',
-    label: 'Dashboard',
-    icon: LayoutDashboardIcon,
-    exact: true,
-  },
-  {
-    href: '/dashboard/campaigns',
-    label: 'Campaigns',
-    icon: MailIcon,
-  },
+  { href: '/dashboard',              label: 'Dashboard',   icon: LayoutDashboardIcon, exact: true },
+  { href: '/dashboard/campaigns',    label: 'Campaigns',   icon: MailIcon },
   {
     href: '/dashboard/contacts',
     label: 'Contacts',
@@ -49,37 +36,20 @@ const NAV = [
       { href: '/dashboard/segments',  label: 'Segments',     icon: ListFilterIcon },
     ],
   },
-  {
-    href: '/dashboard/automation',
-    label: 'Automations',
-    icon: ZapIcon,
-  },
-  {
-    href: '/dashboard/templates',
-    label: 'Templates',
-    icon: LayoutTemplateIcon,
-  },
+  { href: '/dashboard/automation',   label: 'Automations', icon: ZapIcon },
+  { href: '/dashboard/templates',    label: 'Templates',   icon: LayoutTemplateIcon },
   {
     href: '/dashboard/analytics',
     label: 'Analytics',
     icon: BarChart2Icon,
     children: [
-      { href: '/dashboard/analytics',      label: 'Overview',      icon: BarChart2Icon },
-      { href: '/dashboard/revenue',         label: 'Revenue',       icon: DollarSignIcon },
-      { href: '/dashboard/deliverability',  label: 'Deliverability', icon: ShieldCheckIcon },
+      { href: '/dashboard/analytics',     label: 'Overview',       icon: BarChart2Icon },
+      { href: '/dashboard/revenue',        label: 'Revenue',        icon: DollarSignIcon },
+      { href: '/dashboard/deliverability', label: 'Deliverability', icon: ShieldCheckIcon },
     ],
   },
-  {
-    href: '/dashboard/settings',
-    label: 'Settings',
-    icon: SettingsIcon,
-    exact: true,
-  },
+  { href: '/dashboard/settings',     label: 'Settings',    icon: SettingsIcon, exact: true },
 ] as const;
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export function DashboardSidebar() {
   const pathname = usePathname();
@@ -90,14 +60,26 @@ export function DashboardSidebar() {
   }
 
   return (
-    <aside className="flex h-screen w-52 flex-col border-r border-border bg-card">
+    <aside
+      className="flex h-screen w-52 flex-col"
+      style={{ background: '#0D1625', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+    >
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-          <MailIcon className="h-3.5 w-3.5 text-primary-foreground" />
+      <div
+        className="flex h-14 items-center gap-2.5 px-4"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-white text-xs font-bold"
+          style={{ background: '#10B981', fontFamily: 'var(--font-display)' }}
+        >
+          R
         </div>
-        <span className="text-sm font-semibold tracking-tight text-foreground">
-          Email Engine
+        <span
+          className="text-base font-bold text-white tracking-tight"
+          style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}
+        >
+          RevTray
         </span>
       </div>
 
@@ -116,10 +98,30 @@ export function DashboardSidebar() {
                   href={item.href}
                   className={cn(
                     'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-100',
-                    open
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   )}
+                  style={
+                    open
+                      ? {
+                          background: 'rgba(16, 185, 129, 0.12)',
+                          color: '#4ADE80',
+                          borderRight: '2px solid #10B981',
+                        }
+                      : {
+                          color: 'rgba(255,255,255,0.45)',
+                        }
+                  }
+                  onMouseEnter={(e) => {
+                    if (!open) {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
+                      (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!open) {
+                      (e.currentTarget as HTMLElement).style.background = 'transparent';
+                      (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.45)';
+                    }
+                  }}
                 >
                   <Icon className="h-4 w-4 flex-shrink-0" />
                   <span className="flex-1">{item.label}</span>
@@ -135,7 +137,10 @@ export function DashboardSidebar() {
 
                 {/* Sub-nav */}
                 {'children' in item && item.children && open && (
-                  <ul className="mt-0.5 ml-3 space-y-0.5 border-l border-border pl-3">
+                  <ul
+                    className="mt-0.5 ml-3 space-y-0.5 pl-3"
+                    style={{ borderLeft: '1px solid rgba(255,255,255,0.08)' }}
+                  >
                     {item.children.map((child) => {
                       const ChildIcon = child.icon;
                       const childIsActive = isActive(child.href);
@@ -143,12 +148,20 @@ export function DashboardSidebar() {
                         <li key={child.href}>
                           <Link
                             href={child.href}
-                            className={cn(
-                              'flex items-center gap-2 rounded-md px-2 py-1 text-xs font-medium transition-all',
+                            className="flex items-center gap-2 rounded-md px-2 py-1 text-xs font-medium transition-all"
+                            style={
                               childIsActive
-                                ? 'text-primary'
-                                : 'text-muted-foreground hover:text-foreground'
-                            )}
+                                ? { color: '#4ADE80' }
+                                : { color: 'rgba(255,255,255,0.38)' }
+                            }
+                            onMouseEnter={(e) => {
+                              if (!childIsActive)
+                                (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.75)';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!childIsActive)
+                                (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.38)';
+                            }}
                           >
                             <ChildIcon className="h-3 w-3 flex-shrink-0" />
                             {child.label}
@@ -165,9 +178,12 @@ export function DashboardSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border px-3 py-3">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
-          Whop Email Engine
+      <div
+        className="px-4 py-3"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          RevTray
         </p>
       </div>
     </aside>

@@ -1,61 +1,44 @@
 /**
  * app/layout.tsx
- *
- * Root layout — wraps every page in the application.
- * Provides fonts, global styles, and the base HTML shell.
+ * Root layout — RevTray branding, Bricolage Grotesque + DM Sans fonts.
  */
 
-import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import type { Metadata } from 'next';
+import { Bricolage_Grotesque, DM_Sans } from 'next/font/google';
+import './globals.css';
 
-import "./globals.css";
-
-// ---------------------------------------------------------------------------
-// Fonts
-// ---------------------------------------------------------------------------
-
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
+const bricolage = Bricolage_Grotesque({
+  variable: '--font-display',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  axes: ['opsz'],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
+const dmSans = DM_Sans({
+  variable: '--font-sans',
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
 });
-
-// ---------------------------------------------------------------------------
-// Metadata
-// ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: {
-    default: "Whop Email Engine",
-    template: "%s | Whop Email Engine",
+    default: 'RevTray',
+    template: '%s | RevTray',
   },
   description:
-    "Multi-tenant email campaign platform for Whop creators. Sync members, build campaigns, and send at scale.",
-  keywords: ["whop", "email", "campaigns", "creators", "multi-tenant"],
-  authors: [{ name: "Whop Email Engine" }],
-  robots: {
-    index: false, // Pre-launch: keep off search engines
-    follow: false,
-  },
+    'Email marketing built for Whop creators. Sync your audience, send campaigns that convert, and see exactly how much revenue your emails generate.',
+  keywords: ['whop', 'email marketing', 'revenue attribution', 'creator email', 'revtray'],
+  authors: [{ name: 'RevTray' }],
+  robots: { index: false, follow: false },
 };
-
-// ---------------------------------------------------------------------------
-// Layout
-// ---------------------------------------------------------------------------
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased min-h-screen`}
+        className={`${bricolage.variable} ${dmSans.variable} font-sans antialiased min-h-screen`}
       >
         {children}
       </body>

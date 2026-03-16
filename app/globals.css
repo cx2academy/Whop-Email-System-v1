@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,72 +6,81 @@
 
 @layer base {
   :root {
-    --background:     0 0% 99%;
-    --foreground:     220 20% 10%;
+    /* ── RevTray light theme ─────────────────────────────── */
+    --background:     210 20% 98%;     /* #F8FAFC */
+    --foreground:     222 47% 11%;     /* #0F172A */
 
     --card:           0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover:        0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary:        220 90% 52%;
+    /* Primary = RevTray emerald */
+    --primary:        160 84% 39%;     /* #10B981 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary:      220 14% 96%;
-    --secondary-foreground: 220 20% 20%;
+    --secondary:      215 20% 95%;
+    --secondary-foreground: 222 30% 20%;
 
-    --muted:          220 14% 96%;
-    --muted-foreground: 220 10% 52%;
+    --muted:          215 20% 95%;
+    --muted-foreground: 215 14% 48%;   /* #475569 */
 
-    --accent:         220 14% 94%;
-    --accent-foreground: 220 20% 15%;
+    --accent:         215 20% 93%;
+    --accent-foreground: 222 30% 15%;
 
     --destructive:    0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border:         220 13% 91%;
-    --input:          220 13% 91%;
-    --ring:           220 90% 52%;
+    --border:         215 20% 88%;     /* #E2E8F0 */
+    --input:          215 20% 88%;
+    --ring:           160 84% 39%;
 
     --radius: 0.625rem;
 
-    /* Revenue green */
-    --revenue:        142 76% 36%;
-    --revenue-light:  142 76% 95%;
+    /* Revenue green (same as primary in RevTray) */
+    --revenue:        160 84% 39%;
+    --revenue-light:  160 84% 94%;
+
+    /* Sidebar — always dark regardless of light/dark mode */
+    --sidebar-bg:        222 47% 9%;   /* #0D1625 */
+    --sidebar-border:    222 40% 14%;
+    --sidebar-text:      215 20% 55%;
+    --sidebar-text-active: 142 76% 60%; /* bright emerald */
+    --sidebar-active-bg: 160 84% 39% / 0.12;
   }
 
   .dark {
-    --background:     222 20% 8%;
+    --background:     222 47% 8%;      /* #0A0F1E */
     --foreground:     210 20% 95%;
 
-    --card:           222 20% 10%;
+    --card:           222 40% 10%;     /* #0D1625 */
     --card-foreground: 210 20% 95%;
 
-    --popover:        222 20% 10%;
+    --popover:        222 40% 10%;
     --popover-foreground: 210 20% 95%;
 
-    --primary:        217 91% 60%;
+    --primary:        160 84% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary:      222 20% 14%;
+    --secondary:      222 30% 14%;
     --secondary-foreground: 210 20% 80%;
 
-    --muted:          222 20% 14%;
-    --muted-foreground: 215 15% 55%;
+    --muted:          222 30% 14%;
+    --muted-foreground: 215 15% 52%;
 
-    --accent:         222 20% 16%;
+    --accent:         222 30% 16%;
     --accent-foreground: 210 20% 90%;
 
     --destructive:    0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border:         222 20% 18%;
-    --input:          222 20% 18%;
-    --ring:           217 91% 60%;
+    --border:         222 30% 18%;
+    --input:          222 30% 18%;
+    --ring:           160 84% 45%;
 
-    --revenue:        142 70% 45%;
-    --revenue-light:  142 70% 12%;
+    --revenue:        160 84% 50%;
+    --revenue-light:  160 84% 12%;
   }
 }
 
@@ -79,29 +88,49 @@
   * { @apply border-border; }
 
   html {
-    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  /* Display headings use Bricolage Grotesque */
+  h1, h2, h3 {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    @apply tracking-tight;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+
+  h4, h5, h6 {
+    font-family: 'DM Sans', system-ui, sans-serif;
     @apply font-semibold tracking-tight;
-    letter-spacing: -0.02em;
   }
 
   code, kbd, pre {
-    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-family: 'DM Mono', ui-monospace, monospace;
   }
 }
 
 @layer utilities {
+  .font-display {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  }
+
   .text-revenue { color: hsl(var(--revenue)); }
   .bg-revenue-light { background-color: hsl(var(--revenue-light)); }
+
+  /* Emerald glow for primary buttons */
+  .shadow-emerald {
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  }
+  .shadow-emerald:hover {
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  }
 
   /* Skeleton shimmer */
   .skeleton {
@@ -119,12 +148,21 @@
     100% { transform: translateX(100%); }
   }
 
-  /* Tooltip base */
+  /* Tooltip */
   .tooltip-trigger { @apply relative cursor-default; }
   .tooltip-trigger:hover .tooltip-content { @apply opacity-100 visible; }
   .tooltip-content {
     @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1
            rounded text-xs bg-foreground text-background whitespace-nowrap
            opacity-0 invisible transition-opacity duration-150 z-50 pointer-events-none;
+  }
+
+  /* Pulse animation for live indicators */
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(1.4); }
+  }
+  .animate-pulse-dot {
+    animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }
