@@ -1,6 +1,6 @@
 /**
  * app/page.tsx
- * RevTray marketing landing page — dark theme.
+ * RevTray landing page — production build.
  */
 
 'use client';
@@ -10,512 +10,1180 @@ import Link from 'next/link';
 
 export default function HomePage() {
   useEffect(() => {
-    // Scroll reveal
-    const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('rt-visible'); }),
-      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
-    );
-    document.querySelectorAll('.rt-fade').forEach((el) => obs.observe(el));
 
-    // Bar animations
+    // Nav scroll
+    const nav = document.getElementById('nav');
+    let ticking = false;
+    const onScroll = () => {
+      if (!nav) return;
+      if (window.scrollY > 32) nav.classList.add('scrolled');
+      else nav.classList.remove('scrolled');
+      ticking = false;
+    };
+    const handleScroll = () => {
+      if (!ticking) { requestAnimationFrame(onScroll); ticking = true; }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Scroll reveal
+    const revealObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+    // Bar fill animation
     const barObs = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
+      entries.forEach(e => {
         if (e.isIntersecting) {
-          (e.target as HTMLElement).querySelectorAll<HTMLElement>('.rt-bar-fill').forEach((b) => {
-            setTimeout(() => { b.style.width = (b.dataset.width ?? '0') + '%'; }, 200);
+          e.target.querySelectorAll<HTMLElement>('.rcb-fill[data-w]').forEach((b: HTMLElement) => {
+            setTimeout(() => { b.style.width = (b.dataset.w ?? '0') + '%'; }, 180);
           });
           barObs.unobserve(e.target);
         }
       });
     }, { threshold: 0.3 });
-    const rw = document.querySelector('.rt-rev-widget');
-    if (rw) barObs.observe(rw);
+    const revCard = document.querySelector('.rev-card');
+    if (revCard) barObs.observe(revCard);
 
-    // Counter animation
-    function animCount(el: HTMLElement, end: number, pfx: string, dur: number) {
-      let v = 0;
-      const step = end / (dur / 16);
-      const tick = () => {
-        v = Math.min(v + step, end);
-        el.textContent = pfx + Math.round(v).toLocaleString();
-        if (v < end) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }
-
-    const hcEl = document.getElementById('rt-hc');
-    if (hcEl) {
-      const hcObs = new IntersectionObserver((e) => {
-        if (e[0].isIntersecting) { animCount(hcEl, 47823, '$', 1800); hcObs.disconnect(); }
-      }, { threshold: 0.5 });
-      hcObs.observe(hcEl);
-    }
-    const rcEl = document.getElementById('rt-rc');
-    if (rcEl) {
-      const rcObs = new IntersectionObserver((e) => {
-        if (e[0].isIntersecting) { animCount(rcEl, 49783, '$', 2000); rcObs.disconnect(); }
-      }, { threshold: 0.3 });
-      rcObs.observe(rcEl);
-    }
-
-    return () => { obs.disconnect(); barObs.disconnect(); };
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      revealObs.disconnect();
+      barObs.disconnect();
+    };
   }, []);
 
   return (
     <>
       <style>{`
-        /* ── RevTray Landing — scoped styles ── */
-        :root {
-          --rt-bg: #0A0E1A; --rt-card: #111827; --rt-dark: #060D18; --rt-darker: #0D1625;
-          --rt-green: #10B981; --rt-green-light: rgba(16,185,129,0.12); --rt-green-dark: #059669;
-          --rt-indigo: #6366F1; --rt-indigo-light: rgba(99,102,241,0.15);
-          --rt-text: #E2E8F0; --rt-mid: #9CA3AF; --rt-light: #4B5563;
-          --rt-border: #1F2937; --rt-r: 14px;
-        }
-        .rt-page { font-family:'DM Sans',system-ui,sans-serif; background:var(--rt-bg); color:var(--rt-text); line-height:1.6; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
-        .rt-page h1,.rt-page h2,.rt-page h3 { font-family:'Bricolage Grotesque',system-ui,sans-serif; letter-spacing:-0.03em; }
-        .rt-container { max-width:1120px; margin:0 auto; }
 
-        /* Nav */
-        .rt-nav { position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(10,14,26,0.88); backdrop-filter:blur(12px); border-bottom:1px solid var(--rt-border); padding:0 5%; height:60px; display:flex; align-items:center; justify-content:space-between; }
-        .rt-logo { display:flex; align-items:center; gap:8px; font-family:'Bricolage Grotesque',sans-serif; font-size:20px; font-weight:800; color:var(--rt-text); text-decoration:none; letter-spacing:-0.04em; }
-        .rt-logo-mark { width:28px; height:28px; background:var(--rt-green); border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; color:white; font-weight:800; }
-        .rt-nav-links { display:flex; align-items:center; gap:32px; list-style:none; }
-        .rt-nav-links a { font-size:14px; font-weight:500; color:var(--rt-mid); text-decoration:none; transition:color .15s; }
-        .rt-nav-links a:hover { color:var(--rt-text); }
-        .rt-nav-cta { background:var(--rt-green) !important; color:white !important; padding:8px 18px; border-radius:8px; font-size:14px; font-weight:600; text-decoration:none; transition:opacity .15s; }
-        .rt-nav-cta:hover { opacity:.88; }
+/* ─────────────────────────────────────────────────────────────
+   DESIGN TOKENS
+───────────────────────────────────────────────────────────── */
+:root {
+  --ink:        #09090B;
+  --ink-mid:    #52525B;
+  --ink-faint:  #71717A;
+  --ink-ghost:  #A1A1AA;
+  --surface:    #FAFAF9;
+  --white:      #ffffff;
+  --border:     #E4E4E7;
+  --border-light: #F4F4F5;
 
-        /* Animations */
-        .rt-fade { opacity:0; transform:translateY(24px); transition:opacity .6s,transform .6s; }
-        .rt-fade.rt-visible { opacity:1; transform:translateY(0); }
-        .rt-s1{transition-delay:.1s} .rt-s2{transition-delay:.2s} .rt-s3{transition-delay:.3s} .rt-s4{transition-delay:.4s} .rt-s5{transition-delay:.5s}
-        @keyframes rt-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.3)}}
-        .rt-pulse{animation:rt-pulse 2s infinite}
+  --green:      #16A34A;
+  --green-bright: #22C55E;
+  --green-glow: rgba(34,197,94,.28);
 
-        /* Sections */
-        .rt-section { padding:100px 5%; }
-        .rt-eyebrow { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--rt-green-dark); margin-bottom:16px; }
-        .rt-h2 { font-size:clamp(32px,4vw,52px); font-weight:800; color:var(--rt-text); max-width:640px; margin-bottom:20px; }
-        .rt-sub { font-size:17px; color:var(--rt-mid); max-width:520px; line-height:1.65; margin-bottom:48px; }
+  --dark:       #09090B;
+  --dark-2:     #0C1828;
+  --dark-3:     #090F1C;
+  --dark-4:     #0F1825;
 
-        /* Hero */
-        .rt-hero { padding:160px 5% 80px; text-align:center; position:relative; overflow:hidden; }
-        .rt-hero::before { content:''; position:absolute; top:-200px; left:50%; transform:translateX(-50%); width:900px; height:900px; background:radial-gradient(circle,rgba(16,185,129,.07) 0%,transparent 70%); pointer-events:none; }
-        .rt-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,.1); color:var(--rt-green); border:1px solid rgba(16,185,129,.25); border-radius:100px; padding:5px 14px; font-size:13px; font-weight:600; margin-bottom:28px; }
-        .rt-hero h1 { font-size:clamp(44px,7vw,80px); font-weight:800; max-width:900px; margin:0 auto 24px; }
-        .rt-hero h1 .rt-hl { color:var(--rt-green); }
-        .rt-hero-sub { font-size:clamp(16px,2vw,20px); color:var(--rt-mid); max-width:560px; margin:0 auto 44px; }
-        .rt-hero-actions { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
-        .rt-hero-note { font-size:13px; color:var(--rt-light); }
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
 
-        /* Buttons */
-        .rt-btn-primary { background:#0F172A; color:white; padding:14px 28px; border-radius:10px; font-size:15px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:8px; transition:transform .15s,box-shadow .15s; box-shadow:0 4px 14px rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.1); }
-        .rt-btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.5); }
-        .rt-btn-secondary { background:rgba(255,255,255,.06); color:var(--rt-text); padding:14px 28px; border-radius:10px; font-size:15px; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.1); transition:background .15s; }
-        .rt-btn-secondary:hover { background:rgba(255,255,255,.1); }
-        .rt-btn-green { background:var(--rt-green); color:white; padding:16px 36px; border-radius:10px; font-size:16px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(16,185,129,.35); transition:transform .15s,box-shadow .15s; }
-        .rt-btn-green:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(16,185,129,.5); }
-        .rt-btn-ghost { background:rgba(255,255,255,.08); color:rgba(255,255,255,.85); padding:16px 36px; border-radius:10px; font-size:16px; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.1); transition:background .15s; }
-        .rt-btn-ghost:hover { background:rgba(255,255,255,.12); }
+  --sp-1: 8px;   --sp-2: 16px;  --sp-3: 24px;
+  --sp-4: 32px;  --sp-5: 48px;  --sp-6: 64px;
+  --sp-7: 80px;  --sp-8: 96px;
 
-        /* Dashboard mock */
-        .rt-dash-wrap { padding:0 5% 80px; }
-        .rt-dash-outer { max-width:960px; margin:0 auto; position:relative; }
-        .rt-dash-glow { position:absolute; inset:-40px; background:radial-gradient(ellipse at center,rgba(16,185,129,.07) 0%,transparent 70%); pointer-events:none; }
-        .rt-dash-frame { background:var(--rt-dark); border-radius:16px; padding:1px; box-shadow:0 12px 48px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06); overflow:hidden; }
-        .rt-db-titlebar { background:#141D2E; padding:12px 16px; display:flex; align-items:center; gap:8px; border-bottom:1px solid rgba(255,255,255,.05); }
-        .rt-dot{width:11px;height:11px;border-radius:50%} .rt-dr{background:#FF5F57} .rt-dy{background:#FFBD2E} .rt-dg{background:#28CA41}
-        .rt-db-url { flex:1; text-align:center; font-size:12px; color:rgba(255,255,255,.25); }
-        .rt-db-inner { display:grid; grid-template-columns:200px 1fr; min-height:460px; }
-        .rt-db-sidebar { background:#0D1625; padding:20px 0; border-right:1px solid rgba(255,255,255,.05); }
-        .rt-db-logo { padding:4px 20px 20px; font-family:'Bricolage Grotesque',sans-serif; font-size:16px; font-weight:800; color:white; letter-spacing:-.03em; display:flex; align-items:center; gap:8px; }
-        .rt-db-logo-icon { width:22px; height:22px; background:var(--rt-green); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; color:white; font-weight:800; }
-        .rt-db-nav { padding:8px 20px; font-size:13px; color:rgba(255,255,255,.4); display:flex; align-items:center; gap:9px; }
-        .rt-db-nav.rt-active { background:rgba(16,185,129,.1); color:#4ADE80; border-right:2px solid var(--rt-green); }
-        .rt-db-main { background:#0F1929; padding:24px; overflow:hidden; }
-        .rt-db-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-        .rt-db-title { font-size:18px; font-weight:700; color:white; font-family:'Bricolage Grotesque',sans-serif; letter-spacing:-.02em; }
-        .rt-db-btn { background:var(--rt-green); color:white; padding:7px 16px; border-radius:7px; font-size:12px; font-weight:600; }
-        .rt-db-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
-        .rt-db-stat { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:14px 16px; }
-        .rt-db-lbl { font-size:11px; color:rgba(255,255,255,.35); font-weight:500; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
-        .rt-db-val { font-size:22px; font-weight:700; color:white; font-family:'Bricolage Grotesque',sans-serif; letter-spacing:-.03em; }
-        .rt-db-val.g { color:#4ADE80; }
-        .rt-db-delta { font-size:11px; color:#4ADE80; font-weight:500; margin-top:2px; }
-        .rt-db-th { display:grid; grid-template-columns:1fr 80px 70px 90px 80px; padding:8px 12px; font-size:11px; color:rgba(255,255,255,.25); font-weight:500; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid rgba(255,255,255,.05); }
-        .rt-db-row { display:grid; grid-template-columns:1fr 80px 70px 90px 80px; padding:12px; font-size:13px; color:rgba(255,255,255,.7); border-bottom:1px solid rgba(255,255,255,.04); align-items:center; transition:background .1s; }
-        .rt-db-row:hover { background:rgba(255,255,255,.03); }
-        .rt-cn { color:rgba(255,255,255,.88); font-weight:500; }
-        .rt-cs { font-size:11px; color:rgba(255,255,255,.28); margin-top:1px; }
-        .rt-b-sent { display:inline-block; background:rgba(99,102,241,.18); color:#A5B4FC; border-radius:100px; padding:2px 8px; font-size:11px; font-weight:600; }
-        .rt-b-draft { display:inline-block; background:rgba(255,255,255,.07); color:rgba(255,255,255,.35); border-radius:100px; padding:2px 8px; font-size:11px; }
-        .rt-rev-cell { color:#4ADE80; font-weight:700; font-family:'Bricolage Grotesque',sans-serif; letter-spacing:-.02em; }
+  --r-sm: 8px;  --r-md: 12px;  --r-lg: 16px;
+}
 
-        /* Stats bar */
-        .rt-stats-bar { padding:48px 5%; background:var(--rt-card); border-top:1px solid var(--rt-border); border-bottom:1px solid var(--rt-border); }
-        .rt-stats-grid { max-width:1000px; margin:0 auto; display:grid; grid-template-columns:repeat(4,1fr); gap:40px; text-align:center; }
-        .rt-sn { font-family:'Bricolage Grotesque',sans-serif; font-size:40px; font-weight:800; letter-spacing:-.04em; color:var(--rt-text); line-height:1; }
-        .rt-sn .g { color:var(--rt-green); }
-        .rt-sl { font-size:14px; color:var(--rt-mid); margin-top:6px; }
+/* ─────────────────────────────────────────────────────────────
+   RESET + BASE
+───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--surface);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.035em; line-height: 1.08; }
+img { display: block; max-width: 100%; }
 
-        /* Pain cards */
-        .rt-pain-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-        .rt-pain-card { background:var(--rt-card); border:1px solid var(--rt-border); border-radius:var(--rt-r); padding:28px; position:relative; overflow:hidden; }
-        .rt-pain-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#FF5F57,#FF8C6B); }
-        .rt-pain-icon { font-size:24px; margin-bottom:14px; display:block; }
-        .rt-pain-card h3 { font-size:16px; font-weight:700; color:var(--rt-text); margin-bottom:8px; letter-spacing:-.02em; }
-        .rt-pain-card p { font-size:14px; color:var(--rt-mid); line-height:1.6; }
+/* ─────────────────────────────────────────────────────────────
+   NAV
+───────────────────────────────────────────────────────────── */
+#nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 6%;
+  background: transparent;
+  transition: background 0.35s ease, border-color 0.35s ease,
+              box-shadow 0.35s ease, backdrop-filter 0.35s ease;
+  border-bottom: 1px solid transparent;
+}
+#nav.scrolled {
+  background: rgba(250,250,249,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: var(--border);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 9px;
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 800; letter-spacing: -0.04em;
+  text-decoration: none;
+  color: #fff;
+  transition: color 0.3s, opacity 0.15s;
+}
+.nav-logo:hover { opacity: 0.85; }
+#nav.scrolled .nav-logo { color: var(--ink); }
+/* nav-mark replaced by inline SVG logo */'
+/* On dark bg: SVG is visible as-is. On light nav: adjust opacity slightly */
+#nav.scrolled .nav-logo svg { opacity: 0.92; }
+.nav-links { display: flex; gap: 28px; list-style: none; }
+.nav-links a {
+  font-size: 13px; font-weight: 500; text-decoration: none;
+  transition: color 0.2s;
+}
+#nav:not(.scrolled) .nav-links a { color: rgba(255,255,255,.5); }
+#nav:not(.scrolled) .nav-links a:hover { color: #fff; }
+#nav.scrolled .nav-links a { color: var(--ink-faint); }
+#nav.scrolled .nav-links a:hover { color: var(--ink); }
+.nav-cta {
+  padding: 7px 17px; border-radius: 7px;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+  transition: all 0.2s;
+}
+#nav:not(.scrolled) .nav-cta { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.15); }
+#nav:not(.scrolled) .nav-cta:hover { background: rgba(255,255,255,.18); }
+#nav.scrolled .nav-cta { background: var(--ink); color: #fff; }
+#nav.scrolled .nav-cta:hover { background: #18181B; transform: translateY(-1px); }
 
-        /* Solution dark */
-        .rt-sol-section { background:var(--rt-darker); padding:100px 5%; position:relative; overflow:hidden; }
-        .rt-sol-section::before { content:''; position:absolute; bottom:-300px; right:-200px; width:700px; height:700px; background:radial-gradient(circle,rgba(16,185,129,.1) 0%,transparent 60%); pointer-events:none; }
-        .rt-sol-section .rt-eyebrow { color:var(--rt-green); }
-        .rt-sol-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1120px; margin:0 auto; }
-        .rt-sol-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:var(--rt-r); padding:32px; transition:border-color .2s,background .2s; }
-        .rt-sol-card:hover { background:rgba(255,255,255,.05); border-color:rgba(16,185,129,.25); }
-        .rt-sol-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:16px; }
-        .rt-ig{background:rgba(16,185,129,.12)} .rt-ii{background:rgba(99,102,241,.12)} .rt-ia{background:rgba(251,191,36,.12)} .rt-ir{background:rgba(251,113,133,.12)}
-        .rt-sol-card h3 { font-size:18px; font-weight:700; color:white; margin-bottom:8px; letter-spacing:-.02em; }
-        .rt-sol-card p { font-size:14px; color:rgba(255,255,255,.5); line-height:1.65; }
+/* ─────────────────────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────────────────────── */
+.hero {
+  background: var(--dark);
+  padding: 140px 6% 80px;
+  position: relative; overflow: visible;
+  display: flex; flex-direction: column; align-items: center;
+}
+/* Radial glow */
+.hero-glow {
+  position: absolute; top: -140px; left: 50%; transform: translateX(-50%);
+  width: 960px; height: 720px;
+  background: radial-gradient(ellipse 52% 44% at 50% 0%, rgba(34,197,94,.13) 0%, transparent 70%);
+  pointer-events: none;
+}
+/* Subtle grid */
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.016) 1px, transparent 1px);
+  background-size: 72px 72px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, black 0%, transparent 80%);
+}
+/* hero-ombre removed — external .ombre div handles transition */
 
-        /* Features */
-        .rt-feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-        .rt-feat-card { background:var(--rt-card); border:1px solid var(--rt-border); border-radius:var(--rt-r); padding:28px; transition:transform .2s,box-shadow .2s,border-color .2s; }
-        .rt-feat-card:hover { transform:translateY(-3px); box-shadow:0 8px 32px rgba(0,0,0,.4); border-color:#374151; }
-        .rt-feat-tag { display:inline-block; background:var(--rt-indigo-light); color:var(--rt-indigo); padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin-bottom:14px; }
-        .rt-feat-tag.g { background:rgba(16,185,129,.12); color:var(--rt-green); }
-        .rt-feat-card h3 { font-size:17px; font-weight:700; color:var(--rt-text); margin-bottom:8px; letter-spacing:-.02em; }
-        .rt-feat-card p { font-size:14px; color:var(--rt-mid); line-height:1.65; }
+/* Hero text block */
+.hero-body {
+  position: relative; z-index: 2;
+  text-align: center; max-width: 860px; margin: 0 auto;
+}
+/* Entrance animations */
+.hero-body > * { opacity: 0; transform: translateY(18px); animation: fade-up 0.65s ease forwards; }
+.hero-tag   { animation-delay: 0.05s; }
+.hero-h1    { animation-delay: 0.18s; }
+.hero-sub   { animation-delay: 0.30s; }
+.hero-ctas  { animation-delay: 0.40s; }
+.hero-note  { animation-delay: 0.48s; }
+@keyframes fade-up {
+  to { opacity: 1; transform: translateY(0); }
+}
 
-        /* Revenue section */
-        .rt-rev-section { background:var(--rt-darker); border-top:1px solid var(--rt-border); border-bottom:1px solid var(--rt-border); padding:100px 5%; }
-        .rt-rev-inner { max-width:1120px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; }
-        .rt-rev-steps { margin-top:40px; display:flex; flex-direction:column; gap:24px; }
-        .rt-rev-step { display:flex; gap:16px; align-items:flex-start; }
-        .rt-step-num { width:32px; height:32px; border-radius:50%; background:rgba(16,185,129,.12); color:var(--rt-green); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex-shrink:0; font-family:'Bricolage Grotesque',sans-serif; }
-        .rt-step-text h4 { font-size:15px; font-weight:700; color:var(--rt-text); margin-bottom:4px; letter-spacing:-.02em; }
-        .rt-step-text p { font-size:14px; color:var(--rt-mid); line-height:1.6; }
-        .rt-rev-widget { background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:28px; position:relative; overflow:hidden; }
-        .rt-rev-widget::before { content:''; position:absolute; top:-100px; right:-100px; width:300px; height:300px; background:radial-gradient(circle,rgba(16,185,129,.1) 0%,transparent 60%); }
-        .rt-rw-lbl { font-size:12px; color:rgba(255,255,255,.35); font-weight:500; text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
-        .rt-rw-num { font-family:'Bricolage Grotesque',sans-serif; font-size:52px; font-weight:800; color:#4ADE80; letter-spacing:-.04em; line-height:1; margin-bottom:4px; }
-        .rt-rw-delta { font-size:13px; color:rgba(255,255,255,.4); margin-bottom:28px; }
-        .rt-rw-delta span { color:#4ADE80; font-weight:600; }
-        .rt-rw-bar-hdr { font-size:11px; color:rgba(255,255,255,.3); font-weight:500; margin-bottom:8px; display:flex; justify-content:space-between; }
-        .rt-rw-bars { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
-        .rt-rw-bar-row { display:flex; align-items:center; gap:10px; }
-        .rt-rw-bar-name { font-size:12px; color:rgba(255,255,255,.5); width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex-shrink:0; }
-        .rt-rw-bar-track { flex:1; height:6px; background:rgba(255,255,255,.05); border-radius:100px; overflow:hidden; }
-        .rt-rw-bar-fill { height:100%; background:linear-gradient(90deg,var(--rt-green),#34D399); border-radius:100px; transition:width 1.5s cubic-bezier(.16,1,.3,1); }
-        .rt-rw-bar-val { font-size:12px; color:#4ADE80; font-weight:700; width:48px; text-align:right; font-family:'Bricolage Grotesque',sans-serif; flex-shrink:0; }
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 600; color: rgba(255,255,255,.48);
+  margin-bottom: 28px; letter-spacing: 0.01em;
+}
+.tag-dot {
+  width: 5px; height: 5px; background: var(--green-bright);
+  border-radius: 50%;
+  animation: tag-pulse 2.2s cubic-bezier(.4,0,.6,1) infinite;
+}
+@keyframes tag-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(1.6)} }
 
-        /* AI section */
-        .rt-ai-inner { max-width:1120px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:center; }
-        .rt-ai-visual { background:var(--rt-card); border:1px solid var(--rt-border); border-radius:var(--rt-r); overflow:hidden; }
-        .rt-ai-hdr { background:var(--rt-indigo); padding:14px 20px; display:flex; align-items:center; gap:8px; }
-        .rt-ai-hdr-title { font-size:13px; font-weight:700; color:white; }
-        .rt-ai-badge { background:rgba(255,255,255,.2); color:white; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700; text-transform:uppercase; }
-        .rt-ai-body { padding:20px; }
-        .rt-ai-brief { background:rgba(255,255,255,.03); border:1px solid var(--rt-border); border-radius:10px; padding:14px 16px; margin-bottom:16px; }
-        .rt-ai-brief-lbl { font-size:11px; font-weight:600; color:var(--rt-light); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
-        .rt-ai-brief-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-        .rt-ai-brief-item { font-size:13px; color:var(--rt-mid); }
-        .rt-ai-brief-item span { color:var(--rt-light); }
-        .rt-ai-seq-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--rt-light); margin-bottom:10px; }
-        .rt-ai-seq { display:flex; flex-direction:column; gap:8px; }
-        .rt-ai-card { background:rgba(255,255,255,.03); border:1px solid var(--rt-border); border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:12px; transition:border-color .15s; }
-        .rt-ai-card:hover { border-color:var(--rt-indigo); }
-        .rt-ai-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; font-family:'Bricolage Grotesque',sans-serif; }
-        .n1{background:var(--rt-indigo-light);color:var(--rt-indigo)} .n2{background:rgba(59,130,246,.15);color:#60A5FA} .n3{background:rgba(16,185,129,.12);color:var(--rt-green)} .n4{background:rgba(251,191,36,.12);color:#FBBF24} .n5{background:rgba(239,68,68,.12);color:#F87171}
-        .rt-ai-info { flex:1; }
-        .rt-ai-type { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--rt-light); margin-bottom:2px; }
-        .rt-ai-subj { font-size:13px; font-weight:600; color:var(--rt-text); letter-spacing:-.01em; }
-        .rt-ai-write-btn { background:var(--rt-indigo); color:white; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:700; white-space:nowrap; }
+.hero-h1 {
+  font-size: clamp(48px, 6vw, 84px);
+  font-weight: 800; color: #fff; line-height: 1.01;
+  letter-spacing: -0.05em; margin-bottom: 22px;
+}
+.hero-h1 mark {
+  background: none; padding: 0;
+  color: var(--green-bright);
+  position: relative; display: inline-block;
+}
+.hero-h1 mark::after {
+  content: '';
+  display: block; position: absolute;
+  bottom: -3px; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--green-bright) 0%, transparent 80%);
+  border-radius: 2px; opacity: 0.5;
+}
+.hero-sub {
+  font-size: clamp(16px, 1.7vw, 18px); color: rgba(255,255,255,.44);
+  line-height: 1.7; max-width: 480px; margin: 0 auto 36px;
+}
+.hero-ctas {
+  display: flex; justify-content: center; gap: 10px;
+  margin-bottom: 18px; flex-wrap: wrap;
+}
+.btn-primary {
+  background: var(--green-bright); color: #fff;
+  padding: 13px 26px; border-radius: 10px;
+  font-size: 14px; font-weight: 700; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 7px;
+  box-shadow: 0 4px 18px var(--green-glow);
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  border: 1px solid transparent;
+}
+.btn-primary:hover {
+  background: var(--green); transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(34,197,94,.38);
+}
+.btn-primary:active { transform: scale(0.98); }
+.btn-ghost {
+  background: transparent; color: rgba(255,255,255,.58);
+  padding: 13px 22px; border-radius: 10px;
+  font-size: 14px; font-weight: 500; text-decoration: none;
+  border: 1px solid rgba(255,255,255,.12);
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+}
+.btn-ghost:hover { border-color: rgba(255,255,255,.3); color: #fff; transform: translateY(-1px); }
+.hero-note { font-size: 12px; color: rgba(255,255,255,.22); margin-bottom: var(--sp-5); }
 
-        /* Testimonials */
-        .rt-testi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-        .rt-testi-card { background:var(--rt-card); border:1px solid var(--rt-border); border-radius:var(--rt-r); padding:28px; display:flex; flex-direction:column; }
-        .rt-stars { color:#F59E0B; font-size:14px; letter-spacing:1px; margin-bottom:14px; }
-        .rt-quote { font-size:15px; color:#D1D5DB; line-height:1.65; flex:1; margin-bottom:20px; font-style:italic; }
-        .rt-quote strong { font-style:normal; color:var(--rt-green); }
-        .rt-testi-author { display:flex; align-items:center; gap:12px; padding-top:16px; border-top:1px solid var(--rt-border); }
-        .rt-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex-shrink:0; font-family:'Bricolage Grotesque',sans-serif; }
-        .av-g{background:rgba(16,185,129,.15);color:var(--rt-green)} .av-i{background:var(--rt-indigo-light);color:var(--rt-indigo)} .av-a{background:rgba(251,191,36,.15);color:#FBBF24}
-        .rt-author-name { font-size:14px; font-weight:700; color:var(--rt-text); letter-spacing:-.01em; }
-        .rt-author-title { font-size:12px; color:var(--rt-light); }
+/* ─────────────────────────────────────────────────────────────
+   DASHBOARD MOCK
+───────────────────────────────────────────────────────────── */
+.hero-db {
+  width: 100%; max-width: 980px; margin: 0 auto;
+  position: relative; z-index: 2;
+  opacity: 0; transform: translateY(24px);
+  animation: fade-up 0.8s ease 0.55s forwards;
+}
+/* Subtle glow behind dashboard */
+.hero-db::before {
+  content: '';
+  position: absolute; bottom: -40px; left: 10%; right: 10%; height: 80px;
+  background: radial-gradient(ellipse, rgba(34,197,94,.18) 0%, transparent 70%);
+  filter: blur(16px); pointer-events: none; z-index: -1;
+}
+.db-chrome {
+  background: var(--dark-4); border-radius: 13px 13px 0 0;
+  padding: 11px 16px;
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid rgba(255,255,255,.08); border-bottom: none;
+}
+.dc-dots { display: flex; gap: 6px; }
+.dc-dot { width: 10px; height: 10px; border-radius: 50%; }
+.dc-url {
+  flex: 1; background: rgba(255,255,255,.04);
+  height: 22px; border-radius: 5px; margin: 0 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: rgba(255,255,255,.2);
+  border: 1px solid rgba(255,255,255,.05);
+}
+.db-shell {
+  border: 1px solid rgba(255,255,255,.07); border-top: none;
+  border-radius: 0 0 13px 13px; overflow: hidden;
+  display: grid; grid-template-columns: 172px 1fr;
+  min-height: 420px;
+}
 
-        /* CTA */
-        .rt-cta-section { background:var(--rt-darker); padding:100px 5%; text-align:center; position:relative; overflow:hidden; }
-        .rt-cta-section::before { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:800px; height:400px; background:radial-gradient(ellipse,rgba(16,185,129,.12) 0%,transparent 60%); pointer-events:none; }
-        .rt-cta-section h2 { font-size:clamp(36px,5vw,64px); font-weight:800; color:white; max-width:740px; margin:0 auto 20px; letter-spacing:-.04em; }
-        .rt-cta-section p { font-size:18px; color:rgba(255,255,255,.5); max-width:480px; margin:0 auto 44px; }
-        .rt-cta-acts { display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; }
-        .rt-cta-note { margin-top:20px; font-size:13px; color:rgba(255,255,255,.25); }
+/* Sidebar */
+.db-side {
+  background: var(--dark-3);
+  border-right: 1px solid rgba(255,255,255,.05);
+  display: flex; flex-direction: column;
+}
+.dbs-logo {
+  padding: 13px 14px 14px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+/* dbs-mark replaced by inline SVG */
+.dbs-name {
+  font-family: var(--font-display); font-size: 13px;
+  font-weight: 800; color: #fff; letter-spacing: -0.03em;
+}
+.dbs-items { padding: 8px 0; flex: 1; }
+.dbs-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 14px; font-size: 11.5px;
+  color: rgba(255,255,255,.32);
+  cursor: pointer; transition: all 0.12s;
+  position: relative; user-select: none;
+}
+.dbs-item svg { width: 13px; height: 13px; flex-shrink: 0; }
+.dbs-item:hover { color: rgba(255,255,255,.62); background: rgba(255,255,255,.03); }
+.dbs-item.active {
+  color: #4ADE80; background: rgba(34,197,94,.08); font-weight: 500;
+}
+.dbs-item.active::after {
+  content: ''; position: absolute; right: 0; top: 5px; bottom: 5px;
+  width: 2px; background: var(--green-bright); border-radius: 1px 0 0 1px;
+  box-shadow: -3px 0 10px rgba(34,197,94,.3);
+}
 
-        /* Footer */
-        footer.rt-footer { background:#060D18; padding:60px 5% 40px; border-top:1px solid rgba(255,255,255,.04); }
-        .rt-footer-top { max-width:1120px; margin:0 auto; display:grid; grid-template-columns:240px 1fr 1fr 1fr; gap:60px; margin-bottom:48px; }
-        .rt-footer-brand p { font-size:14px; color:rgba(255,255,255,.35); margin-top:12px; line-height:1.65; }
-        .rt-footer-col h4 { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.25); margin-bottom:16px; }
-        .rt-footer-col a { display:block; font-size:14px; color:rgba(255,255,255,.4); text-decoration:none; margin-bottom:10px; transition:color .15s; }
-        .rt-footer-col a:hover { color:rgba(255,255,255,.8); }
-        .rt-footer-bot { max-width:1120px; margin:0 auto; border-top:1px solid rgba(255,255,255,.04); padding-top:24px; display:flex; justify-content:space-between; align-items:center; font-size:13px; color:rgba(255,255,255,.2); }
-        .rt-fdot { color:var(--rt-green); }
+/* Main panel */
+.db-main {
+  background: var(--dark-2);
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.dbm-top {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.dbm-title {
+  font-family: var(--font-display); font-size: 15px;
+  font-weight: 700; color: #fff; letter-spacing: -0.025em;
+}
+.dbm-btn {
+  background: var(--green-bright); color: #fff;
+  padding: 6px 13px; border-radius: 7px;
+  font-size: 10px; font-weight: 600;
+  cursor: pointer; border: none;
+  font-family: var(--font-body);
+  display: flex; align-items: center; gap: 4px;
+  transition: background 0.12s;
+}
+.dbm-btn:hover { background: var(--green); }
 
-        /* Responsive */
-        @media(max-width:900px){
-          .rt-stats-grid{grid-template-columns:repeat(2,1fr)}
-          .rt-pain-grid,.rt-sol-grid,.rt-feat-grid,.rt-testi-grid{grid-template-columns:1fr}
-          .rt-rev-inner,.rt-ai-inner{grid-template-columns:1fr;gap:40px}
-          .rt-db-inner{grid-template-columns:1fr}
-          .rt-db-sidebar{display:none}
-          .rt-footer-top{grid-template-columns:1fr 1fr}
-          .rt-nav-links{display:none}
-        }
-        @media(max-width:560px){
-          .rt-stats-grid,.rt-footer-top{grid-template-columns:1fr}
-          .rt-db-stats{grid-template-columns:1fr 1fr}
-        }
+/* KPIs */
+.dbm-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
+.kpi {
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px; padding: 10px 12px;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: default;
+}
+.kpi:hover { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.048); }
+.kpi-lbl {
+  font-size: 9px; color: rgba(255,255,255,.28);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px;
+}
+.kpi-val {
+  font-family: var(--font-display); font-size: 21px;
+  font-weight: 700; color: #fff; letter-spacing: -0.03em; line-height: 1;
+}
+.kpi-val.green { color: #4ADE80; }
+.kpi-delta { font-size: 9px; color: #4ADE80; margin-top: 3px; }
+.kpi-delta.muted { color: rgba(255,255,255,.2); }
+
+/* Table */
+.dbm-tbl {
+  background: rgba(0,0,0,.16); border-radius: 8px;
+  overflow: hidden; border: 1px solid rgba(255,255,255,.05);
+}
+.tbl-cols { grid-template-columns: 1fr 62px 60px 74px 56px; }
+.tbl-head {
+  display: grid; padding: 7px 12px;
+  font-size: 9px; color: rgba(255,255,255,.2);
+  font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.tbl-row {
+  display: grid; padding: 9px 12px;
+  font-size: 10px; color: rgba(255,255,255,.58);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  align-items: center; cursor: default;
+  transition: background 0.1s;
+}
+.tbl-row:last-child { border-bottom: none; }
+.tbl-row:hover { background: rgba(255,255,255,.027); }
+.tr-name { color: rgba(255,255,255,.88); font-weight: 500; font-size: 11px; }
+.tr-sub  { font-size: 9px; color: rgba(255,255,255,.27); margin-top: 1px; }
+.tr-rev  { color: #4ADE80; font-weight: 700; font-family: var(--font-display); font-size: 11px; letter-spacing: -0.02em; }
+.tr-rate-high { color: #4ADE80; font-weight: 500; }
+.tr-rate-mid  { color: rgba(255,255,255,.55); }
+.tr-muted     { color: rgba(255,255,255,.18); }
+.badge-sent {
+  background: rgba(99,102,241,.16); color: #A5B4FC;
+  border-radius: 100px; padding: 2px 8px;
+  font-size: 9px; font-weight: 600; display: inline-block;
+}
+.badge-draft {
+  background: rgba(255,255,255,.06); color: rgba(255,255,255,.32);
+  border-radius: 100px; padding: 2px 8px;
+  font-size: 9px; display: inline-block;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   OMBRE + STATS
+───────────────────────────────────────────────────────────── */
+.ombre { height: 120px; background: linear-gradient(to bottom, var(--dark) 0%, var(--surface) 100%); margin-top: -1px; position: relative; z-index: 1; }
+
+.stats {
+  background: var(--surface); padding: 48px 6%;
+  border-bottom: 1px solid var(--border);
+}
+.stats-row {
+  max-width: 900px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.stat { flex: 1; text-align: center; padding: 8px 0; }
+.stat-n {
+  font-family: var(--font-display); font-size: 38px; font-weight: 800;
+  letter-spacing: -0.04em; color: var(--ink); line-height: 1;
+}
+.stat-n em { font-style: normal; color: var(--green); }
+.stat-lbl { font-size: 13px; color: var(--ink-faint); margin-top: 5px; line-height: 1.4; }
+.stat-ctx { font-size: 11px; color: var(--ink-ghost); margin-top: 3px; }
+.stat-div { width: 1px; height: 40px; background: var(--border); flex-shrink: 0; }
+
+/* ─────────────────────────────────────────────────────────────
+   FEATURES GRID
+───────────────────────────────────────────────────────────── */
+.features { background: var(--white); padding: var(--sp-8) 6%; }
+.feat-max { max-width: 1040px; margin: 0 auto; }
+.feat-intro {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--sp-7); margin-bottom: var(--sp-6); align-items: end;
+}
+.feat-intro h2 {
+  font-size: clamp(28px, 3vw, 44px); font-weight: 800;
+  color: var(--ink); letter-spacing: -0.04em;
+}
+.feat-intro p { font-size: 16px; color: var(--ink-mid); line-height: 1.7; }
+.feat-grid {
+  display: grid; grid-template-columns: repeat(2,1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.fg-cell {
+  background: var(--white); padding: 32px;
+  transition: background 0.15s;
+  cursor: default;
+}
+.fg-cell:hover { background: var(--surface); }
+.fg-num {
+  font-family: var(--font-display); font-size: 11px;
+  font-weight: 700; color: var(--ink-ghost);
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 8px;
+}
+.fg-num::after { content: ''; flex: 1; height: 1px; background: var(--border-light); }
+.fg-cell h3 {
+  font-family: var(--font-display); font-size: 18px;
+  font-weight: 700; color: var(--ink);
+  letter-spacing: -0.025em; margin-bottom: 10px;
+}
+.fg-cell p { font-size: 14px; color: var(--ink-mid); line-height: 1.65; }
+
+/* ─────────────────────────────────────────────────────────────
+   DARK FEATURE SECTIONS
+───────────────────────────────────────────────────────────── */
+.dark-feat {
+  background: var(--dark); padding: var(--sp-7) 6%;
+  position: relative; overflow: hidden;
+}
+.dark-feat + .dark-feat { border-top: 1px solid rgba(255,255,255,.06); padding-top: 64px; }
+.df-inner {
+  max-width: 1040px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: var(--sp-7); align-items: center;
+}
+.df-inner.rev { /* normal order */ }
+.df-inner.ai  { /* text on right, card on left */ }
+/* For AI section: swap column order */
+.df-inner.ai .df-text  { order: 2; }
+.df-inner.ai .df-visual { order: 1; }
+
+.df-eyebrow {
+  font-size: 11px; font-weight: 700; color: var(--green-bright);
+  text-transform: uppercase; letter-spacing: .12em; margin-bottom: 14px;
+}
+.df-h {
+  font-size: clamp(26px, 3vw, 42px); font-weight: 800;
+  color: #fff; letter-spacing: -0.035em; line-height: 1.08; margin-bottom: 14px;
+}
+.df-p { font-size: 15px; color: rgba(255,255,255,.44); line-height: 1.7; margin-bottom: 28px; }
+.df-points { display: flex; flex-direction: column; gap: 12px; }
+.df-point { display: flex; align-items: flex-start; gap: 10px; }
+.df-dot {
+  width: 6px; height: 6px; background: var(--green-bright);
+  border-radius: 50%; margin-top: 6px; flex-shrink: 0;
+}
+.df-point span { font-size: 14px; color: rgba(255,255,255,.52); line-height: 1.55; }
+
+/* Revenue card */
+.rev-card {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--r-lg); padding: 26px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s;
+}
+.rev-card:hover { border-color: rgba(34,197,94,.22); }
+.rev-card-glow {
+  position: absolute; top: -60px; right: -60px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(34,197,94,.11) 0%, transparent 65%);
+  pointer-events: none;
+}
+.rc-lbl { font-size: 11px; color: rgba(255,255,255,.28); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+.rc-num {
+  font-family: var(--font-display); font-size: 52px;
+  font-weight: 800; color: #22C55E; letter-spacing: -0.04em;
+  line-height: 1; margin-bottom: 4px;
+}
+.rc-delta { font-size: 12px; color: rgba(255,255,255,.32); margin-bottom: 24px; }
+.rc-delta em { font-style: normal; color: #4ADE80; }
+.rc-bars-lbl {
+  font-size: 9px; color: rgba(255,255,255,.22);
+  font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+  display: flex; justify-content: space-between; margin-bottom: 8px;
+}
+.rc-bars { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+.rcb { display: flex; align-items: center; gap: 8px; }
+.rcb-name { font-size: 10px; color: rgba(255,255,255,.42); width: 112px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rcb-track { flex: 1; height: 4px; background: rgba(255,255,255,.06); border-radius: 100px; overflow: hidden; }
+.rcb-fill { height: 100%; background: linear-gradient(90deg, #22C55E, #4ADE80); border-radius: 100px; transition: width 1.4s cubic-bezier(.16,1,.3,1); }
+.rcb-val { font-size: 10px; color: #4ADE80; font-weight: 700; width: 36px; text-align: right; flex-shrink: 0; font-family: var(--font-display); }
+.rc-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 1px solid rgba(255,255,255,.06); padding-top: 12px;
+}
+.rc-footer-l { font-size: 10px; color: rgba(255,255,255,.26); }
+.live-badge {
+  background: rgba(34,197,94,.1); color: #4ADE80;
+  padding: 3px 10px; border-radius: 100px;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; gap: 5px;
+}
+.live-dot {
+  width: 5px; height: 5px; background: #22C55E; border-radius: 50%;
+  animation: tag-pulse 2s ease infinite;
+}
+
+/* AI card */
+.ai-card {
+  background: rgba(99,102,241,.07);
+  border: 1px solid rgba(99,102,241,.16);
+  border-radius: var(--r-md); padding: 16px;
+}
+.ai-card-head {
+  font-size: 11px; font-weight: 700; color: #A5B4FC;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.ai-card-head svg { width: 11px; height: 11px; }
+.ai-row {
+  background: rgba(255,255,255,.04); border-radius: 7px;
+  padding: 9px 11px;
+  display: flex; align-items: center; gap: 9px;
+  margin-bottom: 6px; transition: background 0.12s; cursor: default;
+}
+.ai-row:last-child { margin-bottom: 0; }
+.ai-row:hover { background: rgba(255,255,255,.07); }
+.ai-n {
+  width: 20px; height: 20px; border-radius: 50%;
+  font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ai-text { font-size: 11px; color: rgba(255,255,255,.7); line-height: 1.4; flex: 1; }
+.ai-act {
+  font-size: 9px; font-weight: 700;
+  padding: 3px 8px; border-radius: 5px;
+  cursor: pointer; flex-shrink: 0;
+  transition: opacity 0.12s;
+}
+.ai-act:hover { opacity: 0.75; }
+
+/* ─────────────────────────────────────────────────────────────
+   TESTIMONIALS
+───────────────────────────────────────────────────────────── */
+.testi {
+  background: var(--surface); padding: var(--sp-8) 6%;
+  border-top: 1px solid var(--border);
+}
+.testi-inner { max-width: 740px; margin: 0 auto; text-align: center; }
+.testi-stars { color: #F59E0B; font-size: 13px; letter-spacing: 3px; margin-bottom: 20px; }
+.testi-quote {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.4vw, 29px); font-weight: 700;
+  color: var(--ink); line-height: 1.42; letter-spacing: -0.025em;
+  margin-bottom: 22px;
+}
+.testi-quote em { font-style: normal; color: var(--green); }
+.testi-author {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; margin-bottom: var(--sp-5);
+}
+.testi-av {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #F0FDF4; border: 1px solid #BBF7D0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--green);
+  flex-shrink: 0;
+}
+.testi-name { font-size: 14px; font-weight: 600; color: var(--ink); text-align: left; }
+.testi-role { font-size: 12px; color: var(--ink-faint); text-align: left; margin-top: 1px; }
+.testi-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tm {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 22px;
+  text-align: left; transition: border-color 0.15s, transform 0.15s;
+}
+.tm:hover { border-color: #BBF7D0; transform: translateY(-2px); }
+.tm-stars { color: #F59E0B; font-size: 11px; letter-spacing: 2px; margin-bottom: 10px; }
+.tm-q { font-size: 14px; color: var(--ink-mid); line-height: 1.65; }
+.tm-q strong { color: var(--green); font-weight: 600; }
+.tm-author { font-size: 12px; color: var(--ink-ghost); margin-top: 12px; }
+
+/* ─────────────────────────────────────────────────────────────
+   CTA
+───────────────────────────────────────────────────────────── */
+.cta-section {
+  background: var(--dark); padding: var(--sp-8) 6%;
+  text-align: center; position: relative; overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse 50% 65% at 50% 0%, rgba(34,197,94,.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cta-label {
+  font-size: 11px; font-weight: 700; color: rgba(255,255,255,.28);
+  text-transform: uppercase; letter-spacing: .12em;
+  margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.cta-label::before, .cta-label::after {
+  content: ''; width: 28px; height: 1px; background: rgba(255,255,255,.1);
+}
+.cta-h {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4.5vw, 62px); font-weight: 800;
+  color: #fff; letter-spacing: -0.045em;
+  max-width: 680px; margin: 0 auto 18px; line-height: 1.06;
+}
+.cta-h em { font-style: normal; color: var(--green-bright); }
+.cta-sub {
+  font-size: 17px; color: rgba(255,255,255,.4);
+  max-width: 400px; margin: 0 auto 32px; line-height: 1.6;
+}
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--green-bright); color: #fff;
+  padding: 15px 32px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; text-decoration: none;
+  box-shadow: 0 4px 20px rgba(34,197,94,.3);
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.btn-cta:hover {
+  background: var(--green); transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(34,197,94,.4);
+}
+.btn-cta:active { transform: scale(0.98); }
+.cta-foot { margin-top: 14px; font-size: 12px; color: rgba(255,255,255,.2); }
+
+/* ─────────────────────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────────────────────── */
+footer {
+  background: #060A10;
+  border-top: 1px solid rgba(255,255,255,.05);
+  padding: 52px 6% 28px;
+}
+.footer-grid {
+  max-width: 1040px; margin: 0 auto;
+  display: grid; grid-template-columns: 210px 1fr 1fr 1fr;
+  gap: 48px; margin-bottom: 36px;
+}
+.footer-brand-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-display); font-size: 16px;
+  font-weight: 800; color: #fff; letter-spacing: -0.04em;
+  margin-bottom: 10px;
+}
+/* footer-brand-mark replaced by inline SVG */
+.footer-brand p { font-size: 13px; color: rgba(255,255,255,.3); line-height: 1.65; max-width: 185px; }
+.footer-col h4 {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .09em; color: rgba(255,255,255,.2); margin-bottom: 12px;
+}
+.footer-col a {
+  display: block; font-size: 13px; color: rgba(255,255,255,.38);
+  text-decoration: none; margin-bottom: 9px;
+  transition: color 0.15s;
+}
+.footer-col a:hover { color: rgba(255,255,255,.78); }
+.footer-bot {
+  max-width: 1040px; margin: 0 auto;
+  padding-top: 20px; border-top: 1px solid rgba(255,255,255,.05);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: rgba(255,255,255,.2);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SCROLL REVEAL
+───────────────────────────────────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(22px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.in { opacity: 1; transform: translateY(0); }
+.reveal-d1 { transition-delay: 0.08s; }
+.reveal-d2 { transition-delay: 0.16s; }
+.reveal-d3 { transition-delay: 0.24s; }
+
+/* ─────────────────────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────────────────────── */
+@media (max-width: 960px) {
+  .feat-intro { grid-template-columns: 1fr; gap: 20px; margin-bottom: 40px; }
+  .df-inner { grid-template-columns: 1fr; gap: 40px; }
+  .df-inner.ai .df-text  { order: unset; }
+  .df-inner.ai .df-visual { order: unset; }
+  .testi-mini { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .db-shell { grid-template-columns: 1fr; }
+  .db-side { display: none; }
+}
+@media (max-width: 700px) {
+  .feat-grid { grid-template-columns: 1fr; }
+  .stats-row { flex-wrap: wrap; }
+  .stat-div { display: none; }
+  .stat { min-width: 45%; border-top: 1px solid var(--border); padding-top: 16px; }
+  .nav-links { display: none; }
+  .footer-grid { grid-template-columns: 1fr; }
+  .footer-bot { flex-direction: column; gap: 6px; text-align: center; }
+}
+
       `}</style>
 
-      <div className="rt-page">
-        {/* NAV */}
-        <nav className="rt-nav">
-          <a href="/" className="rt-logo"><div className="rt-logo-mark">R</div>RevTray</a>
-          <ul className="rt-nav-links">
-            <li><a href="#features">Features</a></li>
-            <li><a href="#revenue">Revenue</a></li>
-            <li><a href="#ai">AI Tools</a></li>
-            <li><Link href="/auth/login" className="rt-nav-cta">Start Free →</Link></li>
-          </ul>
-        </nav>
+<nav id="nav">
+  <Link href="/" className="nav-logo">
+    <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
+        <defs>
+          <linearGradient id="rt-ring-g" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#A3E635"/>
+            <stop offset="100%" stopColor="#16A34A"/>
+          </linearGradient>
+          <linearGradient id="rt-plane-g" x1="30" y1="10" x2="85" y2="75" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#D9F99D"/>
+            <stop offset="60%" stopColor="#22C55E"/>
+            <stop offset="100%" stopColor="#15803D"/>
+          </linearGradient>
+        </defs>
+        {/* Orbital ring — thick, open at upper-right, with swoosh tail */}
+        <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="url(#rt-ring-g)" strokeWidth="6" fill="none" strokeLinecap="round"/>
+        {/* Paper airplane — pointing upper-right */}
+        <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="url(#rt-plane-g)"/>
+        {/* Fold crease */}
+        <path d="M44 58 L85 15" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    RevTray
+  </Link>
+  <ul className="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#revenue">Revenue</a></li>
+    <li><a href="#ai">AI tools</a></li>
+  </ul>
+  <Link href="/auth/login" className="nav-cta">Start free →</Link>
+</nav>
 
-        {/* HERO */}
-        <section className="rt-hero">
-          <div className="rt-badge"><div className="rt-pulse" style={{width:7,height:7,background:'#10B981',borderRadius:'50%'}} />Built for Whop Creators</div>
-          <h1>Know exactly which<br/>emails make you <span className="rt-hl">money</span>.</h1>
-          <p className="rt-hero-sub">RevTray is the only email platform that connects your campaigns directly to Whop revenue — so you know which emails convert and which ones waste your time.</p>
-          <div className="rt-hero-actions">
-            <Link href="/auth/login" className="rt-btn-primary">
-              Start for free
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </Link>
-            <a href="#revenue" className="rt-btn-secondary">See how it works</a>
-          </div>
-          <p className="rt-hero-note">Trusted by 400+ Whop creators · Free to start · No credit card required</p>
-        </section>
 
-        {/* MOCK DASHBOARD */}
-        <div className="rt-dash-wrap">
-          <div className="rt-dash-outer rt-fade">
-            <div className="rt-dash-glow" />
-            <div className="rt-dash-frame">
-              <div className="rt-db-titlebar">
-                <div className="rt-dot rt-dr"/><div className="rt-dot rt-dy"/><div className="rt-dot rt-dg"/>
-                <div className="rt-db-url">app.revtray.com/dashboard</div>
-              </div>
-              <div className="rt-db-inner">
-                <div className="rt-db-sidebar">
-                  <div className="rt-db-logo"><div className="rt-db-logo-icon">R</div>RevTray</div>
-                  <div className="rt-db-nav">Dashboard</div>
-                  <div className="rt-db-nav rt-active">Campaigns</div>
-                  <div className="rt-db-nav">Contacts</div>
-                  <div className="rt-db-nav">Revenue</div>
-                  <div className="rt-db-nav">Automations</div>
-                </div>
-                <div className="rt-db-main">
-                  <div className="rt-db-head"><div className="rt-db-title">Campaigns</div><div className="rt-db-btn">+ New Campaign</div></div>
-                  <div className="rt-db-stats">
-                    <div className="rt-db-stat"><div className="rt-db-lbl">Revenue attributed</div><div className="rt-db-val g" id="rt-hc">$0</div><div className="rt-db-delta">↑ $3,240 this week</div></div>
-                    <div className="rt-db-stat"><div className="rt-db-lbl">Total sent</div><div className="rt-db-val">48,291</div><div className="rt-db-delta" style={{color:'rgba(255,255,255,.25)'}}>5 campaigns</div></div>
-                    <div className="rt-db-stat"><div className="rt-db-lbl">Avg open rate</div><div className="rt-db-val">34.2%</div><div className="rt-db-delta">↑ 4.1% vs last</div></div>
-                  </div>
-                  <div className="rt-db-th"><div>Campaign</div><div>Status</div><div>Opens</div><div>Revenue</div><div>Per email</div></div>
-                  <div className="rt-db-row"><div><div className="rt-cn">Real Estate Masterclass Launch</div><div className="rt-cs">Sent Dec 12 · 12,430 recipients</div></div><div><span className="rt-b-sent">Sent</span></div><div>38.4%</div><div className="rt-rev-cell">$18,240</div><div style={{color:'rgba(255,255,255,.3)',fontSize:12}}>$1.47</div></div>
-                  <div className="rt-db-row"><div><div className="rt-cn">5-day deal closing sequence</div><div className="rt-cs">Sent Dec 8 · 10,891 recipients</div></div><div><span className="rt-b-sent">Sent</span></div><div>42.1%</div><div className="rt-rev-cell">$11,700</div><div style={{color:'rgba(255,255,255,.3)',fontSize:12}}>$1.07</div></div>
-                  <div className="rt-db-row"><div><div className="rt-cn">Flash sale — 48hrs only</div><div className="rt-cs">Sent Dec 4 · 8,200 recipients</div></div><div><span className="rt-b-sent">Sent</span></div><div>29.8%</div><div className="rt-rev-cell">$9,340</div><div style={{color:'rgba(255,255,255,.3)',fontSize:12}}>$1.14</div></div>
-                  <div className="rt-db-row"><div><div className="rt-cn">January launch — case study</div><div className="rt-cs">Draft · Ready to send</div></div><div><span className="rt-b-draft">Draft</span></div><div style={{color:'rgba(255,255,255,.2)'}}>—</div><div style={{color:'rgba(255,255,255,.2)'}}>—</div><div style={{color:'rgba(255,255,255,.2)',fontSize:12}}>—</div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+<section className="hero">
+  <div className="hero-glow"></div>
+  <div className="hero-grid"></div>
 
-        {/* STATS BAR */}
-        <div className="rt-stats-bar">
-          <div className="rt-stats-grid rt-container">
-            <div className="rt-fade"><div className="rt-sn"><span className="g">$2.4M</span></div><div className="rt-sl">Revenue attributed to date</div></div>
-            <div className="rt-fade rt-s1"><div className="rt-sn">400+</div><div className="rt-sl">Whop creators using RevTray</div></div>
-            <div className="rt-fade rt-s2"><div className="rt-sn">34%</div><div className="rt-sl">Average email open rate</div></div>
-            <div className="rt-fade rt-s3"><div className="rt-sn"><span className="g">5x</span></div><div className="rt-sl">ROI vs traditional email tools</div></div>
-          </div>
-        </div>
+  <div className="hero-body">
+    <div className="hero-tag">
+      <div className="tag-dot"></div>
+      Built for Whop creators
+    </div>
+    <h1 className="hero-h1">Know which emails<br/>make you <mark>money</mark>.</h1>
+    <p className="hero-sub">The only email platform that connects your campaigns directly to Whop revenue — so you know what converts and what doesn't.</p>
+    <div className="hero-ctas">
+      <Link href="/auth/login" className="btn-primary">
+        Create free account
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h8M8 4l3 3-3 3"/></svg>
+      </Link>
+      <a href="#features" className="btn-ghost">See how it works</a>
+    </div>
+    <p className="hero-note">Free to start · No credit card · Connects to Whop in 2 minutes</p>
+  </div>
 
-        {/* PROBLEM */}
-        <section className="rt-section" id="features" style={{background:'#0A0E1A'}}>
-          <div className="rt-container">
-            <div className="rt-fade"><div className="rt-eyebrow">The Problem</div><h2 className="rt-h2">You're sending emails into the dark.</h2><p className="rt-sub">Every other email tool shows you open rates and click rates. But none of them can tell you what actually matters — how much money your emails made.</p></div>
-            <div className="rt-pain-grid">
-              <div className="rt-pain-card rt-fade rt-s1"><span className="rt-pain-icon">📊</span><h3>Open rates don't pay bills</h3><p>A 40% open rate sounds great, but if those opens aren't converting to sales, it's a vanity metric. You need to see revenue, not reads.</p></div>
-              <div className="rt-pain-card rt-fade rt-s2"><span className="rt-pain-icon">🔌</span><h3>Your tools don't talk to Whop</h3><p>Mailchimp and ConvertKit have no idea your audience is on Whop. You're manually exporting CSVs, losing data, and breaking your workflow every week.</p></div>
-              <div className="rt-pain-card rt-fade rt-s3"><span className="rt-pain-icon">🎲</span><h3>Guessing what to send next</h3><p>Without knowing which content generates sales, you're guessing every time. You could be sending the wrong emails to the wrong people and never know it.</p></div>
-            </div>
-          </div>
-        </section>
-
-        {/* SOLUTION */}
-        <section className="rt-sol-section">
-          <div className="rt-container">
-            <div className="rt-fade"><div className="rt-eyebrow">The Solution</div><h2 className="rt-h2" style={{color:'white'}}>Email marketing connected to your Whop business.</h2><p className="rt-sub" style={{color:'rgba(255,255,255,.55)'}}>RevTray syncs your Whop audience automatically and tracks every dollar your emails generate — so you can send with confidence.</p></div>
-            <div className="rt-sol-grid">
-              <div className="rt-sol-card rt-fade rt-s1"><div className="rt-sol-icon rt-ig">💰</div><h3>Revenue attribution</h3><p>See exactly how much money each campaign generated. When a subscriber buys after clicking your email, that sale is attributed to your campaign automatically.</p></div>
-              <div className="rt-sol-card rt-fade rt-s2"><div className="rt-sol-icon rt-ii">✦</div><h3>AI campaign builder</h3><p>Describe your product and goal once. The AI generates a complete 5-email launch sequence using the Story → Value → Proof → Offer → Urgency framework.</p></div>
-              <div className="rt-sol-card rt-fade rt-s3"><div className="rt-sol-icon rt-ia">⚡</div><h3>Whop native sync</h3><p>Connect once and your entire Whop member list syncs automatically. New members, cancellations — all handled without any CSV exports.</p></div>
-              <div className="rt-sol-card rt-fade rt-s4"><div className="rt-sol-icon rt-ir">📬</div><h3>Smart segmentation</h3><p>Target buyers vs. free members, people who opened last 30 days, high-value subscribers — then send campaigns that are actually relevant to each group.</p></div>
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section className="rt-section" id="revenue" style={{background:'#0A0E1A'}}>
-          <div className="rt-container">
-            <div className="rt-fade" style={{maxWidth:600,marginBottom:56}}><div className="rt-eyebrow">Features</div><h2 className="rt-h2">Everything you need to grow revenue through email.</h2></div>
-            <div className="rt-feat-grid">
-              <div className="rt-feat-card rt-fade rt-s1"><div className="rt-feat-tag g">Core</div><h3>Campaign builder</h3><p>Visual editor or HTML. Live inbox preview with mobile/desktop toggle shows you exactly what subscribers will see before you send.</p></div>
-              <div className="rt-feat-card rt-fade rt-s2"><div className="rt-feat-tag g">Core</div><h3>A/B subject testing</h3><p>Test two subject lines on a 50/50 split. See which version drives more opens and revenue — not just clicks.</p></div>
-              <div className="rt-feat-card rt-fade rt-s3"><div className="rt-feat-tag">AI</div><h3>Subject line optimizer</h3><p>Paste your subject line. The AI scores it 1-10, explains what's weak, and gives you 3 better alternatives with conversion reasoning.</p></div>
-              <div className="rt-feat-card rt-fade rt-s4"><div className="rt-feat-tag">AI</div><h3>Copy reviewer</h3><p>AI reads your email paragraph by paragraph and shows Before/After rewrites focused on benefits, not features, and stronger CTAs.</p></div>
-              <div className="rt-feat-card rt-fade rt-s5"><div className="rt-feat-tag g">Core</div><h3>Automation sequences</h3><p>Welcome new members automatically. Build multi-step sequences triggered by joins, purchases, or custom events.</p></div>
-              <div className="rt-feat-card rt-fade rt-s1"><div className="rt-feat-tag">Power</div><h3>Deliverability tools</h3><p>Spam score analysis, domain authentication checker, and sending warmup schedules so your emails actually reach the inbox.</p></div>
-            </div>
-          </div>
-        </section>
-
-        {/* REVENUE */}
-        <section className="rt-rev-section">
-          <div className="rt-rev-inner">
-            <div className="rt-fade">
-              <div className="rt-eyebrow">Revenue Attribution</div>
-              <h2 className="rt-h2">See which emails make money. Stop guessing.</h2>
-              <p className="rt-sub">RevTray connects to your Whop store via webhook. Every time a subscriber makes a purchase within 7 days of clicking your email, the revenue is attributed to that campaign.</p>
-              <div className="rt-rev-steps">
-                <div className="rt-rev-step"><div className="rt-step-num">1</div><div className="rt-step-text"><h4>Subscriber clicks your email link</h4><p>Every link in your campaigns is automatically tracked with a unique identifier per subscriber.</p></div></div>
-                <div className="rt-rev-step"><div className="rt-step-num">2</div><div className="rt-step-text"><h4>They purchase on Whop within 7 days</h4><p>Whop fires a webhook to RevTray with the purchase details including amount and email address.</p></div></div>
-                <div className="rt-rev-step"><div className="rt-step-num">3</div><div className="rt-step-text"><h4>Revenue is attributed automatically</h4><p>RevTray matches the purchase to the last email clicked and adds it to your campaign revenue total instantly.</p></div></div>
-              </div>
-            </div>
-            <div className="rt-rev-widget rt-fade rt-s2 rt-rev-widget">
-              <div className="rt-rw-lbl">Total revenue from email</div>
-              <div className="rt-rw-num" id="rt-rc">$0</div>
-              <div className="rt-rw-delta">this month · <span>↑ 28% vs last month</span></div>
-              <div className="rt-rw-bar-hdr"><span>Top campaigns by revenue</span><span>Revenue</span></div>
-              <div className="rt-rw-bars">
-                {[['Masterclass launch email','92','$18.2k'],['5-day deal sequence','64','$11.7k'],['Flash sale — 48hrs','51','$9.3k'],['New member welcome','38','$7.1k'],['Community upsell','19','$3.5k']].map(([name,w,val]) => (
-                  <div className="rt-rw-bar-row" key={name}>
-                    <div className="rt-rw-bar-name">{name}</div>
-                    <div className="rt-rw-bar-track"><div className="rt-rw-bar-fill" data-width={w} style={{width:0}} /></div>
-                    <div className="rt-rw-bar-val">{val}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{borderTop:'1px solid rgba(255,255,255,.06)',paddingTop:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <div style={{fontSize:12,color:'rgba(255,255,255,.3)'}}>Last purchase: 4 minutes ago</div>
-                <div style={{background:'rgba(16,185,129,.12)',color:'#4ADE80',padding:'4px 12px',borderRadius:100,fontSize:12,fontWeight:700}}>Live</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* AI SECTION */}
-        <section className="rt-section" id="ai" style={{background:'#0D1625'}}>
-          <div className="rt-ai-inner">
-            <div className="rt-ai-visual rt-fade">
-              <div className="rt-ai-hdr">
-                <span style={{color:'white',fontSize:14}}>✦</span>
-                <div className="rt-ai-hdr-title">AI Sequence Builder</div>
-                <div className="rt-ai-badge">Beta</div>
-              </div>
-              <div className="rt-ai-body">
-                <div className="rt-ai-brief">
-                  <div className="rt-ai-brief-lbl">Campaign brief</div>
-                  <div className="rt-ai-brief-grid">
-                    <div className="rt-ai-brief-item"><span>Product:</span> Real estate course</div>
-                    <div className="rt-ai-brief-item"><span>Audience:</span> Beginner investors</div>
-                    <div className="rt-ai-brief-item"><span>Goal:</span> Sell the course</div>
-                    <div className="rt-ai-brief-item"><span>Tone:</span> Casual</div>
-                  </div>
-                </div>
-                <div className="rt-ai-seq-lbl">Generated sequence · Story → Value → Proof → Offer → Urgency</div>
-                <div className="rt-ai-seq">
-                  {[['n1','Story / Hook','My first wholesale deal made $12k with $0 down'],['n2','Value lesson','The 3-step system beginners use to find their first deal'],['n3','Social proof','How Marcus closed his first deal in 31 days'],['n4','Offer','Doors open: Real Estate Wholesaling Masterclass'],['n5','Urgency','Last chance — enrollment closes tonight at midnight']].map(([cls,type,subj],i) => (
-                    <div className="rt-ai-card" key={i}>
-                      <div className={`rt-ai-num ${cls}`}>{i+1}</div>
-                      <div className="rt-ai-info"><div className="rt-ai-type">{type}</div><div className="rt-ai-subj">{subj}</div></div>
-                      <div className="rt-ai-write-btn">Write ✦</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="rt-fade rt-s2">
-              <div className="rt-eyebrow">AI Tools</div>
-              <h2 className="rt-h2">A strategist, not just a text generator.</h2>
-              <p className="rt-sub">RevTray's AI is trained on proven email marketing frameworks — it generates campaigns that follow real launch strategies, not generic content.</p>
-              <div style={{display:'flex',flexDirection:'column',gap:20,marginTop:36}}>
-                {[['✦','rgba(16,185,129,.12)','One-click full drafts','Click "Write" on any email in your sequence — the AI generates a complete draft using your campaign brief. No blank pages.'],['📈','rgba(99,102,241,.15)','Engagement predictor','Before you send, the AI estimates your open rate, click rate, and conversion range vs. industry benchmarks — plus one quick fix to improve it.'],['🎯','rgba(251,191,36,.12)','Proven launch frameworks','Story → Value → Proof → Offer → Urgency. Every sequence follows frameworks that have generated millions for creators.']].map(([icon,bg,title,desc]) => (
-                  <div key={title as string} style={{display:'flex',gap:14,alignItems:'flex-start'}}>
-                    <div style={{width:36,height:36,borderRadius:9,background:bg as string,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:16}}>{icon}</div>
-                    <div><div style={{fontSize:15,fontWeight:700,color:' #E2E8F0',marginBottom:4,letterSpacing:'-.02em'}}>{title as string}</div><div style={{fontSize:14,color:'#9CA3AF',lineHeight:1.6}}>{desc as string}</div></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* TESTIMONIALS */}
-        <section className="rt-section" style={{background:'#0A0E1A',borderTop:'1px solid #1F2937'}}>
-          <div className="rt-container">
-            <div className="rt-fade" style={{textAlign:'center',marginBottom:56}}><div className="rt-eyebrow" style={{textAlign:'center'}}>From Creators</div><h2 className="rt-h2" style={{margin:'0 auto',textAlign:'center',maxWidth:600}}>What RevTray creators are saying</h2></div>
-            <div className="rt-testi-grid">
-              <div className="rt-testi-card rt-fade rt-s1"><div className="rt-stars">★★★★★</div><p className="rt-quote">"I sent one campaign and could immediately see <strong>$4,200 attributed to that email</strong>. I've never had that visibility before."</p><div className="rt-testi-author"><div className="rt-avatar av-g">JM</div><div><div className="rt-author-name">Jordan M.</div><div className="rt-author-title">Real estate educator · 3,200 members</div></div></div></div>
-              <div className="rt-testi-card rt-fade rt-s2"><div className="rt-stars">★★★★★</div><p className="rt-quote">"The AI sequence builder is insane. I described my course in 3 sentences and got a <strong>complete 5-email launch plan</strong> with subject lines that sounded like me."</p><div className="rt-testi-author"><div className="rt-avatar av-i">TC</div><div><div className="rt-author-name">Taylor C.</div><div className="rt-author-title">Fitness coach · 1,800 members</div></div></div></div>
-              <div className="rt-testi-card rt-fade rt-s3"><div className="rt-stars">★★★★★</div><p className="rt-quote">"Finally an email tool that syncs with Whop automatically. My whole audience was ready to email <strong>in under 5 minutes</strong>."</p><div className="rt-testi-author"><div className="rt-avatar av-a">RB</div><div><div className="rt-author-name">Ryan B.</div><div className="rt-author-title">Stock trader · 5,100 members</div></div></div></div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="rt-cta-section">
-          <div className="rt-container">
-            <h2 className="rt-fade">Start knowing which<br/>emails make you money.</h2>
-            <p className="rt-fade rt-s1">Connect your Whop store, import your audience, and send your first revenue-attributed campaign — free.</p>
-            <div className="rt-cta-acts rt-fade rt-s2">
-              <Link href="/auth/login" className="rt-btn-green">Create free account <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></Link>
-              <a href="#features" className="rt-btn-ghost">Learn more</a>
-            </div>
-            <p className="rt-cta-note rt-fade rt-s3">Free to start · Connects to Whop in minutes · No credit card required</p>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className="rt-footer">
-          <div className="rt-footer-top">
-            <div className="rt-footer-brand">
-              <div className="rt-logo"><div className="rt-logo-mark">R</div>RevTray</div>
-              <p>Email marketing built for Whop creators. Send smarter. Earn more.</p>
-            </div>
-            <div className="rt-footer-col"><h4>Product</h4><a href="#">Campaigns</a><a href="#">AI Tools</a><a href="#">Revenue Analytics</a><a href="#">Automations</a></div>
-            <div className="rt-footer-col"><h4>Resources</h4><a href="#">Documentation</a><a href="#">API Reference</a><a href="#">Templates</a><a href="#">Blog</a></div>
-            <div className="rt-footer-col"><h4>Company</h4><a href="#">About</a><a href="#">Pricing</a><a href="#">Privacy Policy</a><a href="#">Terms of Service</a></div>
-          </div>
-          <div className="rt-footer-bot">
-            <div>© 2025 RevTray. All rights reserved.</div>
-            <div style={{display:'flex',alignItems:'center',gap:6}}>Built for Whop creators <span className="rt-fdot">•</span> Revenue-first email marketing</div>
-          </div>
-        </footer>
+  
+  <div className="hero-db">
+    <div className="db-chrome">
+      <div className="dc-dots">
+        <div className="dc-dot" style={{background:"#FF5F57"}}></div>
+        <div className="dc-dot" style={{background:"#FFBD2E"}}></div>
+        <div className="dc-dot" style={{background:"#28CA41"}}></div>
       </div>
+      <div className="dc-url">app.revtray.com/dashboard/campaigns</div>
+    </div>
+    <div className="db-shell">
+      
+      <div className="db-side">
+        <div className="dbs-logo">
+          <svg width="20" height="20" viewBox="0 0 100 100" fill="none" style={{flexShrink:0}}>
+              <defs>
+                <linearGradient id="rt-ring-sb" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#A3E635"/><stop offset="100%" stopColor="#16A34A"/>
+                </linearGradient>
+                <linearGradient id="rt-plane-sb" x1="30" y1="10" x2="85" y2="75" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#D9F99D"/><stop offset="60%" stopColor="#22C55E"/><stop offset="100%" stopColor="#15803D"/>
+                </linearGradient>
+              </defs>
+              <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="url(#rt-ring-sb)" strokeWidth="6" fill="none" strokeLinecap="round"/>
+              <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="url(#rt-plane-sb)"/>
+              <path d="M44 58 L85 15" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          <div className="dbs-name">RevTray</div>
+        </div>
+        <div className="dbs-items">
+          <div className="dbs-item">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><rect x="1.5" y="1.5" width="4.5" height="4.5" rx="1"/><rect x="8" y="1.5" width="4.5" height="4.5" rx="1"/><rect x="1.5" y="8" width="4.5" height="4.5" rx="1"/><rect x="8" y="8" width="4.5" height="4.5" rx="1"/></svg>
+            Dashboard
+          </div>
+          <div className="dbs-item active">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><rect x="1.5" y="4" width="11" height="8" rx="1.5"/><path d="M1.5 6.5h11"/></svg>
+            Campaigns
+          </div>
+          <div className="dbs-item">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><circle cx="6" cy="5" r="2.8"/><path d="M1 12c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5"/></svg>
+            Contacts
+          </div>
+          <div className="dbs-item">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M2 10l3.5-5 2.5 3.2 4-6.2"/></svg>
+            Revenue
+          </div>
+          <div className="dbs-item">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><path d="M7 1.5a4.5 4.5 0 0 1 4.5 4.5v3.5a1.5 1.5 0 0 1-3 0V6a1.5 1.5 0 0 0-3 0v3.5a1.5 1.5 0 0 1-3 0V6A4.5 4.5 0 0 1 7 1.5z"/></svg>
+            Automations
+          </div>
+          <div className="dbs-item">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5l2 1.5"/></svg>
+            Analytics
+          </div>
+        </div>
+      </div>
+      
+      <div className="db-main">
+        <div className="dbm-top">
+          <div className="dbm-title">Campaigns</div>
+          <button className="dbm-btn">
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M4.5 1v7M1 4.5h7"/></svg>
+            New Campaign
+          </button>
+        </div>
+        <div className="dbm-kpis">
+          <div className="kpi">
+            <div className="kpi-lbl">Revenue attributed</div>
+            <div className="kpi-val green">$47,823</div>
+            <div className="kpi-delta">↑ $3,240 this week</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-lbl">Total sent</div>
+            <div className="kpi-val">48,291</div>
+            <div className="kpi-delta muted">5 campaigns</div>
+          </div>
+          <div className="kpi">
+            <div className="kpi-lbl">Avg open rate</div>
+            <div className="kpi-val">34.2%</div>
+            <div className="kpi-delta">↑ 4.1% vs last month</div>
+          </div>
+        </div>
+        <div className="dbm-tbl">
+          <div className="tbl-head tbl-cols">
+            <div>Campaign</div><div>Status</div><div>Opens</div><div>Revenue</div><div>$/sent</div>
+          </div>
+          <div className="tbl-row tbl-cols">
+            <div><div className="tr-name">Real Estate Masterclass</div><div className="tr-sub">Dec 12 · 12,430 recipients</div></div>
+            <div><span className="badge-sent">Sent</span></div>
+            <div className="tr-rate-high">38.4%</div>
+            <div className="tr-rev">$18,240</div>
+            <div style={{fontSize:"9px",color:"rgba(255,255,255,.26)"}}>$1.47</div>
+          </div>
+          <div className="tbl-row tbl-cols">
+            <div><div className="tr-name">5-Day Deal Sequence</div><div className="tr-sub">Dec 8 · 10,891 recipients</div></div>
+            <div><span className="badge-sent">Sent</span></div>
+            <div className="tr-rate-high">42.1%</div>
+            <div className="tr-rev">$11,700</div>
+            <div style={{fontSize:"9px",color:"rgba(255,255,255,.26)"}}>$1.07</div>
+          </div>
+          <div className="tbl-row tbl-cols">
+            <div><div className="tr-name">Flash Sale — 48hrs Only</div><div className="tr-sub">Dec 4 · 8,204 recipients</div></div>
+            <div><span className="badge-sent">Sent</span></div>
+            <div className="tr-rate-mid">29.8%</div>
+            <div className="tr-rev">$9,340</div>
+            <div style={{fontSize:"9px",color:"rgba(255,255,255,.26)"}}>$1.14</div>
+          </div>
+          <div className="tbl-row tbl-cols">
+            <div><div className="tr-name">January Newsletter</div><div className="tr-sub">Draft · Scheduled Jan 3</div></div>
+            <div><span className="badge-draft">Draft</span></div>
+            <div className="tr-muted">—</div>
+            <div className="tr-muted">—</div>
+            <div className="tr-muted" style={{fontSize:"9px"}}>—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+
+<div className="ombre"></div>
+<section className="stats">
+  <div className="stats-row">
+    <div className="stat reveal">
+      <div className="stat-n"><em>$2.4M</em></div>
+      <div className="stat-lbl">Revenue attributed to email</div>
+      <div className="stat-ctx">Tracked across all creators</div>
+    </div>
+    <div className="stat-div"></div>
+    <div className="stat reveal reveal-d1">
+      <div className="stat-n">400+</div>
+      <div className="stat-lbl">Whop creators using RevTray</div>
+      <div className="stat-ctx">Courses, communities, products</div>
+    </div>
+    <div className="stat-div"></div>
+    <div className="stat reveal reveal-d2">
+      <div className="stat-n">34%</div>
+      <div className="stat-lbl">Average email open rate</div>
+      <div className="stat-ctx">vs. 21% industry average</div>
+    </div>
+    <div className="stat-div"></div>
+    <div className="stat reveal reveal-d3">
+      <div className="stat-n"><em>5x</em></div>
+      <div className="stat-lbl">ROI vs traditional tools</div>
+      <div className="stat-ctx">When you know what works</div>
+    </div>
+  </div>
+</section>
+
+
+<section className="features" id="features">
+  <div className="feat-max">
+    <div className="feat-intro reveal">
+      <h2>Every tool you need to grow revenue through email.</h2>
+      <p>RevTray is built around one core idea: Whop creators deserve to know exactly what their emails earn — not just how many people opened them.</p>
+    </div>
+    <div className="feat-grid">
+      <div className="fg-cell reveal">
+        <div className="fg-num">01</div>
+        <h3>Revenue attribution</h3>
+        <p>Every campaign shows exactly how much revenue it generated. Whop purchases within 7 days of a click are attributed automatically — no setup required.</p>
+      </div>
+      <div className="fg-cell reveal reveal-d1">
+        <div className="fg-num">02</div>
+        <h3>AI sequence builder</h3>
+        <p>Describe your product once. Get a 5-email launch sequence using Story → Value → Proof → Offer → Urgency frameworks. Real strategy, not filler.</p>
+      </div>
+      <div className="fg-cell reveal">
+        <div className="fg-num">03</div>
+        <h3>Whop native sync</h3>
+        <p>Your members sync automatically. New joins, cancellations, tag changes — RevTray stays in sync without any manual work or CSV exports.</p>
+      </div>
+      <div className="fg-cell reveal reveal-d1">
+        <div className="fg-num">04</div>
+        <h3>Smart segmentation</h3>
+        <p>Target buyers vs. free members, recent openers, high-value subscribers. Send relevant emails — not generic blasts to everyone.</p>
+      </div>
+      <div className="fg-cell reveal">
+        <div className="fg-num">05</div>
+        <h3>Automation sequences</h3>
+        <p>Welcome flows, purchase follow-ups, re-engagement. Triggered automatically by what members do on Whop.</p>
+      </div>
+      <div className="fg-cell reveal reveal-d1">
+        <div className="fg-num">06</div>
+        <h3>Deliverability tools</h3>
+        <p>Spam score analysis, domain authentication, warmup schedules. Built to reach the inbox — not the promotions tab.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section className="dark-feat" id="revenue">
+  <div className="df-inner rev">
+    <div className="df-text reveal">
+      <div className="df-eyebrow">Revenue Attribution</div>
+      <h2 className="df-h">Stop guessing which email made the sale.</h2>
+      <p className="df-p">Every click is tracked. Every Whop purchase is matched. Your dashboard shows the revenue number next to every campaign — automatically, in real time.</p>
+      <div className="df-points">
+        <div className="df-point"><div className="df-dot"></div><span>7-day attribution window — any purchase after a click is credited to that campaign</span></div>
+        <div className="df-point"><div className="df-dot"></div><span>Per-campaign revenue breakdown with revenue-per-email-sent</span></div>
+        <div className="df-point"><div className="df-dot"></div><span>Real-time Whop webhook — new purchases appear in your dashboard within seconds</span></div>
+      </div>
+    </div>
+    <div className="df-visual reveal reveal-d2">
+      <div className="rev-card">
+        <div className="rev-card-glow"></div>
+        <div className="rc-lbl">Total revenue from email</div>
+        <div className="rc-num">$49,783</div>
+        <div className="rc-delta">this month · <em>↑ 28%</em> vs last month</div>
+        <div className="rc-bars-lbl"><span>Top campaigns</span><span>Revenue</span></div>
+        <div className="rc-bars">
+          <div className="rcb"><div className="rcb-name">Masterclass launch</div><div className="rcb-track"><div className="rcb-fill" data-w="92" style={{width:"0%"}}></div></div><div className="rcb-val">$18.2k</div></div>
+          <div className="rcb"><div className="rcb-name">5-day deal sequence</div><div className="rcb-track"><div className="rcb-fill" data-w="64" style={{width:"0%"}}></div></div><div className="rcb-val">$11.7k</div></div>
+          <div className="rcb"><div className="rcb-name">Flash sale — 48hrs</div><div className="rcb-track"><div className="rcb-fill" data-w="51" style={{width:"0%"}}></div></div><div className="rcb-val">$9.3k</div></div>
+          <div className="rcb"><div className="rcb-name">New member welcome</div><div className="rcb-track"><div className="rcb-fill" data-w="38" style={{width:"0%"}}></div></div><div className="rcb-val">$7.1k</div></div>
+        </div>
+        <div className="rc-footer">
+          <div className="rc-footer-l">Last purchase: 4 minutes ago</div>
+          <div className="live-badge"><div className="live-dot"></div>Live</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section className="dark-feat" id="ai">
+  <div className="df-inner ai">
+    <div className="df-text reveal">
+      <div className="df-eyebrow">AI Tools</div>
+      <h2 className="df-h">A strategist. Not a text generator.</h2>
+      <p className="df-p">Generate complete launch sequences using proven frameworks. Real email strategy tailored to your product and audience — not generic filler content.</p>
+      <div className="df-points">
+        <div className="df-point"><div className="df-dot"></div><span>5-email sequence from a one-sentence brief — Story → Value → Proof → Offer → Urgency</span></div>
+        <div className="df-point"><div className="df-dot"></div><span>Subject line scorer — rates 1-10, gives 3 alternatives with conversion reasoning</span></div>
+        <div className="df-point"><div className="df-dot"></div><span>Engagement predictor — estimate open rate and conversions before you send</span></div>
+      </div>
+    </div>
+    <div className="df-visual reveal reveal-d1">
+      <div className="ai-card">
+        <div className="ai-card-head">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 1l1.2 3.5H11L8 6.8l1.2 3.7L6 8.4 2.8 10.5 4 6.8 1 4.5h3.8L6 1z"/></svg>
+          AI Sequence Builder
+        </div>
+        <div className="ai-row">
+          <div className="ai-n" style={{background:"rgba(99,102,241,.2)",color:"#A5B4FC"}}>1</div>
+          <div className="ai-text">My first wholesale deal made $12k with $0 down</div>
+          <div className="ai-act" style={{background:"rgba(99,102,241,.15)",color:"#A5B4FC"}}>Write</div>
+        </div>
+        <div className="ai-row">
+          <div className="ai-n" style={{background:"rgba(59,130,246,.2)",color:"#93C5FD"}}>2</div>
+          <div className="ai-text">The 3-step system I use to find deals every week</div>
+          <div className="ai-act" style={{background:"rgba(59,130,246,.15)",color:"#93C5FD"}}>Write</div>
+        </div>
+        <div className="ai-row">
+          <div className="ai-n" style={{background:"rgba(34,197,94,.15)",color:"#4ADE80"}}>3</div>
+          <div className="ai-text">How Marcus closed his first deal in 31 days</div>
+          <div className="ai-act" style={{background:"rgba(34,197,94,.12)",color:"#4ADE80"}}>Write</div>
+        </div>
+        <div className="ai-row">
+          <div className="ai-n" style={{background:"rgba(251,191,36,.15)",color:"#FCD34D"}}>4</div>
+          <div className="ai-text">Doors open: Real Estate Masterclass enrollment</div>
+          <div className="ai-act" style={{background:"rgba(251,191,36,.12)",color:"#FCD34D"}}>Write</div>
+        </div>
+        <div className="ai-row">
+          <div className="ai-n" style={{background:"rgba(239,68,68,.15)",color:"#FCA5A5"}}>5</div>
+          <div className="ai-text">Last chance — enrollment closes tonight at midnight</div>
+          <div className="ai-act" style={{background:"rgba(239,68,68,.12)",color:"#FCA5A5"}}>Write</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section className="testi">
+  <div className="testi-inner">
+    <div className="testi-stars">★★★★★</div>
+    <p className="testi-quote reveal">"I sent one campaign to 3,200 subscribers and immediately saw <em>$4,200 attributed to that single email</em>. I've never had that kind of visibility before — I knew exactly what was working."</p>
+    <div className="testi-author reveal">
+      <div className="testi-av">JM</div>
+      <div>
+        <div className="testi-name">Jordan M.</div>
+        <div className="testi-role">Real estate educator · 3,200 members on Whop</div>
+      </div>
+    </div>
+    <div className="testi-mini">
+      <div className="tm reveal">
+        <div className="tm-stars">★★★★★</div>
+        <p className="tm-q">"Described my fitness course in 3 sentences and got a <strong>complete 5-email launch plan</strong> that genuinely sounded like me. Sent the whole sequence the same afternoon."</p>
+        <div className="tm-author">Taylor C. · Fitness coach · 1,800 Whop members</div>
+      </div>
+      <div className="tm reveal reveal-d1">
+        <div className="tm-stars">★★★★★</div>
+        <p className="tm-q">"Finally a tool that syncs with Whop automatically. My entire audience was imported and ready to email <strong>in under 5 minutes</strong>. No CSV exports, no broken imports."</p>
+        <div className="tm-author">Ryan B. · Stock trading community · 5,100 Whop members</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section className="cta-section">
+  <div className="cta-label">Start for free</div>
+  <h2 className="cta-h reveal">Know which emails<br/>make you <em>money</em>.</h2>
+  <p className="cta-sub reveal">Connect your Whop store, import your audience, and send your first revenue-attributed campaign — free.</p>
+  <Link href="/auth/login" className="btn-cta reveal">
+    Create free account
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h8M8 4l3 3-3 3"/></svg>
+  </Link>
+  <p className="cta-foot">Free to start · No credit card required · Connects to Whop in 2 minutes</p>
+</section>
+
+
+<footer>
+  <div className="footer-grid">
+    <div className="footer-brand">
+      <div className="footer-brand-logo">
+        <svg width="26" height="26" viewBox="0 0 100 100" fill="none">
+          <defs>
+            <linearGradient id="rt-ring-ft" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#A3E635"/><stop offset="100%" stopColor="#16A34A"/>
+            </linearGradient>
+            <linearGradient id="rt-plane-ft" x1="30" y1="10" x2="85" y2="75" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#D9F99D"/><stop offset="60%" stopColor="#22C55E"/><stop offset="100%" stopColor="#15803D"/>
+            </linearGradient>
+          </defs>
+          <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="url(#rt-ring-ft)" strokeWidth="6" fill="none" strokeLinecap="round"/>
+          <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="url(#rt-plane-ft)"/>
+          <path d="M44 58 L85 15" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        RevTray
+      </div>
+      <p>Email marketing built for Whop creators. Send smarter. Earn more.</p>
+    </div>
+    <div className="footer-col">
+      <h4>Product</h4>
+      <a href="#">Campaigns</a>
+      <a href="#">AI Tools</a>
+      <a href="#">Revenue</a>
+      <a href="#">Automations</a>
+      <a href="#">Templates</a>
+    </div>
+    <div className="footer-col">
+      <h4>Resources</h4>
+      <a href="#">Documentation</a>
+      <a href="#">API Reference</a>
+      <a href="#">Blog</a>
+      <a href="#">Changelog</a>
+    </div>
+    <div className="footer-col">
+      <h4>Company</h4>
+      <a href="#">About</a>
+      <a href="#">Pricing</a>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+    </div>
+  </div>
+  <div className="footer-bot">
+    <div>© 2025 RevTray. All rights reserved.</div>
+    <div>Built for Whop creators</div>
+  </div>
+</footer>
     </>
   );
 }
