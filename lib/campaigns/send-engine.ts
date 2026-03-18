@@ -391,6 +391,10 @@ export async function sendCampaign(
                         : result.provider === "ses" ? "SES"
                         : result.provider === "sendgrid" ? "SENDGRID"
                         : "RESEND",
+              },
+            });
+          } else {
+            totalFailed++;
             await db.emailSend.update({
               where: { id: emailSend.id },
               data: {

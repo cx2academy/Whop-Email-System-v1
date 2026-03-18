@@ -12,7 +12,7 @@ import { encrypt } from '@/lib/encryption';
 import { logger } from '@/lib/logger';
 import { track } from '@/lib/telemetry';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
-import { syncWhopMembers } from '@/lib/sync/actions';
+import { triggerSync } from '@/lib/sync/actions';
 import { revalidatePath } from 'next/cache';
 
 export interface OnboardingActionResult {
@@ -73,7 +73,7 @@ export async function saveWhopApiKey(
 export async function triggerOnboardingSync(): Promise<OnboardingActionResult> {
   const { workspaceId } = await requireWorkspaceAccess();
 
-  const result = await syncWhopMembers();
+  const result = await triggerSync();
 
   if (!result.success) {
     return { success: false, error: result.error ?? 'Sync failed. Check your API key.' };
