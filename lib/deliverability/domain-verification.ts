@@ -21,6 +21,10 @@ export interface DomainCheckResult {
   spfRecord: string | null;
   dkimVerified: boolean;
   dkimRecord: string | null;
+  dmarcVerified: boolean;
+  dmarcRecord: string | null;
+  returnPathVerified: boolean;
+  returnPathRecord: string | null;
 }
 
 export interface DkimKeyPair {
@@ -66,6 +70,40 @@ export async function checkDkim(
 }
 
 // ---------------------------------------------------------------------------
+// DMARC check
+// ---------------------------------------------------------------------------
+
+export async function checkDmarc(
+  domain: string
+): Promise<{ verified: boolean; record: string | null }> {
+  try {
+    const records = await resolveTxt(`_dmarc.${domain}`);
+    const dmarc = records.flat().find((r) => r.startsWith('v=DMARC1')) ?? null;
+    return { verified: !!dmarc, record: dmarc };
+  } catch {
+    return { verified: false, record: null };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Return-Path / bounce subdomain check
+// Checks for CNAME at bounces.<domain>
+// ---------------------------------------------------------------------------
+
+export async function checkReturnPath(
+  domain: string
+): Promise<{ verified: boolean; record: string | null }> {
+  try {
+    const { resolveCname } = await import('dns/promises');
+    const cname = await resolveCname(`bounces.${domain}`);
+    const resolved = cname[0] ?? null;
+    return { verified: !!resolved, record: resolved };
+  } catch {
+    return { verified: false, record: null };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Full domain check
 // ---------------------------------------------------------------------------
 
@@ -73,15 +111,21 @@ export async function checkDomain(
   domain: string,
   selector: string
 ): Promise<DomainCheckResult> {
-  const [spf, dkim] = await Promise.all([
+  const [spf, dkim, dmarc, returnPath] = await Promise.all([
     checkSpf(domain),
     checkDkim(domain, selector),
+    checkDmarc(domain),
+    checkReturnPath(domain),
   ]);
   return {
-    spfVerified: spf.verified,
-    spfRecord: spf.record,
-    dkimVerified: dkim.verified,
-    dkimRecord: dkim.record,
+    spfVerified:         spf.verified,
+    spfRecord:           spf.record,
+    dkimVerified:        dkim.verified,
+    dkimRecord:          dkim.record,
+    dmarcVerified:       dmarc.verified,
+    dmarcRecord:         dmarc.record,
+    returnPathVerified:  returnPath.verified,
+    returnPathRecord:    returnPath.record,
   };
 }
 

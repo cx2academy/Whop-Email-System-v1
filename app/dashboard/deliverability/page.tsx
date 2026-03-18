@@ -20,7 +20,7 @@ export default async function DeliverabilityPage() {
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [domains, recentReports, _sendCount, inboxResults] = await Promise.all([
+  const [domains, recentReports, _sendCount, inboxResults, emailProviderConfig] = await Promise.all([
     db.sendingDomain.findMany({
       where: { workspaceId },
       orderBy: { createdAt: 'desc' },
@@ -34,12 +34,16 @@ export default async function DeliverabilityPage() {
         campaign: { select: { name: true, id: true } },
       },
     }),
-db.emailSend.count({ where: { workspaceId, sentAt: { gte: thirtyDaysAgo } } }),
+    db.emailSend.count({ where: { workspaceId, sentAt: { gte: thirtyDaysAgo } } }),
     db.inboxTestResult.findMany({
       where: { campaign: { workspaceId } },
       orderBy: { testedAt: 'desc' },
       take: 12,
       select: { provider: true, placement: true, testedAt: true, campaign: { select: { name: true } } },
+    }),
+    db.emailProviderConfig.findUnique({
+      where: { workspaceId },
+      select: { provider: true },
     }),
   ]);
 
@@ -99,16 +103,22 @@ db.emailSend.count({ where: { workspaceId, sentAt: { gte: thirtyDaysAgo } } }),
         <p className="mb-4 text-sm text-muted-foreground">
           Register and authenticate the domain you send from. SPF + DKIM verification improves inbox placement.
         </p>
-        <DomainSetup domains={domains.map((d) => ({
-          id: d.id,
-          domain: d.domain,
-          spfVerified: d.spfVerified,
-          dkimVerified: d.dkimVerified,
-          dkimSelector: d.dkimSelector,
-          dkimPublicKey: d.dkimPublicKey ?? '',
-          reputationScore: d.reputationScore,
-          createdAt: d.createdAt.toISOString(),
-        }))} />
+        <DomainSetup
+          emailProvider={(emailProviderConfig?.provider ?? null) as 'RESEND' | 'SES' | 'SENDGRID' | null}
+          domains={domains.map((d) => ({
+            id: d.id,
+            domain: d.domain,
+            spfVerified: d.spfVerified,
+            dkimVerified: d.dkimVerified,
+            dmarcVerified: (d as { dmarcVerified?: boolean }).dmarcVerified ?? false,
+            returnPathVerified: (d as { returnPathVerified?: boolean }).returnPathVerified ?? false,
+            dkimSelector: d.dkimSelector,
+            dkimPublicKey: d.dkimPublicKey ?? '',
+            emailProvider: (d as { emailProvider?: string | null }).emailProvider ?? null,
+            reputationScore: d.reputationScore,
+            createdAt: d.createdAt.toISOString(),
+          }))}
+        />
       </section>
 
       {/* Warmup guidance */}
