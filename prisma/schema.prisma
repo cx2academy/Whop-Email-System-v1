@@ -134,6 +134,7 @@ model Workspace {
   attributions        RevenueAttribution[]
   emailTemplates      EmailTemplate[]
   tags        Tag[]
+  emailProviderConfig EmailProviderConfig?
 
   @@index([slug])
   @@map("workspaces")
@@ -397,6 +398,8 @@ enum EmailSendStatus {
 enum EmailProvider {
   RESEND
   SMTP
+  SES
+  SENDGRID
 }
 
 // ---------------------------------------------------------------------------
@@ -855,4 +858,40 @@ model RevenueAttribution {
   @@index([contactId])
   @@index([purchaseId])
   @@map("revenue_attributions")
+}
+
+// ===========================================================================
+// EMAIL PROVIDER CONFIG — Per-workspace BYOE (Bring Your Own Email) settings
+// ===========================================================================
+
+// Which provider type is configured on this workspace.
+// Separate from the EmailProvider enum on EmailSend (which is the historical
+// send audit record). This enum drives the provider factory at send time.
+enum EmailProviderType {
+  RESEND
+  SES
+  SENDGRID
+}
+
+// One row per workspace — enforced by @@unique on workspaceId.
+// encryptedKey stores AES-256-GCM blob (same scheme as whopApiKey).
+//   Resend  → raw API key string
+//   SES     → JSON: {"accessKeyId":"...","secretAccessKey":"..."}
+//   SendGrid → raw API key string
+// metadata stores non-secret config as JSON:
+//   { region?: string, senderEmail?: string }
+model EmailProviderConfig {
+  id           String            @id @default(cuid())
+  workspaceId  String            @unique
+  provider     EmailProviderType
+  encryptedKey String            @db.Text
+  metadata     String            @default("{}") // JSON
+  isVerified   Boolean           @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("email_provider_configs")
 }

@@ -60,12 +60,15 @@ export async function sendQuickStartEmail(
   const template = QUICK_START_TEMPLATES[templateKey];
   const fromName = workspace.fromName ?? workspace.name;
 
-  const result = await sendEmail({
-    to: toEmail,
-    subject: template.subject,
-    html: template.html,
-    from: `${fromName} <${workspace.fromEmail}>`,
-  });
+  const result = await sendEmail(
+    {
+      to: toEmail,
+      subject: template.subject,
+      html: template.html,
+      from: `${fromName} <${workspace.fromEmail}>`,
+    },
+    workspaceId
+  );
 
   if (!result.success) {
     logger.warn('[quickstart] Test email failed', { workspaceId, userId, error: result.error });

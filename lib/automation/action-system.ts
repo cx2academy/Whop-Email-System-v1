@@ -94,13 +94,16 @@ async function executeSendEmail(
   const subject = config.subject.replace(/\{\{firstName\}\}/g, contact.firstName ?? '');
   const html = config.html.replace(/\{\{firstName\}\}/g, contact.firstName ?? '');
 
-  await sendEmail({
-    to: contact.email,
-    subject,
-    html,
-    from,
-    idempotencyKey: `auto:${enrollmentId}:${Date.now()}`,
-  });
+  await sendEmail(
+    {
+      to: contact.email,
+      subject,
+      html,
+      from,
+      idempotencyKey: `auto:${enrollmentId}:${Date.now()}`,
+    },
+    workspaceId
+  );
 
   // Increment workflow email counter
   await db.automationWorkflow.update({

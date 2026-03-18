@@ -364,14 +364,17 @@ export async function sendCampaign(
             unsubscribeUrl,
           });
 
-          const result = await sendEmail({
-            to: contact.email,
-            subject: personalizedSubject,
-            html: trackedHtml,
-            text: plainText,
-            from,
-            idempotencyKey,
-          });
+          const result = await sendEmail(
+            {
+              to: contact.email,
+              subject: personalizedSubject,
+              html: trackedHtml,
+              text: plainText,
+              from,
+              idempotencyKey,
+            },
+            workspaceId
+          );
 
           // -----------------------------------------------------------------
           // Record result
@@ -384,17 +387,19 @@ export async function sendCampaign(
                 status: "SENT",
                 messageId: result.messageId,
                 sentAt: new Date(),
-                provider: result.provider === "smtp" ? "SMTP" : "RESEND",
-              },
-            });
-          } else {
-            totalFailed++;
+                provider: result.provider === "smtp" ? "SMTP"
+                        : result.provider === "ses" ? "SES"
+                        : result.provider === "sendgrid" ? "SENDGRID"
+                        : "RESEND",
             await db.emailSend.update({
               where: { id: emailSend.id },
               data: {
                 status: "FAILED",
                 failureReason: result.error,
-                provider: result.provider === "smtp" ? "SMTP" : "RESEND",
+                provider: result.provider === "smtp" ? "SMTP"
+                        : result.provider === "ses" ? "SES"
+                        : result.provider === "sendgrid" ? "SENDGRID"
+                        : "RESEND",
               },
             });
           }

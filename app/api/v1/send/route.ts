@@ -59,13 +59,16 @@ export async function POST(req: NextRequest) {
   }
 
   const fromName = workspace.fromName ?? workspace.name;
-  const result = await sendEmail({
-    to: to as string | string[],
-    subject: subject as string,
-    html: html as string,
-    text: text as string | undefined,
-    from: `${fromName} <${workspace.fromEmail}>`,
-  });
+  const result = await sendEmail(
+    {
+      to: to as string | string[],
+      subject: subject as string,
+      html: html as string,
+      text: text as string | undefined,
+      from: `${fromName} <${workspace.fromEmail}>`,
+    },
+    apiKey.workspaceId  // route through workspace provider if configured
+  );
 
   const statusCode = result.success ? 200 : 502;
 
