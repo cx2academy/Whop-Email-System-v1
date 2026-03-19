@@ -134,7 +134,8 @@ model Workspace {
   attributions        RevenueAttribution[]
   emailTemplates      EmailTemplate[]
   tags        Tag[]
-  domainSearchLogs DomainSearchLog[]
+  emailProviderConfig EmailProviderConfig?
+  domainSearchLogs    DomainSearchLog[]
 
   @@index([slug])
   @@map("workspaces")
@@ -398,6 +399,8 @@ enum EmailSendStatus {
 enum EmailProvider {
   RESEND
   SMTP
+  SES
+  SENDGRID
 }
 
 // ---------------------------------------------------------------------------
@@ -522,15 +525,15 @@ model SendingDomain {
   domain      String  // e.g. "acme.com"
 
   // DNS authentication status
-  spfVerified   Boolean @default(false)
-  dkimVerified  Boolean @default(false)
+  spfVerified         Boolean @default(false)
+  dkimVerified        Boolean @default(false)
   dmarcVerified       Boolean @default(false)
   returnPathVerified  Boolean @default(false)
   dkimSelector  String  @default("wee1") // DNS TXT record selector
   dkimPublicKey String? @db.Text // published in DNS TXT record
   dkimPrivateKey String? @db.Text // encrypted, used for signing
 
-  // Provider hint — drives which SPF include / return-path value to show
+  // Provider hint — drives provider-specific SPF includes and Return-Path values
   // Values: 'RESEND' | 'SES' | 'SENDGRID' | null (generic)
   emailProvider String?
 
@@ -865,6 +868,42 @@ model RevenueAttribution {
 }
 
 // ===========================================================================
+// EMAIL PROVIDER CONFIG — Per-workspace BYOE (Bring Your Own Email) settings
+// ===========================================================================
+
+// Which provider type is configured on this workspace.
+// Separate from the EmailProvider enum on EmailSend (which is the historical
+// send audit record). This enum drives the provider factory at send time.
+enum EmailProviderType {
+  RESEND
+  SES
+  SENDGRID
+}
+
+// One row per workspace — enforced by @@unique on workspaceId.
+// encryptedKey stores AES-256-GCM blob (same scheme as whopApiKey).
+//   Resend  → raw API key string
+//   SES     → JSON: {"accessKeyId":"...","secretAccessKey":"..."}
+//   SendGrid → raw API key string
+// metadata stores non-secret config as JSON:
+//   { region?: string, senderEmail?: string }
+model EmailProviderConfig {
+  id           String            @id @default(cuid())
+  workspaceId  String            @unique
+  provider     EmailProviderType
+  encryptedKey String            @db.Text
+  metadata     String            @default("{}") // JSON
+  isVerified   Boolean           @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("email_provider_configs")
+}
+
+// ===========================================================================
 // DOMAIN SEARCH LOG — affiliate + monetization tracking
 // ===========================================================================
 
@@ -874,8 +913,8 @@ model DomainSearchLog {
 
   domain            String
   available         Boolean
-  priceUsd          Int?    // cents, null if unavailable or unknown TLD
-  registrarClicked  String? // 'namecheap' | 'godaddy' | 'cloudflare'
+  priceUsd          Int?
+  registrarClicked  String?
   clickedAt         DateTime?
 
   createdAt DateTime @default(now())
