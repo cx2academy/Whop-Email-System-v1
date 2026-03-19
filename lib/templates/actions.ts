@@ -17,6 +17,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/client';
 import { requireAdminAccess, requireWorkspaceAccess } from '@/lib/auth/session';
 import { getTemplateById, estimateReadingTime } from './library';
+import { checkCredits, deductCredits } from '@/lib/ai/credits';
 
 // ---------------------------------------------------------------------------
 // User template CRUD
@@ -179,7 +180,12 @@ export async function generateTemplate(opts: {
   tone: string;
   audience: string;
 }) {
-  await requireAdminAccess();
+  const { workspaceId } = await requireAdminAccess();
+
+  const _creditCheck = await checkCredits(workspaceId, 'generateTemplate');
+  if (!_creditCheck.allowed) {
+    return { success: false as const, error: `Not enough AI credits. Need 5, have ${_creditCheck.currentBalance}.` };
+  }
 
   const EMAIL_SCAFFOLD = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:0;background:#ffffff;">
   <div style="padding:24px 32px 8px;"><p style="margin:0;font-size:13px;color:#6b7280;">{{sender_name}}</p></div>
@@ -256,6 +262,7 @@ Respond ONLY with JSON (no markdown):
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean) as { subject: string; previewText: string; htmlBody: string };
 
+    await deductCredits(workspaceId, 'generateTemplate');
     return {
       success: true as const,
       data: {

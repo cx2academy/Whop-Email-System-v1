@@ -115,6 +115,7 @@ model Workspace {
   // Plan / limits (extended in billing phase)
   plan            WorkspacePlan @default(FREE)
   monthlyEmailCap Int           @default(1000)
+  aiCredits       Int           @default(10)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,6 +137,7 @@ model Workspace {
   tags        Tag[]
   emailProviderConfig EmailProviderConfig?
   domainSearchLogs    DomainSearchLog[]
+  aiCreditLogs        AiCreditLog[]
 
   @@index([slug])
   @@map("workspaces")
@@ -924,4 +926,30 @@ model DomainSearchLog {
   @@index([workspaceId])
   @@index([createdAt])
   @@map("domain_search_logs")
+}
+
+// ===========================================================================
+// AI CREDIT LOG — immutable ledger of every credit event
+// ===========================================================================
+
+model AiCreditLog {
+  id           String @id @default(cuid())
+  workspaceId  String
+
+  // Negative = deduction (AI use), Positive = purchase/grant
+  delta        Int
+  // Running balance snapshot after this transaction
+  balanceAfter Int
+  // Feature key or 'purchase' | 'grant'
+  reason       String
+  // Optional reference ID (campaignId, templateId, etc.)
+  refId        String?
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([createdAt])
+  @@map("ai_credit_logs")
 }

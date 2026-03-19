@@ -3,16 +3,32 @@
  */
 import Link from 'next/link';
 import { auth } from '@/auth';
+import { db } from '@/lib/db/client';
+import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { SignOutButton } from '@/components/auth/sign-out-button';
 import { PlusIcon } from 'lucide-react';
 import { KeyboardShortcut } from '@/components/ui/keyboard-shortcut';
 import { CommandPaletteTrigger } from '@/components/ui/command-palette-trigger';
+import { AiCreditBadge } from '@/components/ui/ai-credits';
 
 export async function DashboardTopbar() {
   const session = await auth();
   const user = session?.user;
   const initials = (user?.name ?? user?.email ?? 'U')
     .split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
+  // Fetch AI credit balance — workspace scoped
+  let aiCredits = 0;
+  try {
+    const { workspaceId } = await requireWorkspaceAccess();
+    const workspace = await db.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { aiCredits: true },
+    });
+    aiCredits = workspace?.aiCredits ?? 0;
+  } catch {
+    // Not authenticated yet — show 0, layout middleware will redirect
+  }
 
   return (
     <header
@@ -27,6 +43,12 @@ export async function DashboardTopbar() {
 
       <div className="flex items-center gap-3">
         <CommandPaletteTrigger />
+
+        {/* AI Credits */}
+        <AiCreditBadge initialBalance={aiCredits} />
+
+        <div className="h-5 w-px hidden sm:block" style={{ background: 'hsl(222 25% 18%)' }} />
+
         {/* Emerald CTA */}
         <Link
           href="/dashboard/campaigns/new"

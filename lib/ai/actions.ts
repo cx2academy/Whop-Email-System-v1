@@ -16,6 +16,7 @@
 
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
+import { checkCredits, deductCredits, InsufficientCreditsError } from '@/lib/ai/credits';
 
 // ---------------------------------------------------------------------------
 // Shared Groq helper
@@ -62,7 +63,9 @@ export async function optimizeSubjectLine(
   productContext: string
 ): Promise<{ success: true; data: OptimizeSubjectResult } | { success: false; error: string }> {
   try {
-    await requireWorkspaceAccess();
+    const { workspaceId } = await requireWorkspaceAccess();
+    const _check1 = await checkCredits(workspaceId, 'optimizeSubjectLine');
+    if (!_check1.allowed) return { success: false, error: `Not enough AI credits. Need 2, have ${_check1.currentBalance}.` };
 
     const text = await groq(`You are an expert email marketer who has studied thousands of high-performing campaigns.
 
@@ -85,6 +88,7 @@ Respond ONLY with a JSON object, no markdown:
 }`);
 
     const parsed = JSON.parse(text) as OptimizeSubjectResult;
+    await deductCredits(workspaceId, 'optimizeSubjectLine');
     return { success: true, data: parsed };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
@@ -116,7 +120,9 @@ export async function improveEmailCopy(
   htmlBody: string
 ): Promise<{ success: true; data: ImproveEmailResult } | { success: false; error: string }> {
   try {
-    await requireWorkspaceAccess();
+    const { workspaceId } = await requireWorkspaceAccess();
+    const _check2 = await checkCredits(workspaceId, 'improveEmailCopy');
+    if (!_check2.allowed) return { success: false, error: `Not enough AI credits. Need 2, have ${_check2.currentBalance}.` };
 
     // Strip HTML tags for cleaner analysis
     const plainText = htmlBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 2000);
@@ -148,6 +154,7 @@ Return ONLY a JSON object (no markdown):
 Return 2-4 issues maximum. Only flag real problems, not minor style preferences.`, 1200);
 
     const parsed = JSON.parse(text) as ImproveEmailResult;
+    await deductCredits(workspaceId, 'improveEmailCopy');
     return { success: true, data: parsed };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
@@ -174,7 +181,9 @@ export async function predictEngagement(
   audienceSize: number
 ): Promise<{ success: true; data: EngagementPrediction } | { success: false; error: string }> {
   try {
-    await requireWorkspaceAccess();
+    const { workspaceId } = await requireWorkspaceAccess();
+    const _check3 = await checkCredits(workspaceId, 'predictEngagement');
+    if (!_check3.allowed) return { success: false, error: `Not enough AI credits. Need 2, have ${_check3.currentBalance}.` };
 
     const plainText = htmlBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 1500);
 
@@ -200,6 +209,7 @@ Respond ONLY with JSON (no markdown):
 }`);
 
     const parsed = JSON.parse(text) as EngagementPrediction;
+    await deductCredits(workspaceId, 'predictEngagement');
     return { success: true, data: parsed };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
@@ -233,7 +243,9 @@ export async function buildCampaignSequence(
   goal: string
 ): Promise<{ success: true; data: CampaignSequence } | { success: false; error: string }> {
   try {
-    await requireWorkspaceAccess();
+    const { workspaceId } = await requireWorkspaceAccess();
+    const _check4 = await checkCredits(workspaceId, 'buildCampaignSequence');
+    if (!_check4.allowed) return { success: false, error: `Not enough AI credits. Need 5, have ${_check4.currentBalance}.` };
 
     const text = await groq(`You are a launch strategist who specializes in email sequences for creators and course sellers.
 
@@ -262,6 +274,7 @@ Create a 5-email sequence. Respond ONLY with JSON (no markdown):
 }`, 2000);
 
     const parsed = JSON.parse(text) as CampaignSequence;
+    await deductCredits(workspaceId, 'buildCampaignSequence');
     return { success: true, data: parsed };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
@@ -340,6 +353,7 @@ Respond ONLY with JSON (no markdown):
 }`, 600);
 
     const parsed = JSON.parse(text) as StrategyTip;
+    await deductCredits(workspaceId, 'getStrategyAdvice');
     return { success: true, data: parsed };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
@@ -411,7 +425,9 @@ export async function generateEmailDraft(
   keyElements: string[]
 ): Promise<{ success: true; data: EmailDraft } | { success: false; error: string }> {
   try {
-    await requireWorkspaceAccess();
+    const { workspaceId } = await requireWorkspaceAccess();
+    const _check5 = await checkCredits(workspaceId, 'generateEmailDraft');
+    if (!_check5.allowed) return { success: false, error: `Not enough AI credits. Need 5, have ${_check5.currentBalance}.` };
 
     const text = await groq(`You are a conversion-focused email copywriter and designer for online creators.
 
@@ -453,6 +469,7 @@ Respond ONLY with a JSON object (no markdown backticks, no extra text):
 }`, 2500);
 
     const parsed = JSON.parse(text) as EmailDraft;
+    await deductCredits(workspaceId, 'generateEmailDraft');
     return { success: true, data: parsed };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'AI request failed' };
