@@ -10,8 +10,7 @@ import { db } from "@/lib/db/client";
 import { WorkspaceSettingsForm } from "./settings-form";
 import { ApiKeys } from "./api-keys";
 import { WhopWebhookSettings } from "./whop-webhook";
-import { EmailProviderSettings } from "./email-provider";
-import type { CurrentProvider } from "./email-provider";
+import { SendingSettings } from "./sending-settings";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -31,21 +30,24 @@ export default async function SettingsPage() {
       plan: true,
       whopApiKey: true,
       webhookSecret: true,
+      // Smart sending settings
+      engagementFilterEnabled: true,
+      engagementFilterDays:    true,
+      deduplicationEnabled:    true,
+      sendRateLimitEnabled:    true,
+      sendRateLimitPerMinute:  true,
+      abuseDetectionEnabled:   true,
+      abuseFlagged:            true,
+      abuseFlaggedReason:      true,
+      abuseFlaggedAt:          true,
     },
   });
 
-  const [apiKeys, emailProviderConfig] = await Promise.all([
-    db.apiKey.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
-    }),
-    db.emailProviderConfig.findUnique({
-      where: { workspaceId },
-      // Never select encryptedKey — keep it server-only
-      select: { provider: true, isVerified: true, createdAt: true },
-    }),
-  ]);
+  const apiKeys = await db.apiKey.findMany({
+    where: { workspaceId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
+  });
 
   if (!workspace) return null;
 
@@ -72,29 +74,6 @@ export default async function SettingsPage() {
             fromName: workspace.fromName,
             hasWhopApiKey: !!workspace.whopApiKey,
           }}
-        />
-      </section>
-
-      {/* Email provider */}
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-foreground">
-          Email Provider
-        </h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Connect your own email account. Emails from this workspace will send
-          through your provider — your API key is encrypted and never exposed.
-        </p>
-        <EmailProviderSettings
-          isAdmin={isAdmin}
-          current={
-            emailProviderConfig
-              ? ({
-                  provider: emailProviderConfig.provider,
-                  isVerified: emailProviderConfig.isVerified,
-                  connectedAt: emailProviderConfig.createdAt.toISOString(),
-                } satisfies CurrentProvider)
-              : null
-          }
         />
       </section>
 
@@ -179,6 +158,28 @@ export default async function SettingsPage() {
         <ApiKeys
           initialKeys={apiKeys.map((k) => ({ ...k, lastUsedAt: k.lastUsedAt?.toISOString() ?? null, createdAt: k.createdAt.toISOString() }))}
           isAdmin={isAdmin}
+        />
+      </section>
+
+      {/* Smart Sending */}
+      <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">Smart Sending</h2>
+        <p className="mb-5 text-sm text-muted-foreground">
+          Control who receives your emails, how fast they send, and protect your sender reputation automatically.
+        </p>
+        <SendingSettings
+          isAdmin={isAdmin}
+          initial={{
+            engagementFilterEnabled: workspace.engagementFilterEnabled ?? true,
+            engagementFilterDays:    workspace.engagementFilterDays ?? 30,
+            deduplicationEnabled:    workspace.deduplicationEnabled ?? true,
+            sendRateLimitEnabled:    workspace.sendRateLimitEnabled ?? false,
+            sendRateLimitPerMinute:  workspace.sendRateLimitPerMinute ?? 100,
+            abuseDetectionEnabled:   workspace.abuseDetectionEnabled ?? true,
+            abuseFlagged:            workspace.abuseFlagged ?? false,
+            abuseFlaggedReason:      workspace.abuseFlaggedReason ?? null,
+            abuseFlaggedAt:          workspace.abuseFlaggedAt?.toISOString() ?? null,
+          }}
         />
       </section>
 

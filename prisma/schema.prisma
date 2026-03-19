@@ -117,6 +117,19 @@ model Workspace {
   monthlyEmailCap Int           @default(1000)
   aiCredits       Int           @default(10)
 
+  // Smart sending settings
+  engagementFilterEnabled Boolean @default(true)
+  engagementFilterDays    Int     @default(30)
+  deduplicationEnabled    Boolean @default(true)
+  sendRateLimitEnabled    Boolean @default(false)
+  sendRateLimitPerMinute  Int     @default(100)
+  abuseDetectionEnabled   Boolean @default(true)
+
+  // Abuse flags — set by abuse detector, cleared manually by admin
+  abuseFlagged        Boolean   @default(false)
+  abuseFlaggedReason  String?
+  abuseFlaggedAt      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -29,6 +29,9 @@ import { checkThrottle } from "@/lib/deliverability/send-throttle";
 import { sleep } from "@/lib/utils";
 import type { Contact, EmailCampaign } from "@prisma/client";
 import { parseVariables, buildSendVariables } from "@/lib/templates/variable-parser";
+import { applyPreSendFilters } from "@/lib/sending/smart-filter";
+import { checkAbuseSignals } from "@/lib/sending/abuse-detector";
+import { createRateLimiter } from "@/lib/sending/rate-queue";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -199,6 +202,15 @@ export async function sendCampaign(
         name: true,
         fromEmail: true,
         fromName: true,
+        // Smart sending settings
+        engagementFilterEnabled: true,
+        engagementFilterDays:    true,
+        deduplicationEnabled:    true,
+        sendRateLimitEnabled:    true,
+        sendRateLimitPerMinute:  true,
+        abuseDetectionEnabled:   true,
+        abuseFlagged:            true,
+        abuseFlaggedReason:      true,
       },
     }),
   ]);
@@ -233,9 +245,9 @@ export async function sendCampaign(
     // -----------------------------------------------------------------------
     // Resolve audience
     // -----------------------------------------------------------------------
-    const audience = await resolveAudience(campaign, workspaceId);
+    const rawAudience = await resolveAudience(campaign, workspaceId);
 
-    if (audience.length === 0) {
+    if (rawAudience.length === 0) {
       await db.emailCampaign.update({
         where: { id: campaignId },
         data: {
@@ -245,6 +257,48 @@ export async function sendCampaign(
         },
       });
       return { status: "COMPLETED", totalSent: 0, totalFailed: 0, totalSkipped: 0 };
+    }
+
+    // -----------------------------------------------------------------------
+    // Abuse detection — block if workspace has bad signals
+    // -----------------------------------------------------------------------
+    if (workspace.abuseDetectionEnabled) {
+      const abuseCheck = await checkAbuseSignals(workspaceId, rawAudience.length);
+      if (!abuseCheck.allowed) {
+        console.warn(`[send-engine] Abuse block for workspace ${workspaceId}: ${abuseCheck.signals.map(s => s.message).join(', ')}`);
+        await db.emailCampaign.update({
+          where: { id: campaignId },
+          data: { status: 'PAUSED' },
+        });
+        return { status: 'FAILED', totalSent: 0, totalFailed: 0, totalSkipped: rawAudience.length };
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Pre-send filters — engagement filter + deduplication
+    // -----------------------------------------------------------------------
+    const { audience, stats: filterStats } = await applyPreSendFilters(rawAudience, {
+      workspaceId,
+      engagementFilterEnabled: workspace.engagementFilterEnabled,
+      engagementFilterDays:    workspace.engagementFilterDays,
+      deduplicationEnabled:    workspace.deduplicationEnabled,
+    });
+
+    totalSkipped += filterStats.dedupRemoved + filterStats.engagementRemoved;
+
+    if (filterStats.dedupRemoved > 0) {
+      console.log(`[send-engine] Dedup removed ${filterStats.dedupRemoved} duplicate contacts`);
+    }
+    if (filterStats.engagementRemoved > 0) {
+      console.log(`[send-engine] Engagement filter removed ${filterStats.engagementRemoved} unengaged contacts (${workspace.engagementFilterDays}d window)`);
+    }
+
+    if (audience.length === 0) {
+      await db.emailCampaign.update({
+        where: { id: campaignId },
+        data: { status: "COMPLETED", sentAt: new Date(), totalRecipients: 0 },
+      });
+      return { status: "COMPLETED", totalSent: 0, totalFailed: 0, totalSkipped };
     }
 
     // -----------------------------------------------------------------------
@@ -276,6 +330,13 @@ export async function sendCampaign(
       where: { id: campaignId },
       data: { totalRecipients: audience.length },
     });
+
+    // -----------------------------------------------------------------------
+    // Rate limiter — optional per-minute cap
+    // -----------------------------------------------------------------------
+    const rateLimiter = workspace.sendRateLimitEnabled
+      ? createRateLimiter(workspaceId, workspace.sendRateLimitPerMinute)
+      : null;
 
     // -----------------------------------------------------------------------
     // Send in batches
@@ -351,30 +412,25 @@ export async function sendCampaign(
           let trackedHtml = injectTrackingPixel(personalizedHtml, trackingPixelUrl);
           trackedHtml = injectClickTracking(trackedHtml, appUrl, campaignId, contact.id);
 
-          // DEBUG — remove after confirming tracking works
-          console.log("[send-engine] appUrl:", appUrl);
-          console.log("[send-engine] pixelUrl:", trackingPixelUrl);
-          console.log("[send-engine] hasPixel:", trackedHtml.includes("/api/track/open"));
-          console.log("[send-engine] hasClickLinks:", trackedHtml.includes("/api/track/click"));
-          console.log("[send-engine] originalHtml snippet:", campaign.htmlBody.slice(0, 200));
-
           const plainText = buildPlainText({
             htmlBody: personalizedHtml,
             fromName,
             unsubscribeUrl,
           });
 
-          const result = await sendEmail(
-            {
-              to: contact.email,
-              subject: personalizedSubject,
-              html: trackedHtml,
-              text: plainText,
-              from,
-              idempotencyKey,
-            },
-            workspaceId
-          );
+          // Wait for rate limiter slot if enabled
+          if (rateLimiter) {
+            await rateLimiter.waitForSlot();
+          }
+
+          const result = await sendEmail({
+            to: contact.email,
+            subject: personalizedSubject,
+            html: trackedHtml,
+            text: plainText,
+            from,
+            idempotencyKey,
+          });
 
           // -----------------------------------------------------------------
           // Record result
@@ -387,10 +443,7 @@ export async function sendCampaign(
                 status: "SENT",
                 messageId: result.messageId,
                 sentAt: new Date(),
-                provider: result.provider === "smtp" ? "SMTP"
-                        : result.provider === "ses" ? "SES"
-                        : result.provider === "sendgrid" ? "SENDGRID"
-                        : "RESEND",
+                provider: result.provider === "smtp" ? "SMTP" : "RESEND",
               },
             });
           } else {
@@ -400,10 +453,7 @@ export async function sendCampaign(
               data: {
                 status: "FAILED",
                 failureReason: result.error,
-                provider: result.provider === "smtp" ? "SMTP"
-                        : result.provider === "ses" ? "SES"
-                        : result.provider === "sendgrid" ? "SENDGRID"
-                        : "RESEND",
+                provider: result.provider === "smtp" ? "SMTP" : "RESEND",
               },
             });
           }
