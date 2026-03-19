@@ -30,7 +30,7 @@ export async function getPlanUsage() {
 // Get all plan definitions — for upgrade modal
 // ---------------------------------------------------------------------------
 
-export function getAllPlans() {
+export async function getAllPlans() {
   return PLAN_ORDER.map((key) => PLANS[key]);
 }
 
