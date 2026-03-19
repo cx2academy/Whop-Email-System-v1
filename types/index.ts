@@ -9,11 +9,30 @@
 
 // ---------------------------------------------------------------------------
 // Generic API response wrapper
+// Extended to include plan upgrade errors as a first-class response type.
 // ---------------------------------------------------------------------------
 
 export type ApiResponse<T> =
   | { success: true; data: T }
-  | { success: false; error: string; code?: string };
+  | { success: false; error: string; code?: string }
+  | {
+      success: false;
+      upgradeRequired: true;
+      message: string;
+      feature?: string;
+      currentPlan: string;
+      suggestedPlan: string;
+      suggestedPlanPrice: number;
+      currentUsage?: number;
+      limit?: number | null;
+    };
+
+/** Type guard — narrows to the upgrade-required variant */
+export function isUpgradeRequired(
+  res: ApiResponse<unknown>
+): res is Extract<ApiResponse<unknown>, { upgradeRequired: true }> {
+  return !res.success && 'upgradeRequired' in res && res.upgradeRequired === true;
+}
 
 // ---------------------------------------------------------------------------
 // Pagination
@@ -92,7 +111,7 @@ export interface ContactFilters {
 }
 
 // ---------------------------------------------------------------------------
-// Whop API types (typed shapes for Whop API responses)
+// Whop API types
 // ---------------------------------------------------------------------------
 
 export interface WhopMember {

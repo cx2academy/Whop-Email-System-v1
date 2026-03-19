@@ -29,6 +29,7 @@ import {
   type NormalisedWhopMember,
 } from "@/lib/whop/client";
 import { SEND_BATCH_SIZE } from "@/lib/constants";
+import { checkUsageLimit } from "@/lib/plans/gates";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -121,6 +122,20 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
       // Upsert valid contacts in sub-batches to avoid huge transactions
       const subBatches = chunk(valid, SEND_BATCH_SIZE);
       for (const subBatch of subBatches) {
+        // Contact cap check — skip upsert if plan limit would be exceeded
+        const contactGate = await checkUsageLimit({
+          workspaceId,
+          type: 'contacts',
+          requested: subBatch.length,
+        });
+        if (!contactGate.allowed) {
+          totalSkipped += subBatch.length;
+          errorDetails.push(
+            `Contact limit reached (plan: ${contactGate.payload.currentPlan}, limit: ${contactGate.payload.limit ?? 'unknown'}). ${subBatch.length} contacts skipped.`
+          );
+          continue;
+        }
+
         const result = await upsertContactBatch(workspaceId, subBatch);
         totalUpserted += result.upserted;
         totalErrors += result.errors;

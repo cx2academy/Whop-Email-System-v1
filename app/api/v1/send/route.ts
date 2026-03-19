@@ -19,6 +19,7 @@ import { db } from '@/lib/db/client';
 import { resolveApiKey, unauthorizedResponse } from '@/lib/api/auth';
 import { v1Limiter, rateLimitedResponse } from '@/lib/api/rate-limit';
 import { logApiRequest } from '@/lib/api/logger';
+import { checkPlanLimit, checkUsageLimit } from '@/lib/plans/gates';
 
 export async function POST(req: NextRequest) {
   const start = Date.now();
@@ -58,17 +59,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Plan gates — API access feature + monthly email quota
+  const [apiGate, emailGate] = await Promise.all([
+    checkPlanLimit({ workspaceId: apiKey.workspaceId, feature: 'apiAccess' }),
+    checkUsageLimit({ workspaceId: apiKey.workspaceId, type: 'emails', requested: 1 }),
+  ]);
+  if (!apiGate.allowed) {
+    return Response.json(apiGate.toResponse(), { status: 402 });
+  }
+  if (!emailGate.allowed) {
+    return Response.json(emailGate.toResponse(), { status: 402 });
+  }
+
   const fromName = workspace.fromName ?? workspace.name;
-  const result = await sendEmail(
-    {
-      to: to as string | string[],
-      subject: subject as string,
-      html: html as string,
-      text: text as string | undefined,
-      from: `${fromName} <${workspace.fromEmail}>`,
-    },
-    apiKey.workspaceId  // route through workspace provider if configured
-  );
+  const result = await sendEmail({
+    to: to as string | string[],
+    subject: subject as string,
+    html: html as string,
+    text: text as string | undefined,
+    from: `${fromName} <${workspace.fromEmail}>`,
+  });
 
   const statusCode = result.success ? 200 : 502;
 

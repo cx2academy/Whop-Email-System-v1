@@ -11,6 +11,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/client';
 import { requireAdminAccess, requireWorkspaceAccess } from '@/lib/auth/session';
 import { manualTrigger, bulkTrigger } from './trigger-system';
+import { checkUsageLimit } from '@/lib/plans/gates';
 import type { AutomationStepType } from '@prisma/client';
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,10 @@ import type { AutomationStepType } from '@prisma/client';
 
 export async function createWorkflow(name: string, description?: string) {
   const { workspaceId } = await requireAdminAccess();
+
+  // Plan gate — check automation limit before creating
+  const gate = await checkUsageLimit({ workspaceId, type: 'automations' });
+  if (!gate.allowed) return gate.toActionError();
 
   const workflow = await db.automationWorkflow.create({
     data: { workspaceId, name, description },

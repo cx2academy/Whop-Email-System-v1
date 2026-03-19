@@ -7,6 +7,7 @@
 
 import { db } from '@/lib/db/client';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
+import { checkPlanLimit } from '@/lib/plans/gates';
 
 const CENTS = 100;
 const fmt = (cents: number) => `$${(cents / CENTS).toFixed(2)}`;
@@ -17,6 +18,9 @@ const fmt = (cents: number) => `$${(cents / CENTS).toFixed(2)}`;
 
 export async function getRevenueSummary() {
   const { workspaceId } = await requireWorkspaceAccess();
+
+  const gate = await checkPlanLimit({ workspaceId, feature: 'revenueAttribution' });
+  if (!gate.allowed) return gate.toActionError();
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
   const sevenDaysAgo  = new Date(Date.now() - 7  * 86400000);

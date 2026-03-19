@@ -7,6 +7,8 @@ import { db } from '@/lib/db/client';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { OnboardingChecklist } from './onboarding-checklist';
 import { deriveOnboardingState } from '@/lib/onboarding/steps';
+import { getWorkspaceUsage } from '@/lib/plans/gates';
+import { UsageBarsWidget } from '@/components/ui/plan-usage';
 import {
   UsersIcon, TrendingUpIcon, MailIcon, MousePointerClickIcon,
   ArrowRightIcon, PlusIcon, ZapIcon, UploadIcon, SparklesIcon,
@@ -18,7 +20,7 @@ export default async function DashboardPage() {
   const { workspaceId, userId } = await requireWorkspaceAccess();
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
 
-  const [workspace, contactCount, newThisWeek, campaignCount, recentCampaigns, user, revResult, sentThisWeek] =
+  const [workspace, contactCount, newThisWeek, campaignCount, recentCampaigns, user, revResult, sentThisWeek, usage] =
     await Promise.all([
       db.workspace.findUnique({
         where: { id: workspaceId },
@@ -45,6 +47,7 @@ export default async function DashboardPage() {
         where: { workspaceId }, _sum: { revenue: true },
       }).catch(() => ({ _sum: { revenue: 0 } })),
       db.emailSend.count({ where: { workspaceId, createdAt: { gte: sevenDaysAgo } } }),
+      getWorkspaceUsage(workspaceId).catch(() => null),
     ]);
 
   const totalRevenueCents = revResult._sum.revenue ?? 0;
@@ -130,6 +133,11 @@ export default async function DashboardPage() {
           icon={<MousePointerClickIcon className="h-4 w-4" />}
         />
       </div>
+
+      {/* ── Plan usage ────────────────────────────────────── */}
+      {usage && (
+        <UsageBarsWidget usage={usage} />
+      )}
 
       {/* ── Recent campaigns ──────────────────────────────── */}
       <section>

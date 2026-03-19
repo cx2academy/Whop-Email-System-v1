@@ -16,6 +16,7 @@ import { sendCampaign } from "@/lib/campaigns/send-engine";
 import { requireWorkspaceAccess, requireAdminAccess } from "@/lib/auth/session";
 import type { ApiResponse } from "@/types";
 import { track } from "@/lib/telemetry";
+import { checkUsageLimit, checkPlanLimit } from "@/lib/plans/gates";
 import type { EmailCampaign, CampaignStatus, CampaignType } from "@prisma/client";
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,26 @@ export async function createCampaign(
   }
 
   const data = parsed.data;
+
+  // ── Plan gates ────────────────────────────────────────────────────────────
+
+  // 1. Monthly campaign count limit
+  const campaignGate = await checkUsageLimit({ workspaceId, type: 'campaigns' });
+  if (!campaignGate.allowed) return campaignGate.toActionError();
+
+  // 2. A/B testing requires Growth or higher
+  if (data.isAbTest) {
+    const abGate = await checkPlanLimit({ workspaceId, feature: 'abTesting' });
+    if (!abGate.allowed) return abGate.toActionError();
+  }
+
+  // 3. Segment targeting requires Starter or higher
+  if (data.audienceSegmentIds && data.audienceSegmentIds.length > 0) {
+    const segGate = await checkPlanLimit({ workspaceId, feature: 'segments' });
+    if (!segGate.allowed) return segGate.toActionError();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Validate A/B test: if isAbTest=true, abSubjectB must be provided
   if (data.isAbTest && !data.abSubjectB) {

@@ -10,7 +10,8 @@ import { db } from "@/lib/db/client";
 import { WorkspaceSettingsForm } from "./settings-form";
 import { ApiKeys } from "./api-keys";
 import { WhopWebhookSettings } from "./whop-webhook";
-import { SendingSettings } from "./sending-settings";
+import { PlanBillingSettings } from "./plan-billing";
+import { getWorkspaceUsage } from "@/lib/plans/gates";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -30,24 +31,17 @@ export default async function SettingsPage() {
       plan: true,
       whopApiKey: true,
       webhookSecret: true,
-      // Smart sending settings
-      engagementFilterEnabled: true,
-      engagementFilterDays:    true,
-      deduplicationEnabled:    true,
-      sendRateLimitEnabled:    true,
-      sendRateLimitPerMinute:  true,
-      abuseDetectionEnabled:   true,
-      abuseFlagged:            true,
-      abuseFlaggedReason:      true,
-      abuseFlaggedAt:          true,
     },
   });
 
-  const apiKeys = await db.apiKey.findMany({
-    where: { workspaceId },
-    orderBy: { createdAt: 'desc' },
-    select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
-  });
+  const [apiKeys, usage] = await Promise.all([
+    db.apiKey.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
+    }),
+    getWorkspaceUsage(workspaceId).catch(() => null),
+  ]);
 
   if (!workspace) return null;
 
@@ -161,27 +155,16 @@ export default async function SettingsPage() {
         />
       </section>
 
-      {/* Smart Sending */}
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-foreground">Smart Sending</h2>
-        <p className="mb-5 text-sm text-muted-foreground">
-          Control who receives your emails, how fast they send, and protect your sender reputation automatically.
-        </p>
-        <SendingSettings
-          isAdmin={isAdmin}
-          initial={{
-            engagementFilterEnabled: workspace.engagementFilterEnabled ?? true,
-            engagementFilterDays:    workspace.engagementFilterDays ?? 30,
-            deduplicationEnabled:    workspace.deduplicationEnabled ?? true,
-            sendRateLimitEnabled:    workspace.sendRateLimitEnabled ?? false,
-            sendRateLimitPerMinute:  workspace.sendRateLimitPerMinute ?? 100,
-            abuseDetectionEnabled:   workspace.abuseDetectionEnabled ?? true,
-            abuseFlagged:            workspace.abuseFlagged ?? false,
-            abuseFlaggedReason:      workspace.abuseFlaggedReason ?? null,
-            abuseFlaggedAt:          workspace.abuseFlaggedAt?.toISOString() ?? null,
-          }}
-        />
-      </section>
+      {/* Plan & Billing */}
+      {usage && (
+        <section className="rounded-lg border border-border bg-card p-6">
+          <h2 className="mb-1 text-base font-semibold text-foreground">Plan &amp; Billing</h2>
+          <p className="mb-5 text-sm text-muted-foreground">
+            Manage your subscription, view usage, and purchase add-ons.
+          </p>
+          <PlanBillingSettings usage={usage} isAdmin={isAdmin} />
+        </section>
+      )}
 
       {/* Danger zone (owner only) */}
       {workspaceRole === "OWNER" && (

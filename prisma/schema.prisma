@@ -117,6 +117,14 @@ model Workspace {
   monthlyEmailCap Int           @default(1000)
   aiCredits       Int           @default(10)
 
+  // Stripe billing fields (wired up when payment is implemented)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  billingPeriodStart   DateTime?
+  billingPeriodEnd     DateTime?
+  trialEndsAt          DateTime?
+
   // Smart sending settings
   engagementFilterEnabled Boolean @default(true)
   engagementFilterDays    Int     @default(30)
@@ -151,6 +159,7 @@ model Workspace {
   emailProviderConfig EmailProviderConfig?
   domainSearchLogs    DomainSearchLog[]
   aiCreditLogs        AiCreditLog[]
+  addons              WorkspaceAddon[]
 
   @@index([slug])
   @@map("workspaces")
@@ -159,8 +168,10 @@ model Workspace {
 enum WorkspacePlan {
   FREE
   STARTER
+  GROWTH
   PRO
   ENTERPRISE
+  SCALE
 }
 
 // ---------------------------------------------------------------------------
@@ -965,4 +976,36 @@ model AiCreditLog {
   @@index([workspaceId])
   @@index([createdAt])
   @@map("ai_credit_logs")
+}
+
+// ===========================================================================
+// WORKSPACE ADD-ONS — purchased volume boosts on top of plan limits
+// ===========================================================================
+
+// Add-on types mirror the UsageLimitType in lib/plans/gates.ts.
+// 'emails'     → extra emails/month
+// 'contacts'   → extra contact slots
+// 'ai_credits' → extra AI credit balance (one-time, not monthly)
+enum AddonType {
+  emails
+  contacts
+  ai_credits
+}
+
+model WorkspaceAddon {
+  id          String    @id @default(cuid())
+  workspaceId String
+  type        AddonType
+  quantity    Int       // emails: per-month extra; ai_credits: one-time grant
+  // Stripe payment reference (populated when billing is wired)
+  stripePaymentIntentId String?
+  // Expiry — monthly add-ons expire at billing period end; null = never
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, type])
+  @@map("workspace_addons")
 }

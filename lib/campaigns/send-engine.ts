@@ -32,6 +32,7 @@ import { parseVariables, buildSendVariables } from "@/lib/templates/variable-par
 import { applyPreSendFilters } from "@/lib/sending/smart-filter";
 import { checkAbuseSignals } from "@/lib/sending/abuse-detector";
 import { createRateLimiter } from "@/lib/sending/rate-queue";
+import { checkUsageLimit } from "@/lib/plans/gates";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -272,6 +273,23 @@ export async function sendCampaign(
         });
         return { status: 'FAILED', totalSent: 0, totalFailed: 0, totalSkipped: rawAudience.length };
       }
+    }
+
+    // -----------------------------------------------------------------------
+    // Plan email cap — check monthly quota before sending
+    // -----------------------------------------------------------------------
+    const emailGate = await checkUsageLimit({
+      workspaceId,
+      type: 'emails',
+      requested: rawAudience.length,
+    });
+    if (!emailGate.allowed) {
+      console.warn(`[send-engine] Plan email cap reached for workspace ${workspaceId}: ${emailGate.payload.message}`);
+      await db.emailCampaign.update({
+        where: { id: campaignId },
+        data: { status: 'PAUSED' },
+      });
+      return { status: 'FAILED', totalSent: 0, totalFailed: 0, totalSkipped: rawAudience.length };
     }
 
     // -----------------------------------------------------------------------

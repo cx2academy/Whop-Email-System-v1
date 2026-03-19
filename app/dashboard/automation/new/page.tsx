@@ -8,6 +8,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createWorkflow, addStep } from '@/lib/automation/actions';
+import { UpgradeBanner } from '@/components/ui/plan-usage';
+import { isUpgradeRequired } from '@/types';
 import type { AutomationStepType } from '@prisma/client';
 
 const STEP_TYPES: { type: AutomationStepType; label: string; description: string }[] = [
@@ -39,6 +41,7 @@ export default function NewWorkflowPage() {
     { type: 'TRIGGER', config: { triggerType: 'new_member' } },
   ]);
   const [error, setError] = useState('');
+  const [upgradePayload, setUpgradePayload] = useState<Parameters<typeof UpgradeBanner>[0]['payload'] | null>(null);
 
   function addNewStep(type: AutomationStepType) {
     const defaults: Record<AutomationStepType, Record<string, unknown>> = {
@@ -66,7 +69,14 @@ export default function NewWorkflowPage() {
 
     startTransition(async () => {
       const wf = await createWorkflow(name.trim(), description.trim() || undefined);
-      if (!wf.success) { setError(wf.error ?? 'Failed'); return; }
+      if (!wf.success) {
+        if (isUpgradeRequired(wf)) {
+          setUpgradePayload(wf);
+        } else {
+          setError(wf.error ?? 'Failed');
+        }
+        return;
+      }
 
       for (let i = 0; i < steps.length; i++) {
         await addStep(wf.data.workflowId, steps[i].type, steps[i].config, i);
@@ -132,6 +142,9 @@ export default function NewWorkflowPage() {
         </div>
       </div>
 
+      {upgradePayload && (
+        <UpgradeBanner payload={upgradePayload} />
+      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex gap-3">
