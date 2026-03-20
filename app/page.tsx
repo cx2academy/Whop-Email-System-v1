@@ -792,6 +792,7 @@ footer {
     <li><a href="#features">Features</a></li>
     <li><a href="#revenue">Revenue</a></li>
     <li><a href="#ai">AI tools</a></li>
+    <li><a href="#pricing">Pricing</a></li>
   </ul>
   <Link href="/auth/login" className="nav-cta">Start free →</Link>
 </nav>
@@ -1123,6 +1124,139 @@ footer {
 </section>
 
 
+<style>{`
+  /* ── Pricing ───────────────────────────────────────────────── */
+  .pricing { padding: 100px 24px; background: #060d18; }
+  .pricing-head { text-align: center; margin-bottom: 56px; }
+  .pricing-eyebrow { display: inline-block; background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.22); border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 4px 14px; margin-bottom: 18px; }
+  .pricing-h { font-size: clamp(28px,4vw,42px); font-weight: 800; color: #fff; letter-spacing: -.02em; margin: 0 0 14px; }
+  .pricing-sub { font-size: 16px; color: rgba(255,255,255,.46); max-width: 460px; margin: 0 auto; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; max-width: 1080px; margin: 0 auto; }
+  .pc { border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 28px 24px 32px; background: rgba(255,255,255,.03); position: relative; display: flex; flex-direction: column; }
+  .pc.popular { border-color: #22c55e; background: rgba(34,197,94,.06); }
+  .pc-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #22c55e; color: #000; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 12px; border-radius: 99px; white-space: nowrap; }
+  .pc-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+  .pc-price { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -.03em; margin-bottom: 4px; }
+  .pc-price span { font-size: 15px; font-weight: 400; color: rgba(255,255,255,.4); }
+  .pc-tagline { font-size: 13px; color: rgba(255,255,255,.4); margin-bottom: 24px; }
+  .pc-divider { height: 1px; background: rgba(255,255,255,.07); margin-bottom: 20px; }
+  .pc-features { list-style: none; padding: 0; margin: 0 0 28px; flex: 1; }
+  .pc-features li { font-size: 13px; color: rgba(255,255,255,.65); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+  .pc-features li::before { content: ''; display: inline-block; width: 14px; height: 14px; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 7l3 3 6-6' stroke='%2322c55e' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat; flex-shrink: 0; }
+  .pc-features li.dim { color: rgba(255,255,255,.25); }
+  .pc-features li.dim::before { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 10l6-6M10 10L4 4' stroke='rgba(255,255,255,.2)' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E"); }
+  .pc-cta { display: block; text-align: center; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700; text-decoration: none; transition: opacity .15s; }
+  .pc-cta-free { background: rgba(255,255,255,.07); color: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.1); }
+  .pc-cta-free:hover { opacity: .8; }
+  .pc-cta-paid { background: #22c55e; color: #000; }
+  .pc-cta-paid:hover { opacity: .88; }
+  .pricing-footer { text-align: center; margin-top: 32px; font-size: 13px; color: rgba(255,255,255,.28); }
+  @media(max-width:900px){ .pricing-grid { grid-template-columns: 1fr 1fr; } }
+  @media(max-width:540px){ .pricing-grid { grid-template-columns: 1fr; } }
+`}</style>
+
+<section className="pricing" id="pricing">
+  <div className="pricing-head">
+    <div className="pricing-eyebrow">Simple pricing</div>
+    <h2 className="pricing-h">Start free. Scale as you grow.</h2>
+    <p className="pricing-sub">Every plan includes Whop sync, campaign sending, and open/click tracking. Upgrade when you need more.</p>
+  </div>
+
+  <div className="pricing-grid">
+
+    {/* Free */}
+    <div className="pc">
+      <p className="pc-name">Free</p>
+      <p className="pc-price">$0 <span>/mo</span></p>
+      <p className="pc-tagline">For creators just getting started</p>
+      <div className="pc-divider" />
+      <ul className="pc-features">
+        <li>500 emails / month</li>
+        <li>250 contacts</li>
+        <li>3 campaigns / month</li>
+        <li>10 AI credits</li>
+        <li>Open &amp; click tracking</li>
+        <li className="dim">Automations</li>
+        <li className="dim">Segments</li>
+        <li className="dim">A/B testing</li>
+        <li className="dim">Revenue attribution</li>
+        <li className="dim">API access</li>
+      </ul>
+      <Link href="/auth/register" className="pc-cta pc-cta-free">Get started free</Link>
+    </div>
+
+    {/* Starter */}
+    <div className="pc">
+      <p className="pc-name">Starter</p>
+      <p className="pc-price">$29 <span>/mo</span></p>
+      <p className="pc-tagline">For growing communities</p>
+      <div className="pc-divider" />
+      <ul className="pc-features">
+        <li>5,000 emails / month</li>
+        <li>2,500 contacts</li>
+        <li>Unlimited campaigns</li>
+        <li>50 AI credits / month</li>
+        <li>3 automations</li>
+        <li>Segments</li>
+        <li>Custom sending domain</li>
+        <li>30-day analytics history</li>
+        <li className="dim">A/B testing</li>
+        <li className="dim">Revenue attribution</li>
+      </ul>
+      <Link href="/auth/register" className="pc-cta pc-cta-paid">Start Starter</Link>
+    </div>
+
+    {/* Growth */}
+    <div className="pc popular">
+      <div className="pc-badge">Most popular</div>
+      <p className="pc-name">Growth</p>
+      <p className="pc-price">$79 <span>/mo</span></p>
+      <p className="pc-tagline">For serious email marketers</p>
+      <div className="pc-divider" />
+      <ul className="pc-features">
+        <li>25,000 emails / month</li>
+        <li>10,000 contacts</li>
+        <li>Unlimited campaigns</li>
+        <li>150 AI credits / month</li>
+        <li>Unlimited automations</li>
+        <li>A/B testing</li>
+        <li>Revenue attribution</li>
+        <li>API access</li>
+        <li>Advanced analytics (1yr)</li>
+        <li>AI deliverability rewrite</li>
+      </ul>
+      <Link href="/auth/register" className="pc-cta pc-cta-paid">Start Growth</Link>
+    </div>
+
+    {/* Scale */}
+    <div className="pc">
+      <p className="pc-name">Scale</p>
+      <p className="pc-price">$199 <span>/mo</span></p>
+      <p className="pc-tagline">For high-volume senders</p>
+      <div className="pc-divider" />
+      <ul className="pc-features">
+        <li>Unlimited emails</li>
+        <li>Unlimited contacts</li>
+        <li>Unlimited campaigns</li>
+        <li>500 AI credits / month</li>
+        <li>Unlimited automations</li>
+        <li>All Growth features</li>
+        <li>Multiple email providers</li>
+        <li>Priority support</li>
+        <li>Unlimited analytics history</li>
+        <li>Dedicated onboarding</li>
+      </ul>
+      <Link href="/auth/register" className="pc-cta pc-cta-paid">Start Scale</Link>
+    </div>
+
+  </div>
+
+  <p className="pricing-footer">
+    All plans include a free trial period · No credit card required to start · Cancel anytime
+  </p>
+</section>
+
+
 <section className="cta-section">
   <div className="cta-label">Start for free</div>
   <h2 className="cta-h reveal">Know which emails<br/>make you <em>money</em>.</h2>
@@ -1174,7 +1308,7 @@ footer {
     <div className="footer-col">
       <h4>Company</h4>
       <a href="#">About</a>
-      <a href="#">Pricing</a>
+      <a href="#pricing">Pricing</a>
       <a href="#">Privacy Policy</a>
       <a href="#">Terms of Service</a>
     </div>
