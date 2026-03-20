@@ -1,35 +1,26 @@
 'use client';
 
+/**
+ * components/layout/dashboard-sidebar.tsx
+ * RevTray light sidebar — task-first nav, minimal chrome
+ */
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboardIcon, MailIcon, UsersIcon, ZapIcon,
-  LayoutTemplateIcon, BarChart2Icon, SettingsIcon,
-  ChevronRightIcon, DollarSignIcon, ShieldCheckIcon, ListFilterIcon,
+  HomeIcon, MailIcon, UsersIcon, ZapIcon,
+  BarChart2Icon, SettingsIcon, ShieldCheckIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { href: '/dashboard',           label: 'Dashboard',   icon: LayoutDashboardIcon, exact: true },
-  { href: '/dashboard/campaigns', label: 'Campaigns',   icon: MailIcon },
-  {
-    href: '/dashboard/contacts',  label: 'Contacts',    icon: UsersIcon,
-    children: [
-      { href: '/dashboard/contacts', label: 'All Contacts', icon: UsersIcon },
-      { href: '/dashboard/segments', label: 'Segments',     icon: ListFilterIcon },
-    ],
-  },
-  { href: '/dashboard/automation', label: 'Automations', icon: ZapIcon },
-  { href: '/dashboard/templates',  label: 'Templates',   icon: LayoutTemplateIcon },
-  {
-    href: '/dashboard/analytics',  label: 'Analytics',   icon: BarChart2Icon,
-    children: [
-      { href: '/dashboard/analytics',     label: 'Overview',       icon: BarChart2Icon },
-      { href: '/dashboard/revenue',        label: 'Revenue',        icon: DollarSignIcon },
-      { href: '/dashboard/deliverability', label: 'Deliverability', icon: ShieldCheckIcon },
-    ],
-  },
-  { href: '/dashboard/settings',  label: 'Settings',    icon: SettingsIcon, exact: true },
+  { href: '/dashboard',             label: 'Home',         icon: HomeIcon,       exact: true },
+  { href: '/dashboard/campaigns',   label: 'Campaigns',    icon: MailIcon },
+  { href: '/dashboard/contacts',    label: 'Contacts',     icon: UsersIcon },
+  { href: '/dashboard/automation',  label: 'Auto-send',    icon: ZapIcon },
+  { href: '/dashboard/analytics',   label: 'Analytics',    icon: BarChart2Icon },
+  { href: '/dashboard/deliverability', label: 'Inbox health', icon: ShieldCheckIcon },
+  { href: '/dashboard/settings',    label: 'Settings',     icon: SettingsIcon,   exact: true },
 ] as const;
 
 export function DashboardSidebar() {
@@ -42,26 +33,29 @@ export function DashboardSidebar() {
 
   return (
     <aside
-      className="flex h-screen w-56 flex-col flex-shrink-0 sticky top-0"
+      className="flex h-screen w-[220px] flex-col flex-shrink-0 sticky top-0"
       style={{
-        background: 'hsl(222 47% 7%)',
-        borderRight: '1px solid hsl(222 35% 11%)',
+        background: 'var(--sidebar-bg)',
+        borderRight: '1px solid var(--sidebar-border)',
       }}
     >
       {/* Logo */}
       <div
-        className="flex h-14 items-center gap-3 px-5"
-        style={{ borderBottom: '1px solid hsl(222 35% 11%)' }}
+        className="flex h-14 items-center gap-2.5 px-5"
+        style={{ borderBottom: '1px solid var(--sidebar-border)' }}
       >
         <div
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-white text-xs font-bold flex-shrink-0"
-          style={{ background: '#22C55E', fontFamily: 'var(--font-display)' }}
+          className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+          style={{ background: 'var(--brand)' }}
         >
-          R
+          <svg width="14" height="14" viewBox="0 0 100 100" fill="none">
+            <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
+            <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="white"/>
+          </svg>
         </div>
         <span
-          className="text-[15px] font-bold text-white"
-          style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}
+          className="text-[15px] font-bold"
+          style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em', color: 'var(--text-primary)' }}
         >
           RevTray
         </span>
@@ -73,67 +67,56 @@ export function DashboardSidebar() {
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href, 'exact' in item ? item.exact : false);
-            const childActive = 'children' in item && item.children?.some((c) => isActive(c.href));
-            const open = active || childActive;
 
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-100 group',
-                    open
-                      ? 'text-white'
-                      : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5'
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-100',
+                    active
+                      ? 'text-[#16A34A]'
+                      : 'hover:bg-[#F3F4F6]'
                   )}
-                  style={open ? {
-                    background: 'rgba(34,197,94,0.1)',
-                    borderLeft: '2px solid #22C55E',
-                    paddingLeft: '10px',
-                  } : {}}
+                  style={
+                    active
+                      ? { background: 'var(--brand-tint)', color: '#16A34A' }
+                      : { color: 'var(--text-secondary)' }
+                  }
                 >
-                  <Icon className={cn('h-4 w-4 flex-shrink-0 transition-colors', open ? 'text-emerald-400' : 'text-zinc-600 group-hover:text-zinc-400')} />
-                  <span className="flex-1">{item.label}</span>
-                  {'children' in item && item.children && (
-                    <ChevronRightIcon className={cn('h-3 w-3 transition-transform duration-150 text-zinc-600', open && 'rotate-90')} />
-                  )}
+                  <Icon
+                    className="h-4 w-4 flex-shrink-0"
+                    style={{ color: active ? '#16A34A' : 'var(--text-tertiary)' }}
+                  />
+                  {item.label}
                 </Link>
-
-                {'children' in item && item.children && open && (
-                  <ul className="mt-0.5 ml-4 space-y-0.5" style={{ borderLeft: '1px solid hsl(222 25% 16%)', paddingLeft: '12px' }}>
-                    {item.children.map((child) => {
-                      const ChildIcon = child.icon;
-                      const childIsActive = isActive(child.href);
-                      return (
-                        <li key={child.href}>
-                          <Link
-                            href={child.href}
-                            className={cn(
-                              'flex items-center gap-2 rounded-md px-2 py-1.5 text-[12px] font-medium transition-all',
-                              childIsActive
-                                ? 'text-emerald-400'
-                                : 'text-zinc-600 hover:text-zinc-300 hover:bg-white/5'
-                            )}
-                          >
-                            <ChildIcon className="h-3 w-3 flex-shrink-0" />
-                            {child.label}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
               </li>
             );
           })}
         </ul>
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-3" style={{ borderTop: '1px solid hsl(222 35% 11%)' }}>
-        <p className="text-[10px] font-medium uppercase tracking-widest text-zinc-700">
-          RevTray v1
-        </p>
+      {/* Plan badge */}
+      <div
+        className="px-4 py-4"
+        style={{ borderTop: '1px solid var(--sidebar-border)' }}
+      >
+        <div
+          className="flex items-center justify-between rounded-lg px-3 py-2.5"
+          style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
+        >
+          <div>
+            <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>Free plan</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>500 emails / mo</p>
+          </div>
+          <Link
+            href="/dashboard/settings?tab=billing"
+            className="rounded-md px-2 py-1 text-[11px] font-semibold transition-colors"
+            style={{ background: 'var(--brand-tint)', color: '#16A34A' }}
+          >
+            Upgrade
+          </Link>
+        </div>
       </div>
     </aside>
   );

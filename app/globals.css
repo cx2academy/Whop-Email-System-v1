@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,45 +9,58 @@
     --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
     --font-sans:    'DM Sans', system-ui, sans-serif;
 
-    /* ── RevTray dark design system ─────────────────────── */
-    --background:          222 47% 6%;     /* #0A0E1A */
-    --foreground:          213 20% 91%;    /* #E2E8F0 */
+    /* ── RevTray Light Design System ──────────────────────── */
+    --background:          0 0% 97%;        /* #F7F8FA */
+    --foreground:          220 14% 7%;      /* #0D0F12 */
 
-    --card:                222 35% 9%;     /* #111827 */
-    --card-foreground:     213 20% 91%;
+    --card:                0 0% 100%;       /* #FFFFFF */
+    --card-foreground:     220 14% 7%;
 
-    --popover:             222 35% 9%;
-    --popover-foreground:  213 20% 91%;
+    --popover:             0 0% 100%;
+    --popover-foreground:  220 14% 7%;
 
-    /* Emerald green — RevTray primary */
-    --primary:             142 76% 46%;    /* #22C55E */
+    /* RevTray brand green */
+    --primary:             142 72% 45%;     /* #22C55E */
     --primary-foreground:  0 0% 100%;
 
-    --secondary:           222 30% 13%;
-    --secondary-foreground: 213 20% 70%;
+    --secondary:           220 9% 96%;      /* #F3F4F6 */
+    --secondary-foreground: 215 16% 47%;
 
-    --muted:               222 30% 13%;
-    --muted-foreground:    215 14% 48%;    /* #6B7280 / slightly lighter */
+    --muted:               220 9% 96%;
+    --muted-foreground:    215 16% 47%;     /* #5A6472 */
 
-    --accent:              222 30% 15%;
-    --accent-foreground:   213 20% 88%;
+    --accent:              220 13% 93%;
+    --accent-foreground:   220 14% 7%;
 
     --destructive:         0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border:              222 25% 16%;    /* #1F2937 */
-    --input:               222 25% 16%;
-    --ring:                142 76% 46%;
+    --border:              220 13% 91%;     /* #E6E8EC */
+    --input:               220 13% 91%;
+    --ring:                142 72% 45%;
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;
 
-    /* Revenue / positive green */
-    --revenue:             142 76% 46%;
-    --revenue-light:       142 76% 10%;
+    /* Text ramp */
+    --text-primary:   #0D0F12;
+    --text-secondary: #5A6472;
+    --text-tertiary:  #9AA3AF;
 
-    /* Sidebar tokens */
-    --sidebar-bg:          222 47% 7%;
-    --sidebar-border:      222 35% 11%;
+    /* Surfaces */
+    --surface-app:    #F7F8FA;
+    --surface-card:   #FFFFFF;
+    --surface-hover:  #F3F4F6;
+
+    /* Brand */
+    --brand:          #22C55E;
+    --brand-hover:    #16A34A;
+    --brand-tint:     rgba(34,197,94,0.08);
+    --brand-tint-md:  rgba(34,197,94,0.14);
+
+    /* Sidebar */
+    --sidebar-bg:     #FFFFFF;
+    --sidebar-border: #E6E8EC;
+    --sidebar-w:      220px;
   }
 }
 
@@ -70,84 +83,55 @@
     letter-spacing: -0.03em;
     font-weight: 700;
   }
-
-  h4, h5, h6 {
-    font-family: 'DM Sans', system-ui, sans-serif;
-    @apply font-semibold tracking-tight;
-  }
-
-  code, kbd, pre {
-    font-family: ui-monospace, 'Cascadia Code', monospace;
-    font-size: 0.875em;
-  }
 }
 
 @layer utilities {
   .font-display { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
 
-  .text-revenue { color: hsl(var(--revenue)); }
-  .bg-revenue-light { background-color: hsl(var(--revenue-light)); }
-
-  /* Emerald glow */
-  .glow-emerald {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+  /* Page entry */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
+  .animate-fade-up { animation: fade-up 0.28s ease forwards; }
 
-  /* Card hover lift */
-  .card-hover {
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-  }
-  .card-hover:hover {
-    transform: translateY(-1px);
-    border-color: hsl(222 25% 22%);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  /* Card shadow */
+  .shadow-card { box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03); }
+  .shadow-card-md { box-shadow: 0 4px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04); }
+
+  /* Status badge — light theme */
+  .badge-draft      { background: #F3F4F6; color: #5A6472; }
+  .badge-scheduled  { background: #EFF6FF; color: #3B82F6; }
+  .badge-sending    { background: #FFFBEB; color: #D97706; }
+  .badge-completed  { background: #F0FDF4; color: #16A34A; }
+  .badge-failed     { background: #FEF2F2; color: #DC2626; }
+  .badge-paused     { background: #FFF7ED; color: #EA580C; }
+
+  /* Focus ring */
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
   }
 
   /* Skeleton shimmer */
   .skeleton {
-    @apply rounded-md bg-muted relative overflow-hidden;
+    @apply rounded bg-gray-100 relative overflow-hidden;
   }
   .skeleton::after {
     content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, hsl(var(--muted-foreground) / 0.08), transparent);
-    animation: shimmer 1.6s infinite;
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+    animation: shimmer 1.5s infinite;
   }
   @keyframes shimmer {
     0%   { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
 
-  /* Tooltip */
-  .tooltip-trigger { @apply relative cursor-default; }
-  .tooltip-trigger:hover .tooltip-content { @apply opacity-100 visible; }
-  .tooltip-content {
-    @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5
-           rounded-lg text-xs font-medium bg-card border border-border text-foreground
-           whitespace-nowrap opacity-0 invisible transition-all duration-150 z-50 pointer-events-none
-           shadow-xl;
-  }
-
-  /* Pulse for live indicators */
+  /* Pulse */
   @keyframes pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50%       { opacity: 0.4; transform: scale(1.5); }
   }
   .animate-pulse-dot { animation: pulse-dot 2s ease infinite; }
-
-  /* Page fade-in */
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fade-in { animation: fade-in 0.3s ease forwards; }
-
-  /* Status badge colours (dark-mode safe) */
-  .badge-draft      { @apply bg-zinc-800 text-zinc-400; }
-  .badge-scheduled  { @apply bg-blue-950 text-blue-400; }
-  .badge-sending    { @apply bg-amber-950 text-amber-400; }
-  .badge-completed  { @apply bg-emerald-950 text-emerald-400; }
-  .badge-failed     { @apply bg-red-950 text-red-400; }
-  .badge-paused     { @apply bg-orange-950 text-orange-400; }
 }

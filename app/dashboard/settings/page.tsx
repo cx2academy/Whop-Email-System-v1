@@ -1,45 +1,39 @@
 /**
  * app/dashboard/settings/page.tsx
- *
- * Workspace settings — name, sending identity, Whop API key.
+ * RevTray settings — tabbed, no scroll marathon
  */
 
-import type { Metadata } from "next";
-import { requireWorkspaceAccess } from "@/lib/auth/session";
-import { db } from "@/lib/db/client";
-import { WorkspaceSettingsForm } from "./settings-form";
-import { ApiKeys } from "./api-keys";
-import { WhopWebhookSettings } from "./whop-webhook";
-import { PlanBillingSettings } from "./plan-billing";
-import { getWorkspaceUsage } from "@/lib/plans/gates";
-import { BillingSuccessBanner } from "./billing-success-banner";
+import type { Metadata } from 'next';
+import { requireWorkspaceAccess } from '@/lib/auth/session';
+import { db } from '@/lib/db/client';
+import { WorkspaceSettingsForm } from './settings-form';
+import { ApiKeys } from './api-keys';
+import { WhopWebhookSettings } from './whop-webhook';
+import { PlanBillingSettings } from './plan-billing';
+import { BillingSuccessBanner } from './billing-success-banner';
+import { EmailProviderSettings } from './email-provider';
+import { getWorkspaceUsage } from '@/lib/plans/gates';
+import { SettingsTabs } from './settings-tabs';
 
-export const metadata: Metadata = {
-  title: "Settings",
-};
+export const metadata: Metadata = { title: 'Settings' };
 
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: { billing_success?: string };
+  searchParams: { tab?: string; billing_success?: string };
 }) {
   const { workspaceId, workspaceRole } = await requireWorkspaceAccess();
+  const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 
-  const workspace = await db.workspace.findUnique({
-    where: { id: workspaceId },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      fromEmail: true,
-      fromName: true,
-      plan: true,
-      whopApiKey: true,
-      webhookSecret: true,
-    },
-  });
-
-  const [apiKeys, usage] = await Promise.all([
+  const [workspace, apiKeys, usage] = await Promise.all([
+    db.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true, name: true, slug: true,
+        fromEmail: true, fromName: true,
+        plan: true, whopApiKey: true, webhookSecret: true,
+      },
+    }),
     db.apiKey.findMany({
       where: { workspaceId },
       orderBy: { createdAt: 'desc' },
@@ -50,160 +44,174 @@ export default async function SettingsPage({
 
   if (!workspace) return null;
 
-  const isAdmin = workspaceRole === "OWNER" || workspaceRole === "ADMIN";
+  const activeTab = searchParams.tab ?? 'general';
+  const serializedKeys = apiKeys.map((k) => ({
+    ...k,
+    lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
+    createdAt: k.createdAt.toISOString(),
+  }));
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      {searchParams.billing_success && (
-        <BillingSuccessBanner message={searchParams.billing_success} />
-      )}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your workspace configuration
+    <div className="max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1
+          className="text-2xl font-bold"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+        >
+          Settings
+        </h1>
+        <p className="mt-0.5 text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Manage your workspace
         </p>
       </div>
 
-      {/* Workspace info */}
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-4 text-base font-semibold text-foreground">
-          Workspace
-        </h2>
-        <WorkspaceSettingsForm
-          workspace={{
-            name: workspace.name,
-            fromEmail: workspace.fromEmail,
-            fromName: workspace.fromName,
-            hasWhopApiKey: !!workspace.whopApiKey,
-          }}
-        />
-      </section>
-
-
-      {/* API Keys */}
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-foreground">API Keys</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Use API keys to access the{' '}
-          <code className="rounded bg-muted px-1 py-0.5 text-xs">/api/v1</code> endpoints
-          from external tools or AI agents.
-        </p>
-        {isAdmin ? (
-          <ApiKeys
-            initialKeys={apiKeys.map((k) => ({
-              ...k,
-              lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
-              createdAt: k.createdAt.toISOString(),
-            }))}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">Only admins can manage API keys.</p>
-        )}
-      </section>
-
-      {/* Data & Privacy */}
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-foreground">Data &amp; Privacy</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          How your data is stored and protected in this workspace.
-        </p>
-        <div className="space-y-3 text-sm">
-          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
-            <span className="mt-0.5 text-base">🔐</span>
-            <div>
-              <p className="font-medium text-foreground">API keys encrypted at rest</p>
-              <p className="text-muted-foreground">
-                Your Whop API key is encrypted with AES-256-GCM before being stored in the database.
-                The plaintext key is never persisted.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
-            <span className="mt-0.5 text-base">🛡️</span>
-            <div>
-              <p className="font-medium text-foreground">Workspace isolation</p>
-              <p className="text-muted-foreground">
-                All contacts, campaigns, and settings are scoped to your workspace.
-                No data is shared between workspaces.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
-            <span className="mt-0.5 text-base">📧</span>
-            <div>
-              <p className="font-medium text-foreground">Email content</p>
-              <p className="text-muted-foreground">
-                Email bodies are not end-to-end encrypted — they are transmitted to Resend for delivery.
-                Resend is SOC 2 Type II compliant.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-md border border-border bg-muted/30 px-4 py-3">
-            <span className="mt-0.5 text-base">🚫</span>
-            <div>
-              <p className="font-medium text-foreground">Unsubscribes honoured immediately</p>
-              <p className="text-muted-foreground">
-                Contacts who unsubscribe are excluded from all future sends. Status is updated in real time.
-              </p>
-            </div>
-          </div>
+      {/* Billing success banner */}
+      {searchParams.billing_success && (
+        <div className="mb-6">
+          <BillingSuccessBanner message={searchParams.billing_success} />
         </div>
-      </section>
-
-      {/* API Keys */}
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-foreground">API Keys</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Use API keys to access the v1 REST API from external tools or agents.
-          See <code className="font-mono text-xs">/docs/api-v1.md</code> for endpoint reference.
-        </p>
-        <ApiKeys
-          initialKeys={apiKeys.map((k) => ({ ...k, lastUsedAt: k.lastUsedAt?.toISOString() ?? null, createdAt: k.createdAt.toISOString() }))}
-          isAdmin={isAdmin}
-        />
-      </section>
-
-      {/* Plan & Billing */}
-      {usage && (
-        <section className="rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-1 text-base font-semibold text-foreground">Plan &amp; Billing</h2>
-          <p className="mb-5 text-sm text-muted-foreground">
-            Manage your subscription, view usage, and purchase add-ons.
-          </p>
-          <PlanBillingSettings usage={usage} isAdmin={isAdmin} />
-        </section>
       )}
 
-      {/* Danger zone (owner only) */}
-      {workspaceRole === "OWNER" && (
-        <section className="rounded-lg border border-destructive/30 bg-card p-6">
-          <h2 className="mb-2 text-base font-semibold text-destructive">
-            Danger Zone
-          </h2>
-          <p className="mb-4 text-sm text-muted-foreground">
-            These actions are irreversible. Proceed with caution.
-          </p>
-          <button
-            disabled
-            className="rounded-md border border-destructive px-4 py-2 text-sm font-medium text-destructive opacity-50 cursor-not-allowed"
-            title="Workspace deletion will be available in a future release"
+      {/* Tab bar */}
+      <SettingsTabs activeTab={activeTab} />
+
+      {/* Tab content */}
+      <div className="mt-6 space-y-6">
+
+        {/* ── General ───────────────────────────────────────────────── */}
+        {activeTab === 'general' && (
+          <>
+            <SettingsCard title="Workspace">
+              <WorkspaceSettingsForm
+                workspace={{
+                  name: workspace.name,
+                  fromEmail: workspace.fromEmail,
+                  fromName: workspace.fromName,
+                  hasWhopApiKey: !!workspace.whopApiKey,
+                }}
+              />
+            </SettingsCard>
+
+            <SettingsCard title="Data & privacy">
+              <div className="space-y-3">
+                {[
+                  { icon: '🔐', title: 'API keys encrypted at rest', desc: 'Your Whop API key is encrypted with AES-256-GCM before being stored.' },
+                  { icon: '🛡️', title: 'Workspace isolation', desc: 'All contacts and campaigns are scoped to your workspace only.' },
+                  { icon: '🚫', title: 'Unsubscribes honoured instantly', desc: 'Contacts who unsubscribe are excluded from all future sends in real time.' },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    className="flex items-start gap-3 rounded-lg px-4 py-3"
+                    style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
+                  >
+                    <span className="text-base mt-0.5">{item.icon}</span>
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{item.title}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SettingsCard>
+
+            {/* Danger zone — collapsed */}
+            {workspaceRole === 'OWNER' && (
+              <DangerZone />
+            )}
+          </>
+        )}
+
+        {/* ── Billing ───────────────────────────────────────────────── */}
+        {activeTab === 'billing' && usage && (
+          <SettingsCard title="Plan & billing">
+            <PlanBillingSettings usage={usage} isAdmin={isAdmin} />
+          </SettingsCard>
+        )}
+
+        {/* ── Integrations ──────────────────────────────────────────── */}
+        {activeTab === 'integrations' && (
+          <>
+            <SettingsCard title="Whop webhook" description="Automatically attribute revenue to campaigns when subscribers buy your products.">
+              <WhopWebhookSettings
+                workspaceId={workspace.id}
+                hasSecret={!!workspace.webhookSecret}
+                appUrl={process.env.NEXTAUTH_URL ?? 'https://app.revtray.com'}
+              />
+            </SettingsCard>
+
+            <SettingsCard title="Email provider" description="Connect your own sending provider for higher volume and deliverability control.">
+              <EmailProviderSettings />
+            </SettingsCard>
+          </>
+        )}
+
+        {/* ── API ───────────────────────────────────────────────────── */}
+        {activeTab === 'api' && (
+          <SettingsCard
+            title="API keys"
+            description={
+              <>
+                Access the <code className="rounded bg-[#F3F4F6] px-1 py-0.5 text-xs">/api/v1</code> endpoints from external tools or agents.
+              </>
+            }
           >
-            Delete workspace
-          </button>
-        </section>
-      )}
-      {/* Whop Webhook Integration */}
-      <section className="rounded-lg border border-border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-foreground">Whop Webhook Integration</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Automatically attribute revenue to your campaigns when subscribers buy your Whop products.
-        </p>
-        <WhopWebhookSettings
-          workspaceId={workspace.id}
-          hasSecret={!!workspace.webhookSecret}
-          appUrl={process.env.NEXTAUTH_URL ?? 'https://whop-email-system-v1.vercel.app'}
-        />
-      </section>
+            {isAdmin ? (
+              <ApiKeys initialKeys={serializedKeys} isAdmin={isAdmin} />
+            ) : (
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Only admins can manage API keys.</p>
+            )}
+          </SettingsCard>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ── Sub-components ──────────────────────────────────────────────────────────
+
+function SettingsCard({
+  title, description, children,
+}: {
+  title: string;
+  description?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-xl p-6 shadow-card"
+      style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}
+    >
+      <div className="mb-5">
+        <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
+        {description && (
+          <p className="mt-0.5 text-sm" style={{ color: 'var(--text-secondary)' }}>{description}</p>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DangerZone() {
+  return (
+    <div
+      className="rounded-xl p-6 shadow-card"
+      style={{ background: 'var(--surface-card)', border: '1px solid #FCA5A5' }}
+    >
+      <h2 className="text-base font-semibold mb-1" style={{ color: '#DC2626' }}>Danger zone</h2>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+        These actions are permanent and cannot be undone.
+      </p>
+      <button
+        disabled
+        className="rounded-lg border px-4 py-2 text-sm font-medium opacity-50 cursor-not-allowed"
+        style={{ borderColor: '#FCA5A5', color: '#DC2626' }}
+        title="Workspace deletion coming soon"
+      >
+        Delete workspace
+      </button>
     </div>
   );
 }
