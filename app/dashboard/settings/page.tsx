@@ -20,8 +20,9 @@ export const metadata: Metadata = { title: 'Settings' };
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: { tab?: string; billing_success?: string };
+  searchParams: Promise<{ tab?: string; billing_success?: string }>;
 }) {
+  const params = await searchParams;
   const { workspaceId, workspaceRole } = await requireWorkspaceAccess();
   const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 
@@ -44,7 +45,7 @@ export default async function SettingsPage({
 
   if (!workspace) return null;
 
-  const activeTab = searchParams.tab ?? 'general';
+  const activeTab = params.tab ?? 'general';
   const serializedKeys = apiKeys.map((k) => ({
     ...k,
     lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
@@ -67,9 +68,9 @@ export default async function SettingsPage({
       </div>
 
       {/* Billing success banner */}
-      {searchParams.billing_success && (
+      {params.billing_success && (
         <div className="mb-6">
-          <BillingSuccessBanner message={searchParams.billing_success} />
+          <BillingSuccessBanner message={params.billing_success} />
         </div>
       )}
 
