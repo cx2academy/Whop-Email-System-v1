@@ -12,12 +12,17 @@ import { ApiKeys } from "./api-keys";
 import { WhopWebhookSettings } from "./whop-webhook";
 import { PlanBillingSettings } from "./plan-billing";
 import { getWorkspaceUsage } from "@/lib/plans/gates";
+import { BillingSuccessBanner } from "./billing-success-banner";
 
 export const metadata: Metadata = {
   title: "Settings",
 };
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: { billing_success?: string };
+}) {
   const { workspaceId, workspaceRole } = await requireWorkspaceAccess();
 
   const workspace = await db.workspace.findUnique({
@@ -49,6 +54,9 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
+      {searchParams.billing_success && (
+        <BillingSuccessBanner message={searchParams.billing_success} />
+      )}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">

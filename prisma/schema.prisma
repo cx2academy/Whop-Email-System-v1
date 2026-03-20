@@ -117,13 +117,12 @@ model Workspace {
   monthlyEmailCap Int           @default(1000)
   aiCredits       Int           @default(10)
 
-  // Stripe billing fields (wired up when payment is implemented)
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-  stripePriceId        String?
-  billingPeriodStart   DateTime?
-  billingPeriodEnd     DateTime?
-  trialEndsAt          DateTime?
+  // Whop billing fields — populated by webhook when user upgrades via Whop checkout
+  whopMembershipId   String?   // active Whop membership ID for this subscription
+  whopPlanProductId  String?   // Whop product ID that maps to current plan
+  billingStatus      String    @default("free") // 'free' | 'active' | 'canceled' | 'expired' | 'trialing'
+  billingPeriodEnd   DateTime? // when current period ends (from Whop renewal_period_end)
+  trialEndsAt        DateTime?
 
   // Smart sending settings
   engagementFilterEnabled Boolean @default(true)
@@ -997,8 +996,8 @@ model WorkspaceAddon {
   workspaceId String
   type        AddonType
   quantity    Int       // emails: per-month extra; ai_credits: one-time grant
-  // Stripe payment reference (populated when billing is wired)
-  stripePaymentIntentId String?
+  // Whop membership reference (populated after successful checkout)
+  whopMembershipId      String?
   // Expiry — monthly add-ons expire at billing period end; null = never
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
