@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Shell, Input, Btn, Err, Ok, C } from '../ui';
-import { saveSenderName } from '@/lib/onboarding/actions';
 import { saveBranding } from '@/lib/branding/actions';
 
 interface Props {
@@ -21,10 +20,7 @@ export default function StepSender({ companyName, brandColor, userEmail, onNext 
     if (!name.trim()) { setError('Enter a sender name.'); return; }
     setState('loading'); setError('');
 
-    const [r1, r2] = await Promise.all([
-      saveSenderName(name.trim()),
-      saveBranding({ fromName: name.trim() }),
-    ]);
+    const r1 = await saveBranding({ fromName: name.trim() });
 
     if (!r1.success) { setState('error'); setError(r1.error ?? 'Failed to save.'); return; }
 
