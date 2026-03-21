@@ -111,6 +111,9 @@ model Workspace {
   // Sending identity defaults
   fromEmail String?
   fromName  String?
+  logoUrl         String?
+  brandColor      String  @default("#22C55E")
+  whopCompanyName String?
 
   // Plan / limits (extended in billing phase)
   plan            WorkspacePlan @default(FREE)
