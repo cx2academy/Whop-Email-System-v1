@@ -1,88 +1,94 @@
 /**
  * app/onboarding/page.tsx
  *
- * Server wrapper for the onboarding flow.
- * Reads session and workspace state, then hands off to the client flow.
+ * Server component. Reads session + workspace to determine resume point.
+ * Passes initial data to the client flow — zero extra fetches during steps.
  */
 
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db/client';
-import { OnboardingFlow } from './onboarding-flow';
+import { OnboardingFlow } from './flow';
 
 export const metadata: Metadata = { title: 'Get started — RevTray' };
 
 export default async function OnboardingPage() {
   const session = await auth();
-
   if (!session?.user?.id) redirect('/auth/login');
 
-  // If they have a workspace and have completed setup, go to dashboard
-  if (session.user.workspaceId) {
-    const workspace = await db.workspace.findUnique({
-      where: { id: session.user.workspaceId },
-      select: {
-        id:             true,
-        name:           true,
-        fromEmail:      true,
-        fromName:       true,
-        whopApiKey:     true,
-        whopCompanyName: true,
-        logoUrl:        true,
-        brandColor:     true,
-      },
-    }).catch(() => null);
+  // No workspace → show step 1 (Whop connect creates workspace via onboarding action)
+  // NOTE: createWorkspace must be called before saveWhopApiKey.
+  // If no workspaceId in session, the user just registered.
+  // We redirect to the refresh route after creating workspace so session picks up workspaceId.
+  if (!session.user.workspaceId) {
+    // Create a temporary workspace so subsequent server actions have a workspaceId.
+    // The refresh route will re-mint the JWT with the new workspaceId.
+    const existing = await db.workspaceMembership.findFirst({
+      where: { userId: session.user.id },
+      select: { workspaceId: true },
+    });
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      select: { hasAchievedFirstSend: true, email: true, name: true },
-    }).catch(() => null);
+    if (existing) {
+      // Workspace exists but not in JWT — force refresh
+      redirect(`/api/auth/refresh?callbackUrl=/onboarding`);
+    }
 
-    const contactCount = await db.contact.count({
-      where: { workspaceId: session.user.workspaceId, status: 'SUBSCRIBED' },
-    }).catch(() => 0);
+    // Create workspace now (silently) so actions work
+    const baseSlug = (session.user.name ?? 'workspace').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 30);
+    const count = await db.workspace.count({ where: { slug: { startsWith: baseSlug } } });
+    const slug = count === 0 ? baseSlug : `${baseSlug}-${count}`;
 
-    // Determine starting step based on what's already done
-    let startStep = 1;
-    if (workspace?.whopApiKey)     startStep = Math.max(startStep, 2);
-    if (workspace?.fromName)       startStep = Math.max(startStep, 3);
-    if (workspace?.fromEmail)      startStep = Math.max(startStep, 4);
-    if (contactCount > 0)          startStep = Math.max(startStep, 6);
-    if (user?.hasAchievedFirstSend) redirect('/dashboard');
+    const ws = await db.workspace.create({ data: { name: session.user.name ?? 'My Workspace', slug } });
+    await db.workspaceMembership.create({
+      data: { workspaceId: ws.id, userId: session.user.id, role: 'OWNER' },
+    });
 
-    return (
-      <OnboardingFlow
-        workspaceId={session.user.workspaceId}
-        userEmail={user?.email ?? session.user.email ?? ''}
-        userName={user?.name ?? session.user.name ?? ''}
-        startStep={startStep}
-        initialData={{
-          whopCompanyName: workspace?.whopCompanyName ?? null,
-          logoUrl:         workspace?.logoUrl ?? null,
-          brandColor:      workspace?.brandColor ?? '#22C55E',
-          fromName:        workspace?.fromName ?? null,
-          fromEmail:       workspace?.fromEmail ?? null,
-          contactCount,
-        }}
-      />
-    );
+    redirect(`/api/auth/refresh?callbackUrl=/onboarding`);
   }
 
-  // No workspace yet — show step 0 (create workspace + connect Whop in one action)
+  const workspaceId = session.user.workspaceId;
+
+  const [workspace, user, contactCount] = await Promise.all([
+    db.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        fromEmail: true, fromName: true,
+        whopApiKey: true, whopCompanyName: true,
+        logoUrl: true, brandColor: true,
+      },
+    }),
+    db.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true, name: true, hasAchievedFirstSend: true },
+    }),
+    db.contact.count({ where: { workspaceId, status: 'SUBSCRIBED' } }),
+  ]);
+
+  // If fully onboarded, go to dashboard
+  if (user?.hasAchievedFirstSend) redirect('/dashboard');
+
+  // Determine resume step
+  let startStep = 1;
+  if (workspace?.whopApiKey)     startStep = Math.max(startStep, 2);
+  if (workspace?.fromName)       startStep = Math.max(startStep, 3);
+  if (workspace?.fromEmail)      startStep = Math.max(startStep, 4);
+  if (contactCount > 0)          startStep = Math.max(startStep, 6);
+
+  const userEmail = user?.email ?? session.user.email ?? '';
+  const userName  = user?.name  ?? session.user.name  ?? '';
+
   return (
     <OnboardingFlow
-      workspaceId={null}
-      userEmail={session.user.email ?? ''}
-      userName={session.user.name ?? ''}
-      startStep={1}
+      userEmail={userEmail}
+      userName={userName}
+      startStep={startStep}
       initialData={{
-        whopCompanyName: null,
-        logoUrl:         null,
-        brandColor:      '#22C55E',
-        fromName:        null,
-        fromEmail:       null,
-        contactCount:    0,
+        companyName:  workspace?.whopCompanyName ?? '',
+        brandColor:   workspace?.brandColor ?? '#22C55E',
+        fromName:     workspace?.fromName ?? workspace?.whopCompanyName ?? userName,
+        contactCount,
+        campaignId:   null,
       }}
     />
   );
