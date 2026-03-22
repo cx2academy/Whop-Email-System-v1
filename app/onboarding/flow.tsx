@@ -4,7 +4,7 @@
  * app/onboarding/flow.tsx
  *
  * Step state machine. Owns all cross-step state.
- * Each step component gets callbacks; parent holds the data.
+ * Each step component gets typed callbacks; parent holds the data.
  */
 
 import { useState } from 'react';
@@ -26,6 +26,7 @@ interface FlowProps {
     fromName:     string;
     contactCount: number;
     campaignId:   string | null;
+    aiCredits:    number;
   };
 }
 
@@ -36,6 +37,7 @@ export function OnboardingFlow({ userEmail, userName, startStep, initialData }: 
   const [fromName,     setFromName]     = useState(initialData.fromName || initialData.companyName || userName);
   const [contactCount, setContactCount] = useState(initialData.contactCount);
   const [campaignId,   setCampaignId]   = useState<string | null>(initialData.campaignId);
+  const [aiCredits,    setAiCredits]    = useState(initialData.aiCredits);
 
   function advance() { setStep((s) => s + 1); }
 
@@ -75,6 +77,7 @@ export function OnboardingFlow({ userEmail, userName, startStep, initialData }: 
     );
     case 6: return (
       <StepSequence
+        aiCredits={aiCredits}
         onNext={(id) => { setCampaignId(id); advance(); }}
       />
     );

@@ -17,24 +17,16 @@ export default async function OnboardingPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/auth/login');
 
-  // No workspace → show step 1 (Whop connect creates workspace via onboarding action)
-  // NOTE: createWorkspace must be called before saveWhopApiKey.
-  // If no workspaceId in session, the user just registered.
-  // We redirect to the refresh route after creating workspace so session picks up workspaceId.
   if (!session.user.workspaceId) {
-    // Create a temporary workspace so subsequent server actions have a workspaceId.
-    // The refresh route will re-mint the JWT with the new workspaceId.
     const existing = await db.workspaceMembership.findFirst({
       where: { userId: session.user.id },
       select: { workspaceId: true },
     });
 
     if (existing) {
-      // Workspace exists but not in JWT — force refresh
       redirect(`/api/auth/refresh?callbackUrl=/onboarding`);
     }
 
-    // Create workspace now (silently) so actions work
     const baseSlug = (session.user.name ?? 'workspace').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 30);
     const count = await db.workspace.count({ where: { slug: { startsWith: baseSlug } } });
     const slug = count === 0 ? baseSlug : `${baseSlug}-${count}`;
@@ -56,6 +48,7 @@ export default async function OnboardingPage() {
         fromEmail: true, fromName: true,
         whopApiKey: true, whopCompanyName: true,
         logoUrl: true, brandColor: true,
+        aiCredits: true,   // needed to decide locked vs unlocked sequence step
       },
     }),
     db.user.findUnique({
@@ -65,15 +58,13 @@ export default async function OnboardingPage() {
     db.contact.count({ where: { workspaceId, status: 'SUBSCRIBED' } }),
   ]);
 
-  // If fully onboarded, go to dashboard
   if (user?.hasAchievedFirstSend) redirect('/dashboard');
 
-  // Determine resume step
   let startStep = 1;
-  if (workspace?.whopApiKey)     startStep = Math.max(startStep, 2);
-  if (workspace?.fromName)       startStep = Math.max(startStep, 3);
-  if (workspace?.fromEmail)      startStep = Math.max(startStep, 4);
-  if (contactCount > 0)          startStep = Math.max(startStep, 6);
+  if (workspace?.whopApiKey)  startStep = Math.max(startStep, 2);
+  if (workspace?.fromName)    startStep = Math.max(startStep, 3);
+  if (workspace?.fromEmail)   startStep = Math.max(startStep, 4);
+  if (contactCount > 0)       startStep = Math.max(startStep, 6);
 
   const userEmail = user?.email ?? session.user.email ?? '';
   const userName  = user?.name  ?? session.user.name  ?? '';
@@ -89,6 +80,7 @@ export default async function OnboardingPage() {
         fromName:     workspace?.fromName ?? workspace?.whopCompanyName ?? userName,
         contactCount,
         campaignId:   null,
+        aiCredits:    workspace?.aiCredits ?? 0,
       }}
     />
   );
