@@ -32,7 +32,7 @@
  */
 
 import type { PlanKey } from '@/lib/plans/config';
-import type { AddonPackageId } from '@/lib/plans/actions';
+import type { AddonPackageId } from '@/lib/plans/packages';
 
 // ---------------------------------------------------------------------------
 // Product ID getters — read from env at call time (not module load)
@@ -230,7 +230,7 @@ export async function applyAddonGrant(
   membershipId: string
 ): Promise<void> {
   const { db } = await import('@/lib/db/client');
-  const { ADDON_PACKAGES } = await import('@/lib/plans/actions');
+  const { ADDON_PACKAGES } = await import('@/lib/plans/packages');
   const { revalidatePath } = await import('next/cache');
 
   const pkg = ADDON_PACKAGES[addonId];

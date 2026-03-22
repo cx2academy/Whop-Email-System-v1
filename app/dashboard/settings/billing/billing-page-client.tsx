@@ -10,7 +10,8 @@
 
 import { useState } from 'react';
 import { CheckIcon, ZapIcon, ArrowRightIcon } from 'lucide-react';
-import { upgradePlan, purchaseAddon, ADDON_PACKAGES, type AddonPackageId } from '@/lib/plans/actions';
+import { upgradePlan, purchaseAddon } from '@/lib/plans/actions';
+import { ADDON_PACKAGES, type AddonPackageId } from '@/lib/plans/packages';
 import { PLANS, PLAN_ORDER, formatLimit, type PlanKey } from '@/lib/plans/config';
 import type { WorkspaceUsage } from '@/lib/plans/gates';
 
