@@ -4,7 +4,10 @@
  * app/onboarding/flow.tsx
  *
  * Step state machine. Owns all cross-step state.
- * Each step component gets typed callbacks; parent holds the data.
+ *
+ * Change: StepDomain's onNext now accepts an optional fromEmail argument.
+ * When the user picks their sender address (prefix@domain) inside the
+ * domain step, it gets stored in fromName state and passed to StepLive.
  */
 
 import { useState } from 'react';
@@ -67,7 +70,13 @@ export function OnboardingFlow({ userEmail, userName, startStep, initialData }: 
     case 4: return (
       <StepDomain
         companyName={companyName}
-        onNext={advance}
+        onNext={(fromEmail?: string) => {
+          // If user picked a sender address (prefix@domain), store it
+          // It will already be saved to the DB by saveSenderAddress()
+          // We update fromName here so StepLive shows the right address
+          if (fromEmail) setFromName(fromEmail);
+          advance();
+        }}
       />
     );
     case 5: return (

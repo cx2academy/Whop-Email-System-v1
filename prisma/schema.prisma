@@ -1,6 +1,6 @@
 // prisma/schema.prisma
 //
-// Whop Email Engine — Full Database Schema (Phase 2)
+// Whop Email Engine — Full Database Schema
 //
 // Database Principles enforced:
 //   ✅ Every tenant-scoped table includes workspaceId
@@ -32,12 +32,11 @@ model User {
   image         String?
   passwordHash  String?   // null for OAuth-only users
   hasAchievedFirstSend Boolean @default(false)
-  onboardingDismissedAt DateTime? // set when user explicitly dismisses the onboarding checklist
+  onboardingDismissedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   accounts    Account[]
   sessions    Session[]
   memberships WorkspaceMembership[]
@@ -101,30 +100,32 @@ model VerificationToken {
 model Workspace {
   id   String @id @default(cuid())
   name String
-  slug String @unique // URL-safe identifier, e.g. "acme-corp"
+  slug String @unique
 
-  // Whop integration — stored per workspace for isolation
-  whopApiKey      String? // encrypted at rest in production
+  // Whop integration
+  whopApiKey      String?
   whopCompanyId   String?
-  webhookSecret   String? // per-workspace secret for Whop webhook verification // Whop company/product ID for this workspace
+  whopCompanyName String?   // ← NEW: auto-populated from Whop API on key save
+  webhookSecret   String?
+
+  // Branding — used in email templates and onboarding UI
+  logoUrl    String?                   // ← NEW: workspace logo URL
+  brandColor String @default("#22C55E") // ← NEW: hex color for email CTAs
 
   // Sending identity defaults
   fromEmail String?
   fromName  String?
-  logoUrl         String?
-  brandColor      String  @default("#22C55E")
-  whopCompanyName String?
 
-  // Plan / limits (extended in billing phase)
+  // Plan / limits
   plan            WorkspacePlan @default(FREE)
   monthlyEmailCap Int           @default(1000)
   aiCredits       Int           @default(10)
 
-  // Whop billing fields — populated by webhook when user upgrades via Whop checkout
-  whopMembershipId   String?   // active Whop membership ID for this subscription
-  whopPlanProductId  String?   // Whop product ID that maps to current plan
-  billingStatus      String    @default("free") // 'free' | 'active' | 'canceled' | 'expired' | 'trialing'
-  billingPeriodEnd   DateTime? // when current period ends (from Whop renewal_period_end)
+  // Whop billing fields
+  whopMembershipId   String?
+  whopPlanProductId  String?
+  billingStatus      String    @default("free")
+  billingPeriodEnd   DateTime?
   trialEndsAt        DateTime?
 
   // Smart sending settings
@@ -135,7 +136,7 @@ model Workspace {
   sendRateLimitPerMinute  Int     @default(100)
   abuseDetectionEnabled   Boolean @default(true)
 
-  // Abuse flags — set by abuse detector, cleared manually by admin
+  // Abuse flags
   abuseFlagged        Boolean   @default(false)
   abuseFlaggedReason  String?
   abuseFlaggedAt      DateTime?
@@ -143,21 +144,20 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  memberships WorkspaceMembership[]
-  contacts    Contact[]
-  campaigns   EmailCampaign[]
-  emailSends  EmailSend[]
-  syncLogs    SyncLog[]
-  apiKeys         ApiKey[]
-  telemetryEvents   TelemetryEvent[]
+  memberships         WorkspaceMembership[]
+  contacts            Contact[]
+  campaigns           EmailCampaign[]
+  emailSends          EmailSend[]
+  syncLogs            SyncLog[]
+  apiKeys             ApiKey[]
+  telemetryEvents     TelemetryEvent[]
   sendingDomains      SendingDomain[]
   automationWorkflows AutomationWorkflow[]
   segments            Segment[]
   purchases           Purchase[]
   attributions        RevenueAttribution[]
   emailTemplates      EmailTemplate[]
-  tags        Tag[]
+  tags                Tag[]
   emailProviderConfig EmailProviderConfig?
   domainSearchLogs    DomainSearchLog[]
   aiCreditLogs        AiCreditLog[]
@@ -177,7 +177,7 @@ enum WorkspacePlan {
 }
 
 // ---------------------------------------------------------------------------
-// WORKSPACE MEMBERSHIP — User <-> Workspace many-to-many with roles
+// WORKSPACE MEMBERSHIP
 // ---------------------------------------------------------------------------
 
 model WorkspaceMembership {
@@ -205,41 +205,35 @@ enum WorkspaceMemberRole {
 }
 
 // ---------------------------------------------------------------------------
-// CONTACT — A synced member/subscriber scoped to a workspace
+// CONTACT
 // ---------------------------------------------------------------------------
 
 model Contact {
   id          String @id @default(cuid())
   workspaceId String
 
-  // Identity
   email     String
   firstName String?
   lastName  String?
 
-  // Whop sync metadata
-  whopMemberId String? // Whop's user ID — used for idempotent re-syncs
-  whopMetadata Json?   // Raw Whop fields (product access, plan, etc.)
+  whopMemberId String?
+  whopMetadata Json?
 
-  // Subscription state
   status ContactStatus @default(SUBSCRIBED)
 
-  // Unsubscribe tracking
   unsubscribedAt DateTime?
   unsubscribeIp  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tags                  ContactTag[]
   emailSends            EmailSend[]
   automationEnrollments AutomationEnrollment[]
   purchases             Purchase[]
   attributions          RevenueAttribution[]
 
-  // CRITICAL: prevents duplicate contacts per workspace (database-principles.md)
   @@unique([workspaceId, email])
   @@index([workspaceId])
   @@index([workspaceId, status])
@@ -255,7 +249,7 @@ enum ContactStatus {
 }
 
 // ---------------------------------------------------------------------------
-// TAG — Workspace-scoped label for contact segmentation
+// TAG
 // ---------------------------------------------------------------------------
 
 model Tag {
@@ -290,7 +284,7 @@ model ContactTag {
 }
 
 // ---------------------------------------------------------------------------
-// EMAIL CAMPAIGN — A single campaign definition
+// EMAIL CAMPAIGN
 // ---------------------------------------------------------------------------
 
 model EmailCampaign {
@@ -301,34 +295,29 @@ model EmailCampaign {
   type        CampaignType   @default(BROADCAST)
   status      CampaignStatus @default(DRAFT)
 
-  // Content
   subject     String
   previewText String?
   htmlBody    String  @db.Text
   textBody    String? @db.Text
 
-  // Audience — tag-based and segment-based targeting
   audienceTagIds     String[]
   audienceSegmentIds String[]
 
-  // A/B testing
   isAbTest        Boolean @default(false)
-  templateId      String? // links to EmailTemplate if created from one
+  templateId      String?
   abSubjectB      String?
   abWinnerVariant String?
 
-  // Scheduling
   scheduledAt DateTime?
   sentAt      DateTime?
 
-  // Stats cache — updated asynchronously
   totalRecipients Int @default(0)
   totalSent       Int @default(0)
   totalOpened     Int @default(0)
   totalClicked    Int @default(0)
   totalBounced    Int @default(0)
   totalFailed     Int @default(0)
-  totalRevenue    Int @default(0) // cents — updated by attribution engine
+  totalRevenue    Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -361,8 +350,7 @@ enum CampaignStatus {
 }
 
 // ---------------------------------------------------------------------------
-// EMAIL SEND — One row per recipient per campaign (the send audit trail)
-// High-volume table — every send creates a row
+// EMAIL SEND
 // ---------------------------------------------------------------------------
 
 model EmailSend {
@@ -371,19 +359,14 @@ model EmailSend {
   campaignId  String
   contactId   String
 
-  // Delivery state
   status   EmailSendStatus @default(PENDING)
   provider EmailProvider   @default(RESEND)
 
-  // Provider response
   messageId     String?
   failureReason String? @db.Text
 
-  // Idempotency key — prevents duplicate sends
-  // Format: "{campaignId}:{contactId}"
   idempotencyKey String @unique
 
-  // Tracking timestamps
   sentAt       DateTime?
   deliveredAt  DateTime?
   openedAt     DateTime?
@@ -391,8 +374,7 @@ model EmailSend {
   bouncedAt    DateTime?
   complainedAt DateTime?
 
-  // Bounce details (populated by webhook)
-  bounceType   String? // e.g. "hard", "soft"
+  bounceType   String?
   bounceReason String? @db.Text
 
   createdAt DateTime @default(now())
@@ -432,7 +414,7 @@ enum EmailProvider {
 }
 
 // ---------------------------------------------------------------------------
-// SYNC LOG — Audit trail for Whop member sync operations
+// SYNC LOG
 // ---------------------------------------------------------------------------
 
 model SyncLog {
@@ -440,9 +422,8 @@ model SyncLog {
   workspaceId String
 
   status      SyncStatus @default(RUNNING)
-  triggeredBy String?    // userId or "system"
+  triggeredBy String?
 
-  // Results
   totalFetched  Int @default(0)
   totalUpserted Int @default(0)
   totalSkipped  Int @default(0)
@@ -470,19 +451,16 @@ enum SyncStatus {
   PARTIAL
 }
 
-// NOTE: bounceType and bounceReason added for webhook ingestion
-// Run: prisma migrate dev --name add_bounce_fields
-
 // ---------------------------------------------------------------------------
-// API KEY — User-generated keys for external API / agent access
+// API KEY
 // ---------------------------------------------------------------------------
 
 model ApiKey {
   id          String  @id @default(cuid())
   workspaceId String
-  name        String  // human label e.g. 'My Agent'
-  keyHash     String  @unique // bcrypt hash of the full key
-  keyPrefix   String  // first 8 chars shown in UI e.g. 'wee_1234'
+  name        String
+  keyHash     String  @unique
+  keyPrefix   String
   lastUsedAt  DateTime?
 
   createdAt DateTime @default(now())
@@ -495,15 +473,11 @@ model ApiKey {
   @@map("api_keys")
 }
 
-// ---------------------------------------------------------------------------
-// API LOG — Audit trail for every v1 API call
-// ---------------------------------------------------------------------------
-
 model ApiLog {
   id         String @id @default(cuid())
   apiKeyId   String
-  method     String // GET POST etc
-  path       String // /api/v1/campaigns
+  method     String
+  path       String
   statusCode Int
   durationMs Int
 
@@ -517,24 +491,18 @@ model ApiLog {
 }
 
 // ---------------------------------------------------------------------------
-// TELEMETRY EVENT — Lightweight behavioral event log for analytics + future ML
-// Append-only. Never updated. Index on (workspaceId, event, createdAt).
+// TELEMETRY EVENT
 // ---------------------------------------------------------------------------
 
 model TelemetryEvent {
   id          String  @id @default(cuid())
   workspaceId String
-  userId      String? // null for system-generated events
+  userId      String?
 
-  // Event name — use snake_case e.g. 'campaign_created'
-  event       String
+  event      String
+  properties String @default("{}")
 
-  // Arbitrary JSON properties for future ML feature extraction.
-  // Stored as String to avoid Prisma JSON type edge cases on all DB providers.
-  // Parse with JSON.parse() when reading.
-  properties  String  @default("{}")
-
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -544,28 +512,34 @@ model TelemetryEvent {
 }
 
 // ---------------------------------------------------------------------------
-// SENDING DOMAIN — Per-workspace domain auth + reputation cache
+// SENDING DOMAIN
 // ---------------------------------------------------------------------------
 
 model SendingDomain {
   id          String  @id @default(cuid())
   workspaceId String
-  domain      String  // e.g. "acme.com"
+  domain      String
 
-  // DNS authentication status
-  spfVerified         Boolean @default(false)
-  dkimVerified        Boolean @default(false)
-  dmarcVerified       Boolean @default(false)
-  returnPathVerified  Boolean @default(false)
-  dkimSelector  String  @default("wee1") // DNS TXT record selector
-  dkimPublicKey String? @db.Text // published in DNS TXT record
-  dkimPrivateKey String? @db.Text // encrypted, used for signing
+  // DNS authentication status (legacy + Resend-verified)
+  spfVerified        Boolean @default(false)
+  dkimVerified       Boolean @default(false)
+  dmarcVerified      Boolean @default(false)
+  returnPathVerified Boolean @default(false)
 
-  // Provider hint — drives provider-specific SPF includes and Return-Path values
-  // Values: 'RESEND' | 'SES' | 'SENDGRID' | null (generic)
+  // Legacy DKIM fields (kept for backwards compat with non-Resend domains)
+  dkimSelector   String  @default("wee1")
+  dkimPublicKey  String? @db.Text
+  dkimPrivateKey String? @db.Text
+
+  // Provider hint
   emailProvider String?
 
-  // Reputation (computed + cached by reputation engine)
+  // ← NEW: Resend domain integration
+  resendDomainId   String? // Resend's domain ID returned by resend.domains.create()
+  resendStatus     String? // 'not_started' | 'pending' | 'verified' | 'failed'
+  resendDnsRecords Json?   // DNS records array from Resend — shown in setup UI
+
+  // Reputation
   reputationScore     Int       @default(100)
   reputationUpdatedAt DateTime?
 
@@ -581,7 +555,7 @@ model SendingDomain {
 }
 
 // ---------------------------------------------------------------------------
-// DELIVERABILITY REPORT — Pre-send check result per campaign
+// DELIVERABILITY REPORT
 // ---------------------------------------------------------------------------
 
 model DeliverabilityReport {
@@ -589,9 +563,9 @@ model DeliverabilityReport {
   campaignId String  @unique
   domainId   String?
 
-  score    Int    // 0–100
-  warnings String @default("[]") // JSON array of warning strings
-  details  String @default("{}") // JSON — spam score, auth status, etc.
+  score    Int
+  warnings String @default("[]")
+  details  String @default("{}")
 
   createdAt DateTime @default(now())
 
@@ -602,14 +576,14 @@ model DeliverabilityReport {
 }
 
 // ---------------------------------------------------------------------------
-// INBOX TEST RESULT — Simulated seed list placement results
+// INBOX TEST RESULT
 // ---------------------------------------------------------------------------
 
 model InboxTestResult {
   id         String @id @default(cuid())
   campaignId String
-  provider   String // gmail | outlook | yahoo
-  placement  String // inbox | spam | promotions
+  provider   String
+  placement  String
 
   testedAt DateTime @default(now())
 
@@ -652,10 +626,6 @@ enum JobStatus {
   FAILED
 }
 
-// ---------------------------------------------------------------------------
-// AUTOMATION WORKFLOW
-// ---------------------------------------------------------------------------
-
 model AutomationWorkflow {
   id          String           @id @default(cuid())
   workspaceId String
@@ -664,7 +634,6 @@ model AutomationWorkflow {
   status      AutomationStatus @default(DRAFT)
   errorCount  Int              @default(0)
 
-  // Stats
   totalRuns       Int       @default(0)
   totalEmailsSent Int       @default(0)
   lastTriggeredAt DateTime?
@@ -672,7 +641,7 @@ model AutomationWorkflow {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace    Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   steps        AutomationStep[]
   enrollments  AutomationEnrollment[]
   jobs         AutomationJob[]
@@ -682,16 +651,6 @@ model AutomationWorkflow {
   @@index([workspaceId, status])
   @@map("automation_workflows")
 }
-
-// ---------------------------------------------------------------------------
-// AUTOMATION STEP — one node in the workflow
-// config is JSON stored as String:
-//   TRIGGER:    { triggerType: 'new_member'|'purchase'|'api'|'manual', filters?: {} }
-//   DELAY:      { amount: number, unit: 'minutes'|'hours'|'days' }
-//   SEND_EMAIL: { subject: string, html: string, fromName?: string }
-//   ADD_TAG:    { tagName: string }
-//   WEBHOOK:    { url: string, method: 'GET'|'POST', payload?: string }
-// ---------------------------------------------------------------------------
 
 model AutomationStep {
   id         String             @id @default(cuid())
@@ -710,15 +669,11 @@ model AutomationStep {
   @@map("automation_steps")
 }
 
-// ---------------------------------------------------------------------------
-// AUTOMATION ENROLLMENT — one contact's journey through a workflow
-// ---------------------------------------------------------------------------
-
 model AutomationEnrollment {
   id           String           @id @default(cuid())
   workflowId   String
   contactId    String
-  currentStep  Int              @default(0) // position of next step to execute
+  currentStep  Int              @default(0)
   status       EnrollmentStatus @default(ACTIVE)
   errorCount   Int              @default(0)
   errorMessage String?          @db.Text
@@ -730,17 +685,12 @@ model AutomationEnrollment {
   contact  Contact            @relation(fields: [contactId], references: [id], onDelete: Cascade)
   jobs     AutomationJob[]
 
-  // One active enrollment per contact per workflow
   @@unique([workflowId, contactId])
   @@index([workflowId])
   @@index([contactId])
   @@index([status])
   @@map("automation_enrollments")
 }
-
-// ---------------------------------------------------------------------------
-// AUTOMATION JOB — a scheduled step execution (used for delays)
-// ---------------------------------------------------------------------------
 
 model AutomationJob {
   id           String    @id @default(cuid())
@@ -770,21 +720,19 @@ model AutomationJob {
 
 model EmailTemplate {
   id          String  @id @default(cuid())
-  workspaceId String  // null-equivalent: use a sentinel workspace for system templates
+  workspaceId String
   name        String
-  category    String  // 'course_launch' | 'promotion' | 'announcement' etc.
+  category    String
   subject     String
   htmlBody    String  @db.Text
   previewText String?
 
-  // Ownership flags
-  isSystemTemplate Boolean @default(false) // system templates are read-only
-  isPublic         Boolean @default(false) // future marketplace
-  price            Int     @default(0)     // future marketplace (cents)
+  isSystemTemplate Boolean @default(false)
+  isPublic         Boolean @default(false)
+  price            Int     @default(0)
 
-  // Stats (updated when campaigns using this template complete)
-  usageCount  Int @default(0)
-  avgOpenRate Float @default(0)
+  usageCount   Int   @default(0)
+  avgOpenRate  Float @default(0)
   avgClickRate Float @default(0)
 
   createdAt DateTime @default(now())
@@ -798,35 +746,16 @@ model EmailTemplate {
 }
 
 // ===========================================================================
-// SEGMENTATION SYSTEM
+// SEGMENTATION
 // ===========================================================================
-
-// ---------------------------------------------------------------------------
-// SEGMENT — a saved filter that dynamically resolves to a set of contacts
-//
-// rules JSON shape:
-// {
-//   operator: 'AND' | 'OR',
-//   conditions: [
-//     { field: 'tag',          op: 'has' | 'not_has',     value: 'buyer' },
-//     { field: 'status',       op: 'eq',                  value: 'SUBSCRIBED' },
-//     { field: 'createdAt',    op: 'within_days',         value: 30 },
-//     { field: 'lastOpened',   op: 'within_days' | 'never', value: 30 },
-//     { field: 'lastClicked',  op: 'within_days' | 'never', value: 30 },
-//     { field: 'opensCount',   op: 'gt' | 'lt',           value: 3 },
-//     { field: 'emailsSent',   op: 'gt' | 'lt',           value: 5 }
-//   ]
-// }
-// ---------------------------------------------------------------------------
 
 model Segment {
   id          String  @id @default(cuid())
   workspaceId String
   name        String
   description String?
-  rules       String  @default("{}") // JSON
+  rules       String  @default("{}")
 
-  // Cached contact count — updated when segment is previewed or used
   contactCount    Int       @default(0)
   lastEvaluatedAt DateTime?
 
@@ -840,20 +769,20 @@ model Segment {
 }
 
 // ===========================================================================
-// REVENUE ATTRIBUTION SYSTEM
+// REVENUE ATTRIBUTION
 // ===========================================================================
 
 model Purchase {
   id          String  @id @default(cuid())
   workspaceId String
-  contactId   String?  // nullable — contact may not be in system yet
-  email       String   // always store for matching
+  contactId   String?
+  email       String
   productId   String?
   productName String?
-  amount      Int      // cents
-  currency    String   @default("usd")
-  source      String   @default("api") // 'whop' | 'api' | 'webhook'
-  externalId  String?  // for idempotent dedup
+  amount      Int
+  currency    String  @default("usd")
+  source      String  @default("api")
+  externalId  String?
   metadata    Json?
 
   createdAt DateTime @default(now())
@@ -877,14 +806,14 @@ model RevenueAttribution {
   campaignId       String?
   workflowId       String?
   attributionModel String  @default("last_click")
-  revenue          Int     // cents
+  revenue          Int
 
   createdAt DateTime @default(now())
 
-  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  purchase  Purchase           @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  contact   Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  campaign  EmailCampaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  purchase  Purchase            @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  contact   Contact?            @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  campaign  EmailCampaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   workflow  AutomationWorkflow? @relation(fields: [workflowId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
@@ -896,31 +825,21 @@ model RevenueAttribution {
 }
 
 // ===========================================================================
-// EMAIL PROVIDER CONFIG — Per-workspace BYOE (Bring Your Own Email) settings
+// EMAIL PROVIDER CONFIG
 // ===========================================================================
 
-// Which provider type is configured on this workspace.
-// Separate from the EmailProvider enum on EmailSend (which is the historical
-// send audit record). This enum drives the provider factory at send time.
 enum EmailProviderType {
   RESEND
   SES
   SENDGRID
 }
 
-// One row per workspace — enforced by @@unique on workspaceId.
-// encryptedKey stores AES-256-GCM blob (same scheme as whopApiKey).
-//   Resend  → raw API key string
-//   SES     → JSON: {"accessKeyId":"...","secretAccessKey":"..."}
-//   SendGrid → raw API key string
-// metadata stores non-secret config as JSON:
-//   { region?: string, senderEmail?: string }
 model EmailProviderConfig {
   id           String            @id @default(cuid())
   workspaceId  String            @unique
   provider     EmailProviderType
   encryptedKey String            @db.Text
-  metadata     String            @default("{}") // JSON
+  metadata     String            @default("{}")
   isVerified   Boolean           @default(false)
 
   createdAt DateTime @default(now())
@@ -932,18 +851,18 @@ model EmailProviderConfig {
 }
 
 // ===========================================================================
-// DOMAIN SEARCH LOG — affiliate + monetization tracking
+// DOMAIN SEARCH LOG
 // ===========================================================================
 
 model DomainSearchLog {
-  id          String  @id @default(cuid())
+  id          String @id @default(cuid())
   workspaceId String
 
-  domain            String
-  available         Boolean
-  priceUsd          Int?
-  registrarClicked  String?
-  clickedAt         DateTime?
+  domain           String
+  available        Boolean
+  priceUsd         Int?
+  registrarClicked String?
+  clickedAt        DateTime?
 
   createdAt DateTime @default(now())
 
@@ -955,20 +874,16 @@ model DomainSearchLog {
 }
 
 // ===========================================================================
-// AI CREDIT LOG — immutable ledger of every credit event
+// AI CREDIT LOG
 // ===========================================================================
 
 model AiCreditLog {
-  id           String @id @default(cuid())
-  workspaceId  String
+  id          String @id @default(cuid())
+  workspaceId String
 
-  // Negative = deduction (AI use), Positive = purchase/grant
   delta        Int
-  // Running balance snapshot after this transaction
   balanceAfter Int
-  // Feature key or 'purchase' | 'grant'
   reason       String
-  // Optional reference ID (campaignId, templateId, etc.)
   refId        String?
 
   createdAt DateTime @default(now())
@@ -981,13 +896,9 @@ model AiCreditLog {
 }
 
 // ===========================================================================
-// WORKSPACE ADD-ONS — purchased volume boosts on top of plan limits
+// WORKSPACE ADD-ONS
 // ===========================================================================
 
-// Add-on types mirror the UsageLimitType in lib/plans/gates.ts.
-// 'emails'     → extra emails/month
-// 'contacts'   → extra contact slots
-// 'ai_credits' → extra AI credit balance (one-time, not monthly)
 enum AddonType {
   emails
   contacts
@@ -998,10 +909,8 @@ model WorkspaceAddon {
   id          String    @id @default(cuid())
   workspaceId String
   type        AddonType
-  quantity    Int       // emails: per-month extra; ai_credits: one-time grant
-  // Whop membership reference (populated after successful checkout)
-  whopMembershipId      String?
-  // Expiry — monthly add-ons expire at billing period end; null = never
+  quantity    Int
+  whopMembershipId String?
   expiresAt   DateTime?
   createdAt   DateTime  @default(now())
 
