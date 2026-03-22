@@ -1,16 +1,43 @@
 /**
  * app/dashboard/layout.tsx
- * RevTray light layout shell
+ * RevTray light layout shell.
+ *
+ * Redirects new users to /onboarding if they haven't connected Whop yet.
+ * This catches users who register via email/password and land here directly
+ * instead of going through the /onboarding route.
  */
 
+import { redirect } from 'next/navigation';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
+import { db } from '@/lib/db/client';
 import { DashboardSidebar } from '@/components/layout/dashboard-sidebar';
 import { DashboardTopbar } from '@/components/layout/dashboard-topbar';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ClientProviders } from '@/components/ui/client-providers';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  await requireWorkspaceAccess();
+  const { workspaceId, userId } = await requireWorkspaceAccess();
+
+  // Redirect new users who haven't connected Whop yet.
+  // whopApiKey missing = fresh account that needs onboarding.
+  // Skip redirect if they've explicitly dismissed onboarding or already sent.
+  const [workspace, user] = await Promise.all([
+    db.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { whopApiKey: true },
+    }),
+    db.user.findUnique({
+      where: { id: userId },
+      select: { onboardingDismissedAt: true, hasAchievedFirstSend: true },
+    }),
+  ]);
+
+  const needsOnboarding =
+    !workspace?.whopApiKey &&
+    !user?.hasAchievedFirstSend &&
+    !user?.onboardingDismissedAt;
+
+  if (needsOnboarding) redirect('/onboarding');
 
   return (
     <ClientProviders>
