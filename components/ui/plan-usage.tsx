@@ -3,20 +3,12 @@
 /**
  * components/ui/plan-usage.tsx
  *
- * All plan enforcement UI in one file:
+ * All plan enforcement UI.
  *
- *   UsageBar            — single animated progress bar with label
- *   UsageBarsWidget     — all four usage bars for the dashboard sidebar/card
- *   UpgradeModal        — full-screen modal with plan cards + add-on tab
- *   UpgradeBanner       — inline banner triggered when a limit is hit
- *   useUpgradeModal     — hook to open modal from anywhere
- *
- * Usage:
- *   // Show usage bars on the dashboard
- *   <UsageBarsWidget usage={usage} />
- *
- *   // Block a feature with an upgrade prompt
- *   <UpgradeBanner payload={gate.payload} />
+ * KEY FIX: handleUpgrade() and handleAddon() now redirect to
+ * result.checkoutUrl when the server returns one. Previously the
+ * checkoutUrl was returned but silently ignored — so no payment
+ * ever happened. This fix makes Whop checkout actually open.
  */
 
 import { useState, useTransition, createContext, useContext } from 'react';
@@ -26,17 +18,15 @@ import type { WorkspaceUsage } from '@/lib/plans/gates';
 import type { UpgradeRequiredPayload } from '@/lib/plans/gates';
 import type { AddonPackageId } from '@/lib/plans/actions';
 
-// ---------------------------------------------------------------------------
-// Context — lets any component open the upgrade modal
-// ---------------------------------------------------------------------------
+// ── Context ───────────────────────────────────────────────────────────────────
 
 const UpgradeModalContext = createContext<{
   open: (payload?: Partial<UpgradeRequiredPayload>) => void;
 }>({ open: () => {} });
 
 export function UpgradeModalProvider({ children }: { children: React.ReactNode }) {
-  const [visible, setVisible]   = useState(false);
-  const [payload, setPayload]   = useState<Partial<UpgradeRequiredPayload> | undefined>();
+  const [visible, setVisible] = useState(false);
+  const [payload, setPayload] = useState<Partial<UpgradeRequiredPayload> | undefined>();
 
   return (
     <UpgradeModalContext.Provider value={{ open: (p) => { setPayload(p); setVisible(true); } }}>
@@ -50,9 +40,7 @@ export function useUpgradeModal() {
   return useContext(UpgradeModalContext);
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function Spinner() {
   return (
@@ -63,27 +51,14 @@ function Spinner() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// UsageBar — single bar
-// ---------------------------------------------------------------------------
+// ── UsageBar ──────────────────────────────────────────────────────────────────
 
 export function UsageBar({
-  label,
-  used,
-  limit,
-  pct,
-  unit = '',
+  label, used, limit, pct, unit = '',
 }: {
-  label: string;
-  used:  number;
-  limit: number | null;
-  pct:   number;
-  unit?: string;
+  label: string; used: number; limit: number | null; pct: number; unit?: string;
 }) {
-  const color =
-    pct >= 95 ? 'bg-destructive'
-    : pct >= 80 ? 'bg-amber-500'
-    : 'bg-primary';
+  const color = pct >= 95 ? 'bg-destructive' : pct >= 80 ? 'bg-amber-500' : 'bg-primary';
 
   return (
     <div className="space-y-1.5">
@@ -103,17 +78,9 @@ export function UsageBar({
   );
 }
 
-// ---------------------------------------------------------------------------
-// UsageBarsWidget — card showing all four usage bars
-// ---------------------------------------------------------------------------
+// ── UsageBarsWidget ───────────────────────────────────────────────────────────
 
-export function UsageBarsWidget({
-  usage,
-  compact = false,
-}: {
-  usage: WorkspaceUsage;
-  compact?: boolean;
-}) {
+export function UsageBarsWidget({ usage, compact = false }: { usage: WorkspaceUsage; compact?: boolean }) {
   const { open } = useUpgradeModal();
 
   return (
@@ -134,40 +101,17 @@ export function UsageBarsWidget({
           </button>
         </div>
       )}
-
-      <UsageBar
-        label="Emails this month"
-        used={usage.emails.used}
-        limit={usage.emails.limit}
-        pct={usage.emails.pct}
-      />
-      <UsageBar
-        label="Contacts"
-        used={usage.contacts.used}
-        limit={usage.contacts.limit}
-        pct={usage.contacts.pct}
-      />
-      <UsageBar
-        label="AI credits"
-        used={usage.aiCredits.used}
-        limit={usage.aiCredits.limit}
-        pct={usage.aiCredits.pct}
-      />
+      <UsageBar label="Emails this month" used={usage.emails.used} limit={usage.emails.limit} pct={usage.emails.pct} />
+      <UsageBar label="Contacts" used={usage.contacts.used} limit={usage.contacts.limit} pct={usage.contacts.pct} />
+      <UsageBar label="AI credits" used={usage.aiCredits.used} limit={usage.aiCredits.limit} pct={usage.aiCredits.pct} />
       {usage.automations.limit !== null && (
-        <UsageBar
-          label="Automations"
-          used={usage.automations.used}
-          limit={usage.automations.limit}
-          pct={usage.automations.pct}
-        />
+        <UsageBar label="Automations" used={usage.automations.used} limit={usage.automations.limit} pct={usage.automations.pct} />
       )}
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// UpgradeBanner — inline, shown when a gated action is blocked
-// ---------------------------------------------------------------------------
+// ── UpgradeBanner ─────────────────────────────────────────────────────────────
 
 export function UpgradeBanner({ payload }: { payload: UpgradeRequiredPayload }) {
   const { open } = useUpgradeModal();
@@ -195,36 +139,43 @@ export function UpgradeBanner({ payload }: { payload: UpgradeRequiredPayload }) 
   );
 }
 
-// ---------------------------------------------------------------------------
-// UpgradeModal — full plan cards + add-on tab
-// ---------------------------------------------------------------------------
+// ── UpgradeModal ──────────────────────────────────────────────────────────────
 
 type ModalTab = 'plans' | 'addons';
 
 function UpgradeModal({
-  payload,
-  onClose,
+  payload, onClose,
 }: {
   payload?: Partial<UpgradeRequiredPayload>;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<ModalTab>('plans');
-  const [pending, startTransition] = useTransition();
-  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+  const [upgrading,  setUpgrading]  = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [message, setMessage] = useState('');
+  const [message,    setMessage]    = useState('');
 
+  // ── THE FIX: redirect to Whop checkout when URL is returned ──────────────
   async function handleUpgrade(planKey: PlanKey) {
     setUpgrading(planKey);
     setMessage('');
     const result = await upgradePlan(planKey);
     setUpgrading(null);
-    if (result.success) {
-      setMessage('Plan updated successfully.');
-      setTimeout(onClose, 1200);
-    } else {
+
+    if (!result.success) {
       setMessage(result.error ?? 'Upgrade failed. Try again.');
+      return;
     }
+
+    // If a Whop checkout URL came back, redirect there now
+    if (result.checkoutUrl) {
+      window.location.href = result.checkoutUrl;
+      return;
+    }
+
+    // No checkout URL = dev-mode simulated upgrade
+    setMessage('Plan updated.');
+    setTimeout(onClose, 1200);
   }
 
   async function handleAddon(pkgId: AddonPackageId) {
@@ -232,12 +183,20 @@ function UpgradeModal({
     setMessage('');
     const result = await purchaseAddon(pkgId);
     setPurchasing(null);
-    if (result.success) {
-      setMessage('Add-on applied to your workspace.');
-      setTimeout(onClose, 1200);
-    } else {
+
+    if (!result.success) {
       setMessage(result.error ?? 'Purchase failed.');
+      return;
     }
+
+    // Same fix for add-ons
+    if (result.checkoutUrl) {
+      window.location.href = result.checkoutUrl;
+      return;
+    }
+
+    setMessage('Add-on applied.');
+    setTimeout(onClose, 1200);
   }
 
   const suggestedKey = payload?.suggestedPlan
@@ -322,18 +281,10 @@ function UpgradeModal({
                     </div>
 
                     <div className="space-y-1.5 mb-5 text-xs text-muted-foreground">
-                      <p>
-                        <span className="font-medium text-foreground">{formatLimit(plan.limits.emailsPerMonth)}</span> emails/mo
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">{formatLimit(plan.limits.contacts)}</span> contacts
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">{formatLimit(plan.limits.automations)}</span> automations
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">{formatLimit(plan.limits.aiCreditsMonthly)}</span> AI credits/mo
-                      </p>
+                      <p><span className="font-medium text-foreground">{formatLimit(plan.limits.emailsPerMonth)}</span> emails/mo</p>
+                      <p><span className="font-medium text-foreground">{formatLimit(plan.limits.contacts)}</span> contacts</p>
+                      <p><span className="font-medium text-foreground">{formatLimit(plan.limits.automations)}</span> automations</p>
+                      <p><span className="font-medium text-foreground">{formatLimit(plan.limits.aiCreditsMonthly)}</span> AI credits/mo</p>
                     </div>
 
                     {plan.monthlyUsd === 0 ? (
@@ -352,7 +303,7 @@ function UpgradeModal({
                         ].join(' ')}
                       >
                         {upgrading === key && <Spinner />}
-                        {upgrading === key ? 'Upgrading…' : `Upgrade to ${plan.name}`}
+                        {upgrading === key ? 'Opening checkout…' : `Upgrade to ${plan.name}`}
                       </button>
                     )}
                   </div>
@@ -367,7 +318,6 @@ function UpgradeModal({
                 Add-ons stack on top of your plan limits. Email and contact add-ons renew monthly; AI credit add-ons are one-time.
               </p>
 
-              {/* Group by type */}
               {(['emails', 'contacts', 'ai_credits'] as const).map((type) => {
                 const pkgs = Object.entries(ADDON_PACKAGES).filter(([, p]) => p.type === type);
                 const typeLabel = type === 'emails' ? 'Extra emails' : type === 'contacts' ? 'Extra contacts' : 'AI credits';
@@ -380,7 +330,7 @@ function UpgradeModal({
                           <div>
                             <p className="text-sm font-medium text-foreground">{pkg.label}</p>
                             <p className="text-xs text-muted-foreground">
-                              {type === 'emails' ? '/month' : type === 'contacts' ? '/month' : 'one-time'}
+                              {type === 'ai_credits' ? 'one-time' : '/month'}
                             </p>
                           </div>
                           <button
@@ -405,10 +355,6 @@ function UpgradeModal({
               {message}
             </p>
           )}
-
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            Payment processing coming soon. Plans and add-ons are applied instantly for now.
-          </p>
         </div>
       </div>
     </div>
