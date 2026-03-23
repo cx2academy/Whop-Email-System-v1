@@ -4,19 +4,15 @@
  * Per-workspace Whop webhook endpoint.
  *
  * Handles ALL Whop events for a workspace:
- *   - membership.went_valid   → upgrade plan OR grant add-on (based on product ID)
- *   - membership.went_invalid → downgrade to FREE (canceled/expired)
- *   - payment.succeeded       → record purchase for revenue attribution
+ *   - membership.went_valid   → upgrade plan OR grant add-on + fire automation
+ *   - membership.went_invalid → downgrade to FREE + fire automation
+ *   - payment.succeeded       → record purchase + fire automation
  *
  * Setup (one-time per workspace):
  *   1. Settings → Whop Integration → copy your webhook URL
  *   2. Whop Dashboard → Developer → Webhooks → Add Endpoint → paste URL
  *   3. Select events: membership.went_valid, membership.went_invalid, payment.succeeded
  *   4. Copy the signing secret → paste into Settings → Webhook Secret → Save
- *
- * For billing to work, also set these env vars in Vercel:
- *   WHOP_STARTER_PRODUCT_ID, WHOP_GROWTH_PRODUCT_ID, WHOP_SCALE_PRODUCT_ID
- *   (and add-on product IDs — see lib/whop/billing.ts)
  */
 
 import { NextRequest } from 'next/server';
@@ -30,10 +26,9 @@ import {
   applyPlanDowngrade,
   applyAddonGrant,
 } from '@/lib/whop/billing';
+import { fireTrigger } from '@/lib/automation/trigger-system';
 
-// ---------------------------------------------------------------------------
-// Signature verification
-// ---------------------------------------------------------------------------
+// ── Signature verification ─────────────────────────────────────────────────
 
 function verifySignature(rawBody: string, signature: string | null, secret: string): boolean {
   if (!signature) return false;
@@ -46,9 +41,18 @@ function verifySignature(rawBody: string, signature: string | null, secret: stri
   return diff === 0;
 }
 
-// ---------------------------------------------------------------------------
-// Route handler
-// ---------------------------------------------------------------------------
+// ── Helper: resolve contactId from email ──────────────────────────────────
+
+async function resolveContactId(workspaceId: string, email: string): Promise<string | null> {
+  if (!email) return null;
+  const contact = await db.contact.findFirst({
+    where: { workspaceId, email: email.toLowerCase() },
+    select: { id: true },
+  });
+  return contact?.id ?? null;
+}
+
+// ── Route handler ─────────────────────────────────────────────────────────
 
 export async function POST(
   req: NextRequest,
@@ -56,7 +60,6 @@ export async function POST(
 ) {
   const { workspaceId } = params;
 
-  // Load workspace + secret
   const workspace = await db.workspace.findUnique({
     where: { id: workspaceId },
     select: { id: true, webhookSecret: true },
@@ -68,16 +71,14 @@ export async function POST(
 
   const rawBody = await req.text();
 
-  // Verify signature if secret is configured
   if (workspace.webhookSecret) {
     const sig = req.headers.get('x-whop-signature');
-    const valid = verifySignature(rawBody, sig, workspace.webhookSecret);
-    if (!valid) {
-      console.warn(`[webhook/${workspaceId}] Invalid signature`);
+    if (!verifySignature(rawBody, sig, workspace.webhookSecret)) {
+      console.warn(`[webhook/${workspaceId}] Invalid signature — rejecting`);
       return Response.json({ error: 'Invalid signature' }, { status: 401 });
     }
   } else {
-    console.warn(`[webhook/${workspaceId}] No webhookSecret configured — accepting unverified`);
+    console.warn(`[webhook/${workspaceId}] No webhookSecret — accepting unverified`);
   }
 
   let event: { action: string; data: Record<string, unknown> };
@@ -91,19 +92,17 @@ export async function POST(
   console.log(`[webhook/${workspaceId}] ${action}`);
 
   try {
-    // -----------------------------------------------------------------------
-    // membership.went_valid — new purchase, reactivation, or renewal
-    // -----------------------------------------------------------------------
+    // ── membership.went_valid ─────────────────────────────────────────────
     if (action === 'membership.went_valid') {
       const membershipId = data.id as string;
       const productId    = data.product as string;
-      const email        = data.email as string;
+      const email        = (data.email as string)?.toLowerCase();
       const amountCents  = (data.amount_paid as number) ?? 0;
       const renewalEnd   = data.renewal_period_end
         ? new Date((data.renewal_period_end as number) * 1000)
         : null;
 
-      // 1. Check if this product maps to a plan upgrade
+      // 1. Plan upgrade check
       const plan = resolvePlanFromProductId(productId);
       if (plan) {
         await applyPlanUpgrade(workspaceId, plan, membershipId, productId, renewalEnd);
@@ -111,7 +110,7 @@ export async function POST(
         return Response.json({ received: true, type: 'plan_upgrade', plan });
       }
 
-      // 2. Check if this product maps to an add-on
+      // 2. Add-on check
       const addonId = resolveAddonFromProductId(productId);
       if (addonId) {
         await applyAddonGrant(workspaceId, addonId, membershipId);
@@ -119,48 +118,74 @@ export async function POST(
         return Response.json({ received: true, type: 'addon_grant', addonId });
       }
 
-      // 3. Unknown product — record as a purchase for revenue attribution
+      // 3. Purchase attribution (non-RevTray product = community member's purchase)
       if (email && amountCents > 0) {
-        const result = await recordPurchase({
+        await recordPurchase({
           workspaceId,
           email,
           productId,
           productName: `Whop: ${productId}`,
           amountCents,
-          currency: (data.currency as string) ?? 'usd',
-          source:   'whop',
-          externalId: `whop_mem_${membershipId}`,
+          currency:    (data.currency as string) ?? 'usd',
+          source:      'whop',
+          externalId:  `whop_mem_${membershipId}`,
         });
-        return Response.json({ received: true, type: 'purchase', ...result });
       }
 
-      return Response.json({ received: true, type: 'membership', handled: false });
+      // 4. Fire automation triggers
+      const contactId = await resolveContactId(workspaceId, email);
+      if (contactId) {
+        // membership_activated — any membership going valid
+        await fireTrigger({
+          workspaceId, triggerType: 'membership_activated', contactId,
+          metadata: { productId, membershipId },
+        });
+
+        // product_purchased — specific product
+        await fireTrigger({
+          workspaceId, triggerType: 'product_purchased', contactId,
+          metadata: { productId, membershipId },
+        });
+
+        console.log(`[webhook/${workspaceId}] Automation triggers fired for ${email}`);
+      }
+
+      return Response.json({ received: true, type: 'membership_valid' });
     }
 
-    // -----------------------------------------------------------------------
-    // membership.went_invalid — canceled or expired
-    // -----------------------------------------------------------------------
+    // ── membership.went_invalid ───────────────────────────────────────────
     if (action === 'membership.went_invalid') {
       const productId = data.product as string;
+      const email     = (data.email as string)?.toLowerCase();
 
-      // Only downgrade if this is a plan product (not an add-on or random product)
+      // Plan downgrade (RevTray plan canceled)
       const plan = resolvePlanFromProductId(productId);
       if (plan) {
         await applyPlanDowngrade(workspaceId, 'canceled');
-        console.log(`[webhook/${workspaceId}] Plan downgraded to FREE (membership invalid)`);
+        console.log(`[webhook/${workspaceId}] Plan downgraded to FREE`);
         return Response.json({ received: true, type: 'plan_downgrade' });
       }
 
-      return Response.json({ received: true, type: 'membership_invalid', handled: false });
+      // Fire automation trigger for community membership deactivation
+      const contactId = await resolveContactId(workspaceId, email);
+      if (contactId) {
+        await fireTrigger({
+          workspaceId, triggerType: 'membership_deactivated', contactId,
+          metadata: { productId },
+        });
+        console.log(`[webhook/${workspaceId}] membership_deactivated fired for ${email}`);
+      }
+
+      return Response.json({ received: true, type: 'membership_invalid' });
     }
 
-    // -----------------------------------------------------------------------
-    // payment.succeeded — renewal payment or one-off charge
-    // -----------------------------------------------------------------------
+    // ── payment.succeeded ─────────────────────────────────────────────────
     if (action === 'payment.succeeded') {
-      const result = await recordPurchase({
+      const email = (data.email as string)?.toLowerCase();
+
+      await recordPurchase({
         workspaceId,
-        email:       data.email as string,
+        email,
         productId:   data.product_id as string | undefined,
         productName: `Whop: ${data.product_id ?? 'payment'}`,
         amountCents: data.amount as number,
@@ -168,10 +193,20 @@ export async function POST(
         source:      'whop',
         externalId:  `whop_pay_${data.id}`,
       });
-      return Response.json({ received: true, type: 'payment', ...result });
+
+      // Fire automation trigger
+      const contactId = await resolveContactId(workspaceId, email);
+      if (contactId) {
+        await fireTrigger({
+          workspaceId, triggerType: 'payment_succeeded', contactId,
+          metadata: { productId: data.product_id, amount: data.amount },
+        });
+        console.log(`[webhook/${workspaceId}] payment_succeeded fired for ${email}`);
+      }
+
+      return Response.json({ received: true, type: 'payment' });
     }
 
-    // Unhandled event — acknowledge so Whop doesn't retry
     return Response.json({ received: true, action, handled: false });
 
   } catch (err) {

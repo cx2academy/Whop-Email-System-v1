@@ -126,6 +126,12 @@ export default async function AutomationPage() {
                 stepCount: workflow.steps.length,
                 enrollmentCount: workflow._count.enrollments,
                 errorCount: workflow.errorCount,
+                triggerType: (() => {
+                  const step0 = workflow.steps.find(s => s.type === 'TRIGGER');
+                  if (!step0) return null;
+                  try { return (JSON.parse(step0.config) as { triggerType?: string }).triggerType ?? null; }
+                  catch { return null; }
+                })(),
               }}
               isAdmin={isAdmin}
             />
