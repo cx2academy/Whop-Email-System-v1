@@ -180,10 +180,10 @@ export function VisualEditor({value,onChange}:Props){
       {/* Toolbar */}
       <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 16px',background:CARD,borderBottom:`1px solid ${BD}`,flexShrink:0}}>
         <div style={{position:'relative'}}>
-          <button onClick={()=>setMenuAt(menuAt==='end'&&!selId?null:'end')} style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,border:`1px solid ${BD}`,background:CARD,cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,color:TX}}>
+          <button onClick={()=>setMenuAt(menuAt==='toolbar'?null:'toolbar')} style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,border:`1px solid ${BD}`,background:CARD,cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,color:TX}}>
             <PlusIcon size={13}/> Add block
           </button>
-          {menuAt==='end'&&!selId&&<Menu onSelect={t=>addBlock(t,'end')} onClose={()=>setMenuAt(null)}/>}
+          {menuAt==='toolbar'&&<Menu onSelect={t=>addBlock(t,'end')} onClose={()=>setMenuAt(null)}/>}
         </div>
         <div style={{flex:1}}/>
         <button onClick={()=>setShowAI(s=>!s)} style={{display:'flex',alignItems:'center',gap:5,padding:'5px 12px',borderRadius:7,border:`1px solid rgba(34,197,94,0.3)`,background:showAI?BBG:CARD,cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:600,color:BR}}>
@@ -239,10 +239,10 @@ export function VisualEditor({value,onChange}:Props){
 
           {blocks.length>0&&(
             <div style={{position:'relative',marginTop:6}}>
-              <button onClick={()=>setMenuAt(menuAt==='end'?null:'end')} style={{width:'100%',padding:8,borderRadius:7,border:`1px dashed ${BD}`,background:'transparent',cursor:'pointer',fontSize:12,color:TX3,display:'flex',alignItems:'center',justifyContent:'center',gap:5,fontFamily:'inherit'}}>
+              <button onClick={()=>setMenuAt(menuAt==='bottom'?null:'bottom')} style={{width:'100%',padding:8,borderRadius:7,border:`1px dashed ${BD}`,background:'transparent',cursor:'pointer',fontSize:12,color:TX3,display:'flex',alignItems:'center',justifyContent:'center',gap:5,fontFamily:'inherit'}}>
                 <PlusIcon size={12}/> Add block
               </button>
-              {menuAt==='end'&&<Menu onSelect={t=>addBlock(t,'end')} onClose={()=>setMenuAt(null)} above/>}
+              {menuAt==='bottom'&&<Menu onSelect={t=>addBlock(t,'end')} onClose={()=>setMenuAt(null)} above/>}
             </div>
           )}
         </div>
@@ -308,9 +308,9 @@ function Edit({block,onUpdate}:{block:Block;onUpdate:(p:Partial<Block>)=>void}){
   switch(block.type){
     case 'heading': return<div style={{paddingTop:4}}>
       <div style={{display:'flex',gap:5,marginBottom:8}}>{([1,2,3] as const).map(l=><button key={l} onClick={()=>onUpdate({level:l})} style={{padding:'3px 8px',borderRadius:5,border:`1px solid ${BD}`,fontSize:11,fontWeight:700,fontFamily:'inherit',cursor:'pointer',background:block.level===l?BR:'none',color:block.level===l?'#fff':TX2}}>H{l}</button>)}</div>
-      <input autoFocus value={block.content} onChange={e=>onUpdate({content:e.target.value})} style={IS} placeholder="Heading text…"/>
+      <VarInput value={block.content} onChange={v=>onUpdate({content:v})} placeholder="Heading text…" autoFocus/>
     </div>;
-    case 'text': return<textarea autoFocus value={block.content.replace(/<[^>]+>/g,'')} onChange={e=>onUpdate({content:e.target.value})} rows={3} style={{...IS,resize:'vertical',height:'auto',lineHeight:1.6}} placeholder="Paragraph text…"/>;
+    case 'text': return<VarTextarea value={block.content.replace(/<[^>]+>/g,'')} onChange={v=>onUpdate({content:v})} placeholder="Paragraph text…"/>;
     case 'button': return<div style={{display:'flex',flexDirection:'column',gap:8,paddingTop:4}}>
       <input value={block.text} onChange={e=>onUpdate({text:e.target.value})} style={IS} placeholder="Button label"/>
       <input value={block.url} onChange={e=>onUpdate({url:e.target.value})} style={IS} placeholder="https://..."/>
@@ -320,13 +320,134 @@ function Edit({block,onUpdate}:{block:Block;onUpdate:(p:Partial<Block>)=>void}){
         <div style={{marginLeft:'auto',display:'flex',gap:4}}>{(['left','center','right'] as const).map(a=><button key={a} onClick={()=>onUpdate({align:a})} style={{padding:'3px 7px',borderRadius:4,border:`1px solid ${BD}`,fontSize:10,fontFamily:'inherit',cursor:'pointer',background:block.align===a?BR:'none',color:block.align===a?'#fff':TX2}}>{a[0].toUpperCase()+a.slice(1)}</button>)}</div>
       </div>
     </div>;
-    case 'image': return<div style={{display:'flex',flexDirection:'column',gap:8,paddingTop:4}}>
-      <input value={block.src} onChange={e=>onUpdate({src:e.target.value})} style={IS} placeholder="Image URL (https://...)"/>
-      <input value={block.alt} onChange={e=>onUpdate({alt:e.target.value})} style={IS} placeholder="Alt text"/>
-    </div>;
+    case 'image': return <ImageEdit block={block} onUpdate={onUpdate}/>;
     case 'divider': return<p style={{fontSize:12,color:TX3,padding:'4px 0',margin:0}}>Horizontal divider — no settings.</p>;
     case 'spacer':  return<div style={{display:'flex',alignItems:'center',gap:10,paddingTop:4}}><label style={{fontSize:12,color:TX2}}>Height: {block.height}px</label><input type="range" min={8} max={120} step={4} value={block.height} onChange={e=>onUpdate({height:+e.target.value})} style={{flex:1}}/></div>;
   }
+}
+
+// ── Variable picker ───────────────────────────────────────────────────────────
+
+const VARS = [
+  { label: 'First name',    value: "{{firstName | fallback: 'there'}}" },
+  { label: 'Full name',     value: '{{fullName}}' },
+  { label: 'Email',         value: '{{email}}' },
+  { label: 'Sender name',   value: '{{senderName}}' },
+  { label: 'Company name',  value: '{{companyName}}' },
+  { label: 'Unsubscribe',   value: '{{unsubscribeUrl}}' },
+];
+
+function VarPicker({ onInsert }: { onInsert: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onMouseDown={e => { e.preventDefault(); setOpen(o => !o); }}
+        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 5, border: `1px solid ${BD}`, background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, color: TX2, whiteSpace: 'nowrap' }}
+      >
+        {'{ }'} Variables
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 200, marginTop: 4, background: CARD, border: `1px solid ${BD}`, borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.1)', padding: 6, minWidth: 200 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: TX3, textTransform: 'uppercase', letterSpacing: '0.07em', padding: '4px 8px 6px', margin: 0 }}>Insert variable</p>
+          {VARS.map(v => (
+            <button
+              key={v.value}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); onInsert(v.value); setOpen(false); }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 10px', borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+              onMouseEnter={e => (e.currentTarget.style.background = BG)}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <span style={{ fontSize: 13, fontWeight: 600, color: TX }}>{v.label}</span>
+              <code style={{ fontSize: 10, color: TX3, background: BG, padding: '2px 5px', borderRadius: 4 }}>{v.value.replace(/\{\{|\}\}/g, '').split('|')[0].trim()}</code>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function insertAtCursor(el: HTMLInputElement | HTMLTextAreaElement, text: string): string {
+  const start = el.selectionStart ?? el.value.length;
+  const end   = el.selectionEnd   ?? el.value.length;
+  const next  = el.value.slice(0, start) + text + el.value.slice(end);
+  // restore cursor after React re-render
+  requestAnimationFrame(() => {
+    el.selectionStart = el.selectionEnd = start + text.length;
+    el.focus();
+  });
+  return next;
+}
+
+function VarInput({ value, onChange, placeholder, autoFocus }: { value: string; onChange: (v: string) => void; placeholder?: string; autoFocus?: boolean }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <input ref={ref} autoFocus={autoFocus} value={value} onChange={e => onChange(e.target.value)} style={IS} placeholder={placeholder} />
+      <VarPicker onInsert={v => { if (ref.current) onChange(insertAtCursor(ref.current, v)); }} />
+    </div>
+  );
+}
+
+function VarTextarea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <textarea ref={ref} autoFocus value={value} onChange={e => onChange(e.target.value)} rows={3} style={{ ...IS, resize: 'vertical', height: 'auto', lineHeight: 1.6 }} placeholder={placeholder} />
+      <VarPicker onInsert={v => { if (ref.current) onChange(insertAtCursor(ref.current, v)); }} />
+    </div>
+  );
+}
+
+// ── ImageEdit ─────────────────────────────────────────────────────────────────
+
+function ImageEdit({block,onUpdate}:{block:ImageBlock;onUpdate:(p:Partial<Block>)=>void}){
+  const [dragging,setDragging]=useState(false);
+
+  function handleFile(file:File){
+    if(!file.type.startsWith('image/'))return;
+    const reader=new FileReader();
+    reader.onload=e=>onUpdate({src:e.target?.result as string});
+    reader.readAsDataURL(file);
+  }
+
+  return(
+    <div style={{display:'flex',flexDirection:'column',gap:8,paddingTop:4}}>
+      {/* Drop zone / file picker */}
+      <label
+        onDragOver={e=>{e.preventDefault();setDragging(true);}}
+        onDragLeave={()=>setDragging(false)}
+        onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)handleFile(f);}}
+        style={{
+          display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+          gap:6,padding:'20px 16px',borderRadius:8,cursor:'pointer',
+          border:`2px dashed ${dragging?BR:BD}`,
+          background:dragging?BBG:BG,
+          transition:'border-color 0.15s,background 0.15s',
+        }}
+      >
+        <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleFile(f);}}/>
+        {block.src?(
+          <img src={block.src} alt={block.alt} style={{maxWidth:'100%',maxHeight:140,borderRadius:6,objectFit:'contain'}}/>
+        ):(
+          <>
+            <ImageIcon size={20} style={{color:TX3}}/>
+            <p style={{fontSize:12,color:TX2,margin:0,fontWeight:600}}>Click to upload or drag & drop</p>
+            <p style={{fontSize:11,color:TX3,margin:0}}>PNG, JPG, GIF, WebP</p>
+          </>
+        )}
+      </label>
+      {block.src&&(
+        <button onClick={()=>onUpdate({src:''})} style={{fontSize:11,color:RED,background:'none',border:`1px solid ${BD}`,borderRadius:5,padding:'3px 8px',cursor:'pointer',fontFamily:'inherit',alignSelf:'flex-start'}}>
+          Remove image
+        </button>
+      )}
+      <input value={block.alt} onChange={e=>onUpdate({alt:e.target.value})} style={IS} placeholder="Alt text (for accessibility)"/>
+    </div>
+  );
 }
 
 // ── Menu ──────────────────────────────────────────────────────────────────────
