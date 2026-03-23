@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { setWorkflowStatus, deleteWorkflow, triggerForAll } from '@/lib/automation/actions';
-import { WHOP_TRIGGER_LABELS } from '@/lib/automation/trigger-system';
-import type { TriggerType } from '@/lib/automation/trigger-system';
+import { WHOP_TRIGGER_LABELS, TRIGGER_ICONS } from '@/lib/automation/trigger-constants';
+import type { TriggerType } from '@/lib/automation/trigger-constants';
 
 interface WorkflowCardProps {
   workflow: {
@@ -28,19 +28,6 @@ const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
   DRAFT:    { bg: 'var(--surface-app)',    color: 'var(--text-tertiary)' },
   PAUSED:   { bg: 'rgba(234,179,8,0.1)',   color: '#B45309' },
   DISABLED: { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626' },
-};
-
-// Icons for trigger types
-const TRIGGER_ICONS: Record<string, string> = {
-  membership_activated:   '👋',
-  membership_deactivated: '🔕',
-  payment_succeeded:      '💳',
-  product_purchased:      '🛍',
-  product_not_purchased:  '⏰',
-  new_member:             '➕',
-  purchase:               '💰',
-  api:                    '🔌',
-  manual:                 '🖱',
 };
 
 export function WorkflowCard({ workflow, isAdmin }: WorkflowCardProps) {
