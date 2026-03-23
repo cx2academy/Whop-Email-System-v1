@@ -2,24 +2,17 @@
 
 /**
  * app/dashboard/settings/plan-billing.tsx
- *
- * Plan & Billing settings card.
- *
- * Shows:
- *   - Current plan name, price, and tagline
- *   - Four usage bars (emails, contacts, AI credits, automations)
- *   - Upgrade button (opens the shared UpgradeModal)
- *   - Add-ons section with quick-purchase buttons
- *   - Stripe billing note (placeholder until payment is wired)
- *
- * The UpgradeModalProvider must be an ancestor (it's in dashboard layout.tsx).
+ * Fixed: imports ADDON_PACKAGES and AddonPackageId from lib/plans/packages
+ * (not lib/plans/actions which is 'use server' and can't export non-async).
+ * Also fixed: handleAddon now redirects to checkoutUrl when returned.
  */
 
 import { useUpgradeModal, UsageBar } from '@/components/ui/plan-usage';
-import { purchaseAddon, ADDON_PACKAGES } from '@/lib/plans/actions';
+import { purchaseAddon } from '@/lib/plans/actions';
+import { ADDON_PACKAGES } from '@/lib/plans/packages';
 import { PLANS, formatLimit } from '@/lib/plans/config';
 import type { WorkspaceUsage } from '@/lib/plans/gates';
-import type { AddonPackageId } from '@/lib/plans/actions';
+import type { AddonPackageId } from '@/lib/plans/packages';
 import { useState, useTransition } from 'react';
 
 interface PlanBillingProps {
@@ -49,12 +42,17 @@ export function PlanBillingSettings({ usage, isAdmin }: PlanBillingProps) {
     startTransition(async () => {
       const result = await purchaseAddon(pkgId);
       setPurchasing(null);
-      if (result.success) {
-        setAddonMsg('Add-on applied.');
-        setTimeout(() => setAddonMsg(''), 3000);
-      } else {
+      if (!result.success) {
         setAddonMsg(result.error ?? 'Failed.');
+        return;
       }
+      // Redirect to Whop checkout if URL returned
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
+      setAddonMsg('Add-on applied.');
+      setTimeout(() => setAddonMsg(''), 3000);
     });
   }
 
@@ -75,8 +73,6 @@ export function PlanBillingSettings({ usage, isAdmin }: PlanBillingProps) {
             )}
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">{plan.tagline}</p>
-
-          {/* Key limits inline */}
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
             <span><span className="font-medium text-foreground">{formatLimit(plan.limits.emailsPerMonth)}</span> emails/mo</span>
             <span><span className="font-medium text-foreground">{formatLimit(plan.limits.contacts)}</span> contacts</span>
@@ -98,31 +94,11 @@ export function PlanBillingSettings({ usage, isAdmin }: PlanBillingProps) {
       {/* Usage bars */}
       <div className="space-y-4">
         <p className="text-sm font-medium text-foreground">Usage this month</p>
-        <UsageBar
-          label="Emails sent"
-          used={usage.emails.used}
-          limit={usage.emails.limit}
-          pct={usage.emails.pct}
-        />
-        <UsageBar
-          label="Contacts"
-          used={usage.contacts.used}
-          limit={usage.contacts.limit}
-          pct={usage.contacts.pct}
-        />
-        <UsageBar
-          label="AI credits used"
-          used={usage.aiCredits.used}
-          limit={usage.aiCredits.limit}
-          pct={usage.aiCredits.pct}
-        />
+        <UsageBar label="Emails sent" used={usage.emails.used} limit={usage.emails.limit} pct={usage.emails.pct} />
+        <UsageBar label="Contacts" used={usage.contacts.used} limit={usage.contacts.limit} pct={usage.contacts.pct} />
+        <UsageBar label="AI credits used" used={usage.aiCredits.used} limit={usage.aiCredits.limit} pct={usage.aiCredits.pct} />
         {usage.automations.limit !== null && (
-          <UsageBar
-            label="Active automations"
-            used={usage.automations.used}
-            limit={usage.automations.limit}
-            pct={usage.automations.pct}
-          />
+          <UsageBar label="Active automations" used={usage.automations.used} limit={usage.automations.limit} pct={usage.automations.pct} />
         )}
       </div>
 
@@ -163,13 +139,11 @@ export function PlanBillingSettings({ usage, isAdmin }: PlanBillingProps) {
         </div>
       )}
 
-      {/* Stripe note */}
+      {/* Billing note */}
       <div className="rounded-md border border-border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Billing:</span> Payment processing is coming soon. Plan upgrades and add-ons are applied instantly for now.
+        <span className="font-medium text-foreground">Billing:</span> Payments processed via Whop.
         {plan.monthlyUsd > 0 && (
-          <span className="ml-1">
-            Your subscription will be managed via Stripe when billing goes live.
-          </span>
+          <span className="ml-1">Your subscription renews automatically.</span>
         )}
       </div>
     </div>
