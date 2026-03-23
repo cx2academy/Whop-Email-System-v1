@@ -20,8 +20,8 @@ interface CampaignBuilderProps {
   tags: Tag[];
   segments?: { id: string; name: string; contactCount: number }[];
   fromName?: string;
-  brandColor?: string;
   fromEmail?: string;
+  brandColor?: string;
   audienceSize?: number;
   templateInitial?: { subject?: string; htmlBody?: string; previewText?: string; templateId?: string; userTemplateId?: string; };
   initial?: { id: string; name: string; subject: string; previewText?: string | null; htmlBody: string; audienceTagIds: string[]; audienceSegmentIds?: string[]; isAbTest: boolean; abSubjectB?: string | null; };
