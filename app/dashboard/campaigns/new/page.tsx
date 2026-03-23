@@ -1,6 +1,5 @@
 /**
  * app/dashboard/campaigns/new/page.tsx
- * Added: brandColor fetched from workspace and passed to CampaignBuilder
  */
 import type { Metadata } from 'next';
 import { requireAdminAccess } from '@/lib/auth/session';
@@ -25,7 +24,7 @@ export default async function NewCampaignPage({ searchParams }: Props) {
   const { workspaceId } = await requireAdminAccess();
   const workspace = await db.workspace.findUnique({
     where: { id: workspaceId },
-    select: { fromName: true, fromEmail: true, brandColor: true },
+    select: { fromName: true, fromEmail: true },
   });
   const [tags, segments, audienceSize] = await Promise.all([
     getTags(),
@@ -58,7 +57,6 @@ export default async function NewCampaignPage({ searchParams }: Props) {
       templateInitial={templateInitial}
       fromName={workspace?.fromName ?? undefined}
       fromEmail={workspace?.fromEmail ?? undefined}
-      brandColor={workspace?.brandColor ?? '#22C55E'}
       audienceSize={audienceSize}
       startStep={searchParams.generatedSubject && !searchParams.generatedHtml ? 2 : 1}
     />
