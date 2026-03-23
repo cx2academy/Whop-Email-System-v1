@@ -1,82 +1,40 @@
 /**
  * app/api/whop/webhook/route.ts
  *
- * Receives Whop webhook events and feeds purchases into the attribution engine.
+ * Platform-level Whop webhook — handles RevTray's OWN billing.
+ * This fires when someone buys/cancels a RevTray plan on Whop.
  *
- * Setup (one-time):
- *   1. Go to your Whop dashboard → Settings → Webhooks
- *   2. Add endpoint: https://your-domain.com/api/whop/webhook
- *   3. Select events: membership.went_valid, payment.succeeded
+ * Setup (one-time in Whop dashboard):
+ *   1. Whop Dashboard → Developer → Webhooks → Add Endpoint
+ *   2. URL: https://www.revtray.com/api/whop/webhook
+ *   3. Events: membership.went_valid, membership.went_invalid, payment.succeeded
  *   4. Copy the signing secret → add as WHOP_WEBHOOK_SECRET in Vercel env vars
  *
- * Whop signs each request with HMAC-SHA256.
- * Header: x-whop-signature: sha256=<hex>
- *
- * Events we handle:
- *   membership.went_valid  — new purchase or reactivation (most reliable)
- *   payment.succeeded      — payment processed (catches renewals)
+ * The workspaceId is passed via metadata in the checkout URL and echoed
+ * back by Whop in the webhook payload, so we don't need to look it up.
  */
 
 import { NextRequest } from 'next/server';
 import { createHmac } from 'crypto';
-import { db } from '@/lib/db/client';
 import { recordPurchase } from '@/lib/attribution/purchase-tracker';
+import {
+  resolvePlanFromProductId,
+  resolveAddonFromProductId,
+  applyPlanUpgrade,
+  applyPlanDowngrade,
+  applyAddonGrant,
+} from '@/lib/whop/billing';
 
-// ---------------------------------------------------------------------------
-// Whop webhook payload types (v2 / v5 shape)
-// ---------------------------------------------------------------------------
+// ── Signature verification ────────────────────────────────────────────────────
 
-interface WhopMembershipPayload {
-  id: string;
-  email: string;
-  product: string;       // product ID
-  plan: string;          // plan ID
-  company_id: string;
-  amount_paid?: number;  // cents — may be 0 for free products
-  currency?: string;
-  created_at?: number;
-}
-
-interface WhopPaymentPayload {
-  id: string;
-  email: string;
-  membership_id?: string;
-  product_id?: string;
-  company_id: string;
-  amount: number;        // cents
-  currency: string;
-}
-
-interface WhopWebhookEvent {
-  action: string;
-  data: WhopMembershipPayload | WhopPaymentPayload;
-}
-
-// ---------------------------------------------------------------------------
-// Signature verification
-// ---------------------------------------------------------------------------
-
-async function verifyWhopSignature(
-  req: NextRequest,
-  rawBody: string
-): Promise<boolean> {
+function verifySignature(rawBody: string, signature: string | null): boolean {
   const secret = process.env.WHOP_WEBHOOK_SECRET;
-  
-  // If no secret configured, skip verification in dev but warn
   if (!secret) {
-    console.warn('[whop/webhook] WHOP_WEBHOOK_SECRET not set — skipping signature verification');
-    return true;
+    console.warn('[billing-webhook] WHOP_WEBHOOK_SECRET not set — skipping verification');
+    return true; // allow in dev; set the env var in production
   }
-
-  const signature = req.headers.get('x-whop-signature');
   if (!signature) return false;
-
-  // Whop sends: sha256=<hex_digest>
-  const expected = 'sha256=' + createHmac('sha256', secret)
-    .update(rawBody)
-    .digest('hex');
-
-  // Constant-time comparison to prevent timing attacks
+  const expected = 'sha256=' + createHmac('sha256', secret).update(rawBody).digest('hex');
   if (signature.length !== expected.length) return false;
   let diff = 0;
   for (let i = 0; i < signature.length; i++) {
@@ -85,71 +43,18 @@ async function verifyWhopSignature(
   return diff === 0;
 }
 
-// ---------------------------------------------------------------------------
-// Resolve workspace from Whop company ID
-// ---------------------------------------------------------------------------
-
-async function resolveWorkspace(companyId: string): Promise<string | null> {
-  const workspace = await db.workspace.findFirst({
-    where: { whopCompanyId: companyId },
-    select: { id: true },
-  });
-  return workspace?.id ?? null;
-}
-
-// ---------------------------------------------------------------------------
-// Event handlers
-// ---------------------------------------------------------------------------
-
-async function handleMembershipWentValid(
-  data: WhopMembershipPayload,
-  workspaceId: string
-) {
-  const amountCents = data.amount_paid ?? 0;
-
-  return recordPurchase({
-    workspaceId,
-    email: data.email,
-    productId: data.product,
-    productName: `Whop product: ${data.product}`,
-    amountCents,
-    currency: data.currency ?? 'usd',
-    source: 'whop',
-    externalId: `whop_mem_${data.id}`,
-  });
-}
-
-async function handlePaymentSucceeded(
-  data: WhopPaymentPayload,
-  workspaceId: string
-) {
-  return recordPurchase({
-    workspaceId,
-    email: data.email,
-    productId: data.product_id,
-    productName: data.product_id ? `Whop product: ${data.product_id}` : 'Whop payment',
-    amountCents: data.amount,
-    currency: data.currency,
-    source: 'whop',
-    externalId: `whop_pay_${data.id}`,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Route handler
-// ---------------------------------------------------------------------------
+// ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
+  const sig = req.headers.get('x-whop-signature');
 
-  // Verify signature
-  const isValid = await verifyWhopSignature(req, rawBody);
-  if (!isValid) {
-    console.warn('[whop/webhook] Invalid signature — rejecting');
+  if (!verifySignature(rawBody, sig)) {
+    console.warn('[billing-webhook] Invalid signature — rejecting');
     return Response.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
-  let event: WhopWebhookEvent;
+  let event: { action: string; data: Record<string, any> };
   try {
     event = JSON.parse(rawBody);
   } catch {
@@ -157,45 +62,87 @@ export async function POST(req: NextRequest) {
   }
 
   const { action, data } = event;
-  console.log(`[whop/webhook] Received: ${action}`);
+  console.log(`[billing-webhook] ${action}`);
 
-  // Resolve workspace — Whop events include company_id
-  const companyId = (data as any).company_id;
-  if (!companyId) {
-    return Response.json({ error: 'No company_id in payload' }, { status: 422 });
-  }
-
-  const workspaceId = await resolveWorkspace(companyId);
-  if (!workspaceId) {
-    // This Whop company isn't connected to any workspace — ignore silently
-    console.log(`[whop/webhook] No workspace for company ${companyId} — skipping`);
-    return Response.json({ received: true, attributed: false });
-  }
+  // workspaceId is embedded in metadata when we build the checkout URL
+  const workspaceId: string | undefined =
+    data.metadata?.workspaceId ?? data.metadata?.['workspaceId'];
 
   try {
-    let result;
-
+    // ── membership.went_valid — new purchase or renewal ──────────────────────
     if (action === 'membership.went_valid') {
-      result = await handleMembershipWentValid(
-        data as WhopMembershipPayload,
-        workspaceId
-      );
-    } else if (action === 'payment.succeeded') {
-      result = await handlePaymentSucceeded(
-        data as WhopPaymentPayload,
-        workspaceId
-      );
-    } else {
-      // Unhandled event type — acknowledge so Whop doesn't retry
-      return Response.json({ received: true, action, handled: false });
+      const membershipId = data.id as string;
+      const productId    = (data.product ?? data.product_id) as string;
+      const email        = data.email as string;
+      const amountCents  = (data.amount_paid ?? 0) as number;
+      const renewalEnd   = data.renewal_period_end
+        ? new Date((data.renewal_period_end as number) * 1000)
+        : null;
+
+      // Check if this is a RevTray plan product
+      const plan = resolvePlanFromProductId(productId);
+      if (plan && workspaceId) {
+        await applyPlanUpgrade(workspaceId, plan, membershipId, productId, renewalEnd);
+        console.log(`[billing-webhook] Plan upgraded to ${plan} for workspace ${workspaceId}`);
+        return Response.json({ received: true, type: 'plan_upgrade', plan });
+      }
+
+      // Check if this is a RevTray add-on product
+      const addonId = resolveAddonFromProductId(productId);
+      if (addonId && workspaceId) {
+        await applyAddonGrant(workspaceId, addonId, membershipId);
+        console.log(`[billing-webhook] Add-on granted: ${addonId}`);
+        return Response.json({ received: true, type: 'addon_grant', addonId });
+      }
+
+      // Unknown product — record as revenue attribution for a user's workspace
+      if (email && amountCents > 0 && workspaceId) {
+        await recordPurchase({
+          workspaceId,
+          email,
+          productId,
+          productName: `Whop: ${productId}`,
+          amountCents,
+          currency: (data.currency as string) ?? 'usd',
+          source: 'whop',
+          externalId: `whop_mem_${membershipId}`,
+        });
+      }
+
+      return Response.json({ received: true, type: 'membership', handled: false });
     }
 
-    console.log(`[whop/webhook] ${action} processed:`, result);
-    return Response.json({ received: true, ...result });
+    // ── membership.went_invalid — canceled or expired ────────────────────────
+    if (action === 'membership.went_invalid') {
+      const productId = (data.product ?? data.product_id) as string;
+      const plan = resolvePlanFromProductId(productId);
+      if (plan && workspaceId) {
+        await applyPlanDowngrade(workspaceId, 'canceled');
+        console.log(`[billing-webhook] Plan downgraded to FREE for workspace ${workspaceId}`);
+        return Response.json({ received: true, type: 'plan_downgrade' });
+      }
+      return Response.json({ received: true, type: 'membership_invalid', handled: false });
+    }
+
+    // ── payment.succeeded ────────────────────────────────────────────────────
+    if (action === 'payment.succeeded' && workspaceId) {
+      await recordPurchase({
+        workspaceId,
+        email:       data.email as string,
+        productId:   data.product_id as string | undefined,
+        productName: `Whop: ${data.product_id ?? 'payment'}`,
+        amountCents: data.amount as number,
+        currency:    (data.currency as string) ?? 'usd',
+        source:      'whop',
+        externalId:  `whop_pay_${data.id}`,
+      });
+      return Response.json({ received: true, type: 'payment' });
+    }
+
+    return Response.json({ received: true, action, handled: false });
 
   } catch (err) {
-    console.error('[whop/webhook] Error processing event:', err);
-    // Return 500 so Whop retries the webhook
+    console.error('[billing-webhook] Error:', err);
     return Response.json({ error: 'Processing failed' }, { status: 500 });
   }
 }
