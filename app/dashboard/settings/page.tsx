@@ -26,7 +26,7 @@ export default async function SettingsPage({
   const { workspaceId, workspaceRole } = await requireWorkspaceAccess();
   const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 
-  const [workspace, apiKeys, usage] = await Promise.all([
+  const [workspace, apiKeys, usage, emailProviderConfig] = await Promise.all([
     db.workspace.findUnique({
       where: { id: workspaceId },
       select: {
@@ -41,6 +41,10 @@ export default async function SettingsPage({
       select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, createdAt: true },
     }),
     getWorkspaceUsage(workspaceId).catch(() => null),
+    db.emailProviderConfig.findUnique({
+      where: { workspaceId },
+      select: { provider: true, isVerified: true, createdAt: true },
+    }),
   ]);
 
   if (!workspace) return null;
@@ -51,6 +55,14 @@ export default async function SettingsPage({
     lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
     createdAt: k.createdAt.toISOString(),
   }));
+
+  const currentProvider = emailProviderConfig
+    ? {
+        provider: emailProviderConfig.provider as 'RESEND' | 'SES' | 'SENDGRID',
+        isVerified: emailProviderConfig.isVerified,
+        connectedAt: emailProviderConfig.createdAt.toISOString(),
+      }
+    : null;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -116,7 +128,6 @@ export default async function SettingsPage({
               </div>
             </SettingsCard>
 
-            {/* Danger zone — collapsed */}
             {workspaceRole === 'OWNER' && (
               <DangerZone />
             )}
@@ -141,8 +152,11 @@ export default async function SettingsPage({
               />
             </SettingsCard>
 
-            <SettingsCard title="Email provider" description="Connect your own sending provider for higher volume and deliverability control.">
-              <EmailProviderSettings />
+            <SettingsCard
+              title="Email sending"
+              description="Platform sending works out of the box. Optionally connect your own provider for full billing control."
+            >
+              <EmailProviderSettings isAdmin={isAdmin} current={currentProvider} />
             </SettingsCard>
           </>
         )}
