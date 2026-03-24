@@ -2,26 +2,28 @@
 
 /**
  * components/layout/dashboard-sidebar.tsx
- * RevTray light sidebar — updated with Forms nav item (Phase 4)
+ * Phase 5 fix: added Templates nav item between Campaigns and Contacts.
  */
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   HomeIcon, MailIcon, UsersIcon, ZapIcon,
-  BarChart2Icon, SettingsIcon, ShieldCheckIcon, FormInputIcon,
+  BarChart2Icon, SettingsIcon, ShieldCheckIcon,
+  FormInputIcon, LayoutTemplateIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { href: '/dashboard',                label: 'Home',         icon: HomeIcon,        exact: true },
+  { href: '/dashboard',                label: 'Home',         icon: HomeIcon,            exact: true },
   { href: '/dashboard/campaigns',      label: 'Campaigns',    icon: MailIcon },
+  { href: '/dashboard/templates',      label: 'Templates',    icon: LayoutTemplateIcon },
   { href: '/dashboard/contacts',       label: 'Contacts',     icon: UsersIcon },
   { href: '/dashboard/forms',          label: 'Forms',        icon: FormInputIcon },
   { href: '/dashboard/automation',     label: 'Auto-send',    icon: ZapIcon },
   { href: '/dashboard/analytics',      label: 'Analytics',    icon: BarChart2Icon },
   { href: '/dashboard/deliverability', label: 'Inbox health', icon: ShieldCheckIcon },
-  { href: '/dashboard/settings',       label: 'Settings',     icon: SettingsIcon,    exact: true },
+  { href: '/dashboard/settings',       label: 'Settings',     icon: SettingsIcon,        exact: true },
 ] as const;
 
 export function DashboardSidebar() {
