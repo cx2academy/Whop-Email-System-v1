@@ -2,17 +2,16 @@
  * lib/automation/workflow-engine.ts
  *
  * Core workflow runner. Advances an enrollment through its steps.
+ * Now supports CONDITION branching (IF/ELSE) and REMOVE_TAG.
  *
  * Flow:
- *   enrollContact() → creates enrollment → runNextStep()
- *   runNextStep()   → if DELAY → scheduleJob() → return
- *                   → if action → executeStep() → advance → runNextStep()
- *                   → if no more steps → complete enrollment
- *
- * Safety:
- *   - 10 errors per enrollment → mark FAILED
- *   - 10 errors per workflow → auto-disable workflow
- *   - Duplicate enrollment guard (@@unique constraint)
+ *   enrollContact() → creates enrollment → advanceEnrollment()
+ *   advanceEnrollment():
+ *     TRIGGER  → skip
+ *     DELAY    → schedule job, pause
+ *     CONDITION → evaluate, run true/false branch inline, advance
+ *     ACTION   → execute, advance
+ *     done     → mark COMPLETED
  */
 
 import { db } from '@/lib/db/client';
@@ -23,7 +22,7 @@ const MAX_ENROLLMENT_ERRORS = 10;
 const MAX_WORKFLOW_ERRORS   = 10;
 
 // ---------------------------------------------------------------------------
-// Enroll a contact into a workflow
+// Enroll a contact
 // ---------------------------------------------------------------------------
 
 export async function enrollContact(
@@ -39,14 +38,12 @@ export async function enrollContact(
   if (workflow.status !== 'ACTIVE') return { enrolled: false, reason: 'Workflow not active' };
   if (workflow.steps.length === 0) return { enrolled: false, reason: 'Workflow has no steps' };
 
-  // Upsert enrollment — if one already exists and is ACTIVE, skip
   const existing = await db.automationEnrollment.findUnique({
     where: { workflowId_contactId: { workflowId, contactId } },
   });
 
   if (existing) {
     if (existing.status === 'ACTIVE') return { enrolled: false, reason: 'Already enrolled' };
-    // Re-enroll if previous run completed/failed
     await db.automationEnrollment.update({
       where: { id: existing.id },
       data: { status: 'ACTIVE', currentStep: 0, errorCount: 0, completedAt: null, errorMessage: null },
@@ -57,7 +54,6 @@ export async function enrollContact(
     });
   }
 
-  // Update workflow stats
   await db.automationWorkflow.update({
     where: { id: workflowId },
     data: { totalRuns: { increment: 1 }, lastTriggeredAt: new Date() },
@@ -68,7 +64,6 @@ export async function enrollContact(
   });
 
   if (enrollment) {
-    // Run first steps synchronously (skip the trigger step at position 0)
     await advanceEnrollment(enrollment.id);
   }
 
@@ -76,7 +71,7 @@ export async function enrollContact(
 }
 
 // ---------------------------------------------------------------------------
-// Advance an enrollment to the next step
+// Advance an enrollment
 // ---------------------------------------------------------------------------
 
 export async function advanceEnrollment(enrollmentId: string): Promise<void> {
@@ -93,20 +88,16 @@ export async function advanceEnrollment(enrollmentId: string): Promise<void> {
 
   const steps = enrollment.workflow.steps;
   const workspaceId = enrollment.workflow.workspaceId;
-
-  // Walk through steps starting at currentStep
   let position = enrollment.currentStep;
 
   while (position < steps.length) {
     const step = steps[position];
 
-    // Skip TRIGGER steps (they just mark the entry point)
     if (step.type === 'TRIGGER') {
       position++;
       continue;
     }
 
-    // DELAY: schedule a job and stop here
     if (step.type === 'DELAY') {
       const config = JSON.parse(step.config) as DelayConfig;
       const executeAt = calcExecuteAt(config);
@@ -121,16 +112,15 @@ export async function advanceEnrollment(enrollmentId: string): Promise<void> {
         },
       });
 
-      // Advance position past the delay — job will call runAfterDelay()
       await db.automationEnrollment.update({
         where: { id: enrollmentId },
         data: { currentStep: position + 1 },
       });
 
-      return; // Pause here — resume when job fires
+      return;
     }
 
-    // ACTION step — execute it
+    // ACTION or CONDITION step
     try {
       const config = JSON.parse(step.config) as Record<string, unknown>;
       await executeStep(step.type, config, enrollment.contactId, workspaceId, enrollmentId);
@@ -145,7 +135,6 @@ export async function advanceEnrollment(enrollmentId: string): Promise<void> {
     }
   }
 
-  // All steps done — complete the enrollment
   await db.automationEnrollment.update({
     where: { id: enrollmentId },
     data: { status: 'COMPLETED', completedAt: new Date() },
@@ -153,7 +142,7 @@ export async function advanceEnrollment(enrollmentId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Error handling with auto-disable
+// Error handling
 // ---------------------------------------------------------------------------
 
 async function handleStepError(
@@ -165,10 +154,7 @@ async function handleStepError(
 
   const enrollment = await db.automationEnrollment.update({
     where: { id: enrollmentId },
-    data: {
-      errorCount: { increment: 1 },
-      errorMessage: message,
-    },
+    data: { errorCount: { increment: 1 }, errorMessage: message },
   });
 
   if (enrollment.errorCount >= MAX_ENROLLMENT_ERRORS) {
@@ -178,7 +164,6 @@ async function handleStepError(
     });
   }
 
-  // Increment workflow error count — auto-disable if too many
   const workflow = await db.automationWorkflow.update({
     where: { id: workflowId },
     data: { errorCount: { increment: 1 } },
