@@ -1,97 +1,115 @@
 /**
  * lib/deliverability/send-throttle.ts
  *
- * Rule-based send throttling for domain warmup.
+ * Send throttle — now backed by WarmupSchedule DB records.
  *
- * New domains should ramp up slowly to build reputation.
- * ISPs flag sudden high-volume sends from unknown IPs/domains as spam.
+ * Priority order:
+ *   1. If a WarmupSchedule.ACTIVE exists → enforce daily limit from schedule
+ *   2. If no active schedule → no throttle (unlimited)
  *
- * Warmup schedule (emails per hour):
- *   Day 1  →   50/hr
- *   Day 3  →  150/hr
- *   Day 7  →  500/hr
- *   Day 14 →  unlimited
- *
- * The send engine checks this before dispatching a batch.
+ * The old time-based formula is replaced by the DB-driven system.
+ * Call startWarmup(domainId) from lib/warmup/actions.ts when a domain
+ * is verified to activate a schedule.
  */
 
 import { db } from '@/lib/db/client';
+import { getCurrentDay, getDailyLimit, WARMUP_TOTAL_DAYS } from '@/lib/warmup/schedule';
 
 export interface ThrottleResult {
-  allowed: boolean;
-  limit: number | null;        // null = unlimited
+  allowed:      boolean;
+  limit:        number | null;  // null = unlimited
   sentThisHour: number;
-  remaining: number | null;    // null = unlimited
-  reason: string;
+  remaining:    number | null;  // null = unlimited
+  reason:       string;
 }
 
-// Warmup steps: [daysOld, hourlyLimit]
-const WARMUP_SCHEDULE: [number, number][] = [
-  [14, Infinity],
-  [7,  500],
-  [3,  150],
-  [0,  50],
-];
+// ---------------------------------------------------------------------------
+// getSentToday — count successful sends since midnight
+// ---------------------------------------------------------------------------
 
-function getHourlyLimit(domainCreatedAt: Date): number {
-  const daysOld = (Date.now() - domainCreatedAt.getTime()) / (1000 * 60 * 60 * 24);
-  for (const [days, limit] of WARMUP_SCHEDULE) {
-    if (daysOld >= days) return limit;
-  }
-  return 50;
-}
+async function getSentToday(workspaceId: string): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
 
-export async function checkThrottle(
-  workspaceId: string,
-  domainCreatedAt: Date
-): Promise<ThrottleResult> {
-  const limit = getHourlyLimit(domainCreatedAt);
-
-  if (!isFinite(limit)) {
-    return { allowed: true, limit: null, sentThisHour: 0, remaining: null, reason: 'Domain fully warmed up' };
-  }
-
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  const sentThisHour = await db.emailSend.count({
+  return db.emailSend.count({
     where: {
       workspaceId,
-      sentAt: { gte: oneHourAgo },
+      sentAt: { gte: startOfDay },
       status: { in: ['SENT', 'DELIVERED', 'OPENED', 'CLICKED'] },
     },
   });
+}
 
-  const remaining = Math.max(0, limit - sentThisHour);
-  const allowed = sentThisHour < limit;
+// ---------------------------------------------------------------------------
+// checkThrottle — main entry point (called by send-engine.ts)
+//
+// Signature kept identical to the old version so send-engine.ts doesn't change.
+// The second arg (domainCreatedAt) is now ignored — we use the DB schedule.
+// ---------------------------------------------------------------------------
 
-  const daysOld = Math.floor((Date.now() - domainCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
+export async function checkThrottle(
+  workspaceId: string,
+  _domainCreatedAt?: Date    // kept for backwards compat — no longer used
+): Promise<ThrottleResult> {
+  // Find active warm-up schedule
+  const warmup = await db.warmupSchedule.findFirst({
+    where: { workspaceId, status: 'ACTIVE' },
+  });
+
+  // No active schedule → unlimited
+  if (!warmup) {
+    return {
+      allowed:      true,
+      limit:        null,
+      sentThisHour: 0,
+      remaining:    null,
+      reason:       'No active warm-up — unrestricted',
+    };
+  }
+
+  const currentDay = getCurrentDay(warmup.startedAt);
+  const dailyLimit = getDailyLimit(currentDay);
+
+  // Past the schedule → mark complete and allow
+  if (dailyLimit === null || currentDay > WARMUP_TOTAL_DAYS) {
+    await db.warmupSchedule.update({
+      where: { id: warmup.id },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
+    return {
+      allowed:      true,
+      limit:        null,
+      sentThisHour: 0,
+      remaining:    null,
+      reason:       'Warm-up complete — unrestricted',
+    };
+  }
+
+  const sentToday = await getSentToday(workspaceId);
+  const remaining = Math.max(0, dailyLimit - sentToday);
+  const allowed   = sentToday < dailyLimit;
 
   return {
     allowed,
-    limit,
-    sentThisHour,
+    limit:        dailyLimit,
+    sentThisHour: sentToday,   // field name kept for compat — now represents daily
     remaining,
     reason: allowed
-      ? `Domain is ${daysOld}d old — limit ${limit}/hr`
-      : `Hourly limit reached (${sentThisHour}/${limit}). Resumes in under 1 hour.`,
+      ? `Warm-up day ${currentDay}/${WARMUP_TOTAL_DAYS}: ${sentToday.toLocaleString()}/${dailyLimit.toLocaleString()} sent today`
+      : `Warm-up day ${currentDay}: daily limit of ${dailyLimit.toLocaleString()} reached. Resumes at midnight.`,
   };
 }
 
-export function getWarmupGuidance(domainCreatedAt: Date): {
-  daysOld: number;
-  todayLimit: number | null;
-  nextMilestone: string | null;
+// ---------------------------------------------------------------------------
+// getWarmupGuidance — UI helper (kept for any existing callers)
+// ---------------------------------------------------------------------------
+
+export function getWarmupGuidance(_domainCreatedAt: Date): {
+  daysOld:        number;
+  todayLimit:     number | null;
+  nextMilestone:  string | null;
 } {
-  const daysOld = Math.floor((Date.now() - domainCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
-  const limit = getHourlyLimit(domainCreatedAt);
-
-  let nextMilestone: string | null = null;
-  if (daysOld < 3)  nextMilestone = `150/hr at day 3 (${3 - daysOld}d away)`;
-  else if (daysOld < 7)  nextMilestone = `500/hr at day 7 (${7 - daysOld}d away)`;
-  else if (daysOld < 14) nextMilestone = `Unlimited at day 14 (${14 - daysOld}d away)`;
-
-  return {
-    daysOld,
-    todayLimit: isFinite(limit) ? limit : null,
-    nextMilestone,
-  };
+  // This is now superseded by lib/warmup/actions.ts getWarmupStatus()
+  // Kept as a no-op shim so existing import sites don't break.
+  return { daysOld: 0, todayLimit: null, nextMilestone: null };
 }

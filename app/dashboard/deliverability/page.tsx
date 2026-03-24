@@ -1,6 +1,6 @@
 /**
  * app/dashboard/deliverability/page.tsx
- * Inbox health — no client component imports, pure server render
+ * Inbox health — includes domain warm-up section
  */
 
 import type { Metadata } from 'next';
@@ -8,15 +8,18 @@ import Link from 'next/link';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { ShieldCheckIcon, CheckCircleIcon, AlertTriangleIcon, XCircleIcon, ExternalLinkIcon } from 'lucide-react';
+import { WarmupPanel } from './warmup-panel';
+import { getWarmupStatus } from '@/lib/warmup/actions';
 
 export const metadata: Metadata = { title: 'Inbox health' };
 
 export default async function DeliverabilityPage() {
-  const { workspaceId } = await requireWorkspaceAccess();
+  const { workspaceId, workspaceRole } = await requireWorkspaceAccess();
+  const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000);
 
-  const [domains, recentReports] = await Promise.all([
+  const [domains, recentReports, warmupStatus] = await Promise.all([
     db.sendingDomain.findMany({
       where: { workspaceId },
       orderBy: { createdAt: 'desc' },
@@ -30,6 +33,7 @@ export default async function DeliverabilityPage() {
         campaign: { select: { name: true, id: true } },
       },
     }),
+    getWarmupStatus(),
   ]);
 
   const [bouncedCount, complainedCount, totalSent] = await Promise.all([
@@ -48,6 +52,9 @@ export default async function DeliverabilityPage() {
   const complaintStatus = parseFloat(complaintRate) > 0.1 ? 'bad'  : parseFloat(complaintRate) > 0.05 ? 'warn' : 'good';
   const domainStatus    = !primaryDomain ? 'warn'
     : primaryDomain.spfVerified && primaryDomain.dkimVerified ? 'good' : 'warn';
+
+  // First verified domain for warmup start
+  const verifiedDomain = domains.find((d) => d.spfVerified && d.dkimVerified) ?? null;
 
   return (
     <div className="space-y-6">
@@ -68,8 +75,6 @@ export default async function DeliverabilityPage() {
       {/* ── No activity yet ─────────────────────────────────────────────────── */}
       {!hasActivity && (
         <div className="space-y-4">
-
-          {/* Empty state hero */}
           <div
             className="rounded-xl p-10 text-center"
             style={{ border: '1.5px dashed var(--sidebar-border)', background: 'var(--surface-card)' }}
@@ -86,18 +91,17 @@ export default async function DeliverabilityPage() {
             <p className="text-sm max-w-sm mx-auto mb-8 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
               A custom domain dramatically improves open rates and keeps your emails out of spam. Takes about 5 minutes.
             </p>
-
-            {/* Steps */}
             <div className="max-w-xs mx-auto text-left space-y-2 mb-8">
               {[
                 'Add your domain (e.g. mail.yourbrand.com)',
                 'Copy 3 DNS records to your registrar',
                 'Verify — SPF, DKIM, DMARC all green',
+                'Start warm-up to build inbox reputation',
               ].map((step, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div
                     className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-                    style={{ background: 'var(--brand-tint)', color: '#16A34A' }}
+                    style={{ background: 'rgba(34,197,94,0.12)', color: '#16A34A' }}
                   >
                     {i + 1}
                   </div>
@@ -105,7 +109,6 @@ export default async function DeliverabilityPage() {
                 </div>
               ))}
             </div>
-
             <Link
               href="/dashboard/settings?tab=integrations"
               className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
@@ -114,24 +117,6 @@ export default async function DeliverabilityPage() {
               Set up domain in Settings
               <ExternalLinkIcon className="h-3.5 w-3.5" />
             </Link>
-          </div>
-
-          {/* What good deliverability looks like */}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'Bounce rate', target: 'Keep below 2%', color: '#F0FDF4', textColor: '#16A34A' },
-              { label: 'Complaint rate', target: 'Keep below 0.1%', color: '#FFF7ED', textColor: '#EA580C' },
-              { label: 'SPF + DKIM', target: 'Must be verified', color: '#F0F9FF', textColor: '#0284C7' },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="rounded-xl px-4 py-4 text-center"
-                style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}
-              >
-                <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-tertiary)' }}>{item.label}</p>
-                <p className="text-sm font-semibold" style={{ color: item.textColor }}>{item.target}</p>
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -201,10 +186,35 @@ export default async function DeliverabilityPage() {
             </div>
           )}
 
+          {/* ── Warm-up section ──────────────────────────────────────────────── */}
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Domain warm-up
+              </h2>
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: 'rgba(34,197,94,0.12)', color: '#16A34A' }}
+              >
+                Recommended
+              </span>
+            </div>
+            <p className="mb-3 text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              New domains need a gradual ramp-up to build trust with inbox providers. The warm-up schedule automatically
+              limits your daily send volume for 22 days, then removes all limits once your reputation is established.
+            </p>
+            <WarmupPanel
+              schedule={warmupStatus.schedule ?? null}
+              domainId={verifiedDomain?.id ?? null}
+              domainName={verifiedDomain?.domain ?? null}
+              isAdmin={isAdmin}
+            />
+          </div>
+
           {/* Recent deliverability reports */}
           {recentReports.length > 0 && (
             <div
-              className="rounded-xl overflow-hidden shadow-card"
+              className="rounded-xl overflow-hidden"
               style={{ border: '1px solid var(--sidebar-border)', background: 'var(--surface-card)' }}
             >
               <div
@@ -233,16 +243,18 @@ export default async function DeliverabilityPage() {
                 <tbody>
                   {recentReports.map((r, i) => {
                     const scoreColor = r.score >= 80 ? '#16A34A' : r.score >= 60 ? '#D97706' : '#DC2626';
+                    const warnings = (() => {
+                      try { return JSON.parse(r.warnings) as unknown[]; } catch { return []; }
+                    })();
                     return (
                       <tr
                         key={r.id}
-                        className="transition-colors hover:bg-[#F7F8FA]"
                         style={{ borderTop: i > 0 ? '1px solid var(--sidebar-border)' : undefined }}
                       >
                         <td className="px-5 py-4">
                           <Link
                             href={`/dashboard/campaigns/${r.campaign.id}`}
-                            className="text-sm font-medium transition-colors hover:text-[#16A34A]"
+                            className="text-sm font-medium transition-colors hover:underline"
                             style={{ color: 'var(--text-primary)' }}
                           >
                             {r.campaign.name}
@@ -254,8 +266,8 @@ export default async function DeliverabilityPage() {
                           </span>
                           <span className="text-xs ml-1" style={{ color: 'var(--text-tertiary)' }}>/100</span>
                         </td>
-                        <td className="px-5 py-4 text-right text-sm" style={{ color: r.warnings.length > 0 ? '#D97706' : 'var(--text-tertiary)' }}>
-                          {r.warnings.length > 0 ? `${r.warnings.length} warning${r.warnings.length !== 1 ? 's' : ''}` : '—'}
+                        <td className="px-5 py-4 text-right text-sm" style={{ color: warnings.length > 0 ? '#D97706' : 'var(--text-tertiary)' }}>
+                          {warnings.length > 0 ? `${warnings.length} warning${warnings.length !== 1 ? 's' : ''}` : '—'}
                         </td>
                         <td className="px-5 py-4 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
                           {new Date(r.createdAt).toLocaleDateString()}
@@ -276,11 +288,11 @@ export default async function DeliverabilityPage() {
 // ── HealthCard ────────────────────────────────────────────────────────────────
 
 function HealthCard({ label, value, status, threshold, href }: {
-  label: string;
-  value: string;
-  status: 'good' | 'warn' | 'bad' | 'neutral';
+  label:     string;
+  value:     string;
+  status:    'good' | 'warn' | 'bad' | 'neutral';
   threshold?: string;
-  href?: string;
+  href?:     string;
 }) {
   const palette = {
     good:    { bg: '#F0FDF4', border: '#BBF7D0', icon: <CheckCircleIcon  className="h-4 w-4" style={{ color: '#16A34A' }} />, sub: '#16A34A' },
