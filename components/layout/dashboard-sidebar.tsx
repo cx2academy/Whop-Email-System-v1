@@ -2,25 +2,26 @@
 
 /**
  * components/layout/dashboard-sidebar.tsx
- * RevTray light sidebar — task-first nav, minimal chrome
+ * RevTray light sidebar — updated with Forms nav item (Phase 4)
  */
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   HomeIcon, MailIcon, UsersIcon, ZapIcon,
-  BarChart2Icon, SettingsIcon, ShieldCheckIcon,
+  BarChart2Icon, SettingsIcon, ShieldCheckIcon, FormInputIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { href: '/dashboard',             label: 'Home',         icon: HomeIcon,       exact: true },
-  { href: '/dashboard/campaigns',   label: 'Campaigns',    icon: MailIcon },
-  { href: '/dashboard/contacts',    label: 'Contacts',     icon: UsersIcon },
-  { href: '/dashboard/automation',  label: 'Auto-send',    icon: ZapIcon },
-  { href: '/dashboard/analytics',   label: 'Analytics',    icon: BarChart2Icon },
+  { href: '/dashboard',                label: 'Home',         icon: HomeIcon,        exact: true },
+  { href: '/dashboard/campaigns',      label: 'Campaigns',    icon: MailIcon },
+  { href: '/dashboard/contacts',       label: 'Contacts',     icon: UsersIcon },
+  { href: '/dashboard/forms',          label: 'Forms',        icon: FormInputIcon },
+  { href: '/dashboard/automation',     label: 'Auto-send',    icon: ZapIcon },
+  { href: '/dashboard/analytics',      label: 'Analytics',    icon: BarChart2Icon },
   { href: '/dashboard/deliverability', label: 'Inbox health', icon: ShieldCheckIcon },
-  { href: '/dashboard/settings',    label: 'Settings',     icon: SettingsIcon,   exact: true },
+  { href: '/dashboard/settings',       label: 'Settings',     icon: SettingsIcon,    exact: true },
 ] as const;
 
 export function DashboardSidebar() {
@@ -35,7 +36,7 @@ export function DashboardSidebar() {
     <aside
       className="flex h-screen w-[220px] flex-col flex-shrink-0 sticky top-0"
       style={{
-        background: 'var(--sidebar-bg)',
+        background:  'var(--sidebar-bg)',
         borderRight: '1px solid var(--sidebar-border)',
       }}
     >
@@ -65,7 +66,7 @@ export function DashboardSidebar() {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
           {NAV.map((item) => {
-            const Icon = item.icon;
+            const Icon   = item.icon;
             const active = isActive(item.href, 'exact' in item ? item.exact : false);
 
             return (
@@ -74,9 +75,7 @@ export function DashboardSidebar() {
                   href={item.href}
                   className={cn(
                     'flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-100',
-                    active
-                      ? 'text-[#16A34A]'
-                      : 'hover:bg-[#F3F4F6]'
+                    active ? 'text-[#16A34A]' : 'hover:bg-[#F3F4F6]'
                   )}
                   style={
                     active
@@ -107,7 +106,7 @@ export function DashboardSidebar() {
         >
           <div>
             <p className="text-[11px] font-semibold" style={{ color: 'var(--text-primary)' }}>Free plan</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>500 emails / mo</p>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>10,000 emails / mo</p>
           </div>
           <Link
             href="/dashboard/settings?tab=billing"
