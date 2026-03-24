@@ -4,6 +4,7 @@
  * lib/warmup/actions.ts
  *
  * Server actions for domain warm-up management.
+ * getWarmupStatus() is also safe to call directly from Server Components.
  */
 
 import { revalidatePath } from 'next/cache';
@@ -13,7 +14,6 @@ import { computeWarmupProgress, getCurrentDay, getDailyLimit, WARMUP_TOTAL_DAYS 
 
 // ---------------------------------------------------------------------------
 // Start warm-up for a domain
-// Called automatically when a domain is verified, or manually from the UI.
 // ---------------------------------------------------------------------------
 
 export async function startWarmup(
@@ -26,9 +26,8 @@ export async function startWarmup(
   });
   if (!domain) return { success: false, error: 'Domain not found' };
 
-  // Idempotent — if one already exists, resume it
   await db.warmupSchedule.upsert({
-    where: { domainId },
+    where:  { domainId },
     create: { workspaceId, domainId, status: 'ACTIVE', startedAt: new Date() },
     update: { status: 'ACTIVE', pausedAt: null },
   });
@@ -48,7 +47,7 @@ export async function pauseWarmup(
 
   await db.warmupSchedule.updateMany({
     where: { domainId, workspaceId },
-    data: { status: 'PAUSED', pausedAt: new Date() },
+    data:  { status: 'PAUSED', pausedAt: new Date() },
   });
 
   revalidatePath('/dashboard/deliverability');
@@ -66,7 +65,7 @@ export async function cancelWarmup(
 
   await db.warmupSchedule.updateMany({
     where: { domainId, workspaceId },
-    data: { status: 'CANCELLED' },
+    data:  { status: 'CANCELLED' },
   });
 
   revalidatePath('/dashboard/deliverability');
@@ -74,7 +73,7 @@ export async function cancelWarmup(
 }
 
 // ---------------------------------------------------------------------------
-// Get today's send count for a workspace (for enforcement)
+// getSentTodayCount — internal helper
 // ---------------------------------------------------------------------------
 
 async function getSentTodayCount(workspaceId: string): Promise<number> {
@@ -84,34 +83,36 @@ async function getSentTodayCount(workspaceId: string): Promise<number> {
   return db.emailSend.count({
     where: {
       workspaceId,
-      sentAt: { gte: startOfDay },
-      status: { in: ['SENT', 'DELIVERED', 'OPENED', 'CLICKED'] },
+      sentAt:  { gte: startOfDay },
+      status:  { in: ['SENT', 'DELIVERED', 'OPENED', 'CLICKED'] },
     },
   });
 }
 
 // ---------------------------------------------------------------------------
-// Check if a workspace can send given warm-up limits
-// Used by send-throttle.ts
+// checkWarmupAllowed — called by send-throttle.ts
 // ---------------------------------------------------------------------------
 
 export interface WarmupAllowResult {
-  allowed:     boolean;
-  reason:      string;
-  dailyLimit:  number | null;
-  sentToday:   number;
+  allowed:    boolean;
+  reason:     string;
+  dailyLimit: number | null;
+  sentToday:  number;
 }
 
 export async function checkWarmupAllowed(
   workspaceId: string
 ): Promise<WarmupAllowResult> {
-  // Find active warm-up for any verified domain in this workspace
-  const warmup = await db.warmupSchedule.findFirst({
-    where: { workspaceId, status: 'ACTIVE' },
-    include: { domain: true },
-  });
+  let warmup;
+  try {
+    warmup = await db.warmupSchedule.findFirst({
+      where: { workspaceId, status: 'ACTIVE' },
+    });
+  } catch {
+    // Table may not exist yet — fail open
+    return { allowed: true, reason: 'Warm-up table unavailable', dailyLimit: null, sentToday: 0 };
+  }
 
-  // No active warmup = no restriction
   if (!warmup) {
     return { allowed: true, reason: 'No active warm-up', dailyLimit: null, sentToday: 0 };
   }
@@ -119,11 +120,10 @@ export async function checkWarmupAllowed(
   const currentDay = getCurrentDay(warmup.startedAt);
   const dailyLimit = getDailyLimit(currentDay);
 
-  // Past the schedule = mark complete + allow
   if (dailyLimit === null || currentDay > WARMUP_TOTAL_DAYS) {
     await db.warmupSchedule.update({
       where: { id: warmup.id },
-      data: { status: 'COMPLETED', completedAt: new Date() },
+      data:  { status: 'COMPLETED', completedAt: new Date() },
     });
     return { allowed: true, reason: 'Warm-up complete', dailyLimit: null, sentToday: 0 };
   }
@@ -132,8 +132,8 @@ export async function checkWarmupAllowed(
 
   if (sentToday >= dailyLimit) {
     return {
-      allowed: false,
-      reason:  `Warm-up day ${currentDay}: daily limit of ${dailyLimit.toLocaleString()} reached. Resumes tomorrow.`,
+      allowed:    false,
+      reason:     `Warm-up day ${currentDay}: daily limit of ${dailyLimit.toLocaleString()} reached. Resumes at midnight.`,
       dailyLimit,
       sentToday,
     };
@@ -148,24 +148,25 @@ export async function checkWarmupAllowed(
 }
 
 // ---------------------------------------------------------------------------
-// Get warm-up status for the UI (deliverability page)
+// getWarmupStatus — called from Server Component (deliverability page)
+// Safe: wraps DB call in try/catch so page never crashes if table is missing.
 // ---------------------------------------------------------------------------
 
 export interface WarmupStatusResult {
-  hasWarmup:    boolean;
-  schedule?:    {
-    id:          string;
-    domainId:    string;
-    domainName:  string;
-    status:      string;
-    startedAt:   string;
-    currentDay:  number;
-    totalDays:   number;
-    dailyLimit:  number | null;
-    sentToday:   number;
-    progressPct: number;
+  hasWarmup: boolean;
+  schedule?: {
+    id:           string;
+    domainId:     string;
+    domainName:   string;
+    status:       string;
+    startedAt:    string;
+    currentDay:   number;
+    totalDays:    number;
+    dailyLimit:   number | null;
+    sentToday:    number;
+    progressPct:  number;
     nextMilestone: string | null;
-    isComplete:  boolean;
+    isComplete:   boolean;
     sendsRemainingToday: number | null;
   };
 }
@@ -173,11 +174,17 @@ export interface WarmupStatusResult {
 export async function getWarmupStatus(): Promise<WarmupStatusResult> {
   const { workspaceId } = await requireWorkspaceAccess();
 
-  const warmup = await db.warmupSchedule.findFirst({
-    where: { workspaceId, status: { in: ['ACTIVE', 'PAUSED'] } },
-    include: { domain: { select: { domain: true } } },
-    orderBy: { createdAt: 'desc' },
-  });
+  let warmup;
+  try {
+    warmup = await db.warmupSchedule.findFirst({
+      where:   { workspaceId, status: { in: ['ACTIVE', 'PAUSED'] } },
+      include: { domain: { select: { domain: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch {
+    // Table doesn't exist yet (migration not run) — return gracefully
+    return { hasWarmup: false };
+  }
 
   if (!warmup) return { hasWarmup: false };
 
@@ -187,28 +194,33 @@ export async function getWarmupStatus(): Promise<WarmupStatusResult> {
   return {
     hasWarmup: true,
     schedule: {
-      id:          warmup.id,
-      domainId:    warmup.domainId,
-      domainName:  warmup.domain.domain,
-      status:      warmup.status,
-      startedAt:   warmup.startedAt.toISOString(),
+      id:         warmup.id,
+      domainId:   warmup.domainId,
+      domainName: warmup.domain.domain,
+      status:     warmup.status,
+      startedAt:  warmup.startedAt.toISOString(),
       ...progress,
     },
   };
 }
 
 // ---------------------------------------------------------------------------
-// Get all completed/active warmups for display
+// getAllWarmups — for admin views
 // ---------------------------------------------------------------------------
 
 export async function getAllWarmups() {
   const { workspaceId } = await requireWorkspaceAccess();
 
-  const schedules = await db.warmupSchedule.findMany({
-    where: { workspaceId },
-    include: { domain: { select: { domain: true } } },
-    orderBy: { createdAt: 'desc' },
-  });
+  let schedules;
+  try {
+    schedules = await db.warmupSchedule.findMany({
+      where:   { workspaceId },
+      include: { domain: { select: { domain: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch {
+    return [];
+  }
 
   const sentToday = await getSentTodayCount(workspaceId);
 
