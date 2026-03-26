@@ -56,6 +56,31 @@ const serverEnvSchema = z.object({
     .transform((val: string) => val === "true")
     .optional(),
 
+  // Encryption — required to store API keys at rest
+  // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  ENCRYPTION_KEY: z
+    .string()
+    .min(32, "ENCRYPTION_KEY must be at least 32 characters. Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""),
+
+  // Cron job protection — any random secret is fine
+  // Generate with: openssl rand -base64 24
+  CRON_SECRET: z
+    .string()
+    .min(1, "CRON_SECRET is required to protect the automation cron endpoint.")
+    .optional(), // optional for local dev, but production should set it
+
+  // Webhook secrets — required to verify incoming webhook payloads
+  // Set RESEND_WEBHOOK_SECRET from the Resend dashboard → Webhooks → signing secret
+  RESEND_WEBHOOK_SECRET: z
+    .string()
+    .min(1, "RESEND_WEBHOOK_SECRET is required. Copy it from Resend dashboard → Webhooks.")
+    .optional(), // optional so the app boots before Resend is configured
+  // Set WHOP_WEBHOOK_SECRET from the Whop dashboard → Developer → Webhooks → signing secret
+  WHOP_WEBHOOK_SECRET: z
+    .string()
+    .min(1, "WHOP_WEBHOOK_SECRET is required for production. Copy from Whop dashboard → Webhooks.")
+    .optional(), // optional so the app boots before Whop webhook is configured
+
   // Feature Flags
   USE_SMTP_FALLBACK: z
     .string()

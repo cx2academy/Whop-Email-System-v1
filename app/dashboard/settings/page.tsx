@@ -12,7 +12,10 @@ import { WhopWebhookSettings } from './whop-webhook';
 import { PlanBillingSettings } from './plan-billing';
 import { BillingSuccessBanner } from './billing-success-banner';
 import { EmailProviderSettings } from './email-provider';
+import { BrandingSettings } from './branding-settings';
+import { SmartSendingSettings } from './smart-sending';
 import { getWorkspaceUsage } from '@/lib/plans/gates';
+import { getSendingSettings } from '@/lib/sending/actions';
 import { SettingsTabs } from './settings-tabs';
 
 export const metadata: Metadata = { title: 'Settings' };
@@ -26,13 +29,15 @@ export default async function SettingsPage({
   const { workspaceId, workspaceRole } = await requireWorkspaceAccess();
   const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 
-  const [workspace, apiKeys, usage, emailProviderConfig] = await Promise.all([
+  const [workspace, apiKeys, usage, emailProviderConfig, sendingSettings] = await Promise.all([
     db.workspace.findUnique({
       where: { id: workspaceId },
       select: {
         id: true, name: true, slug: true,
         fromEmail: true, fromName: true,
         plan: true, whopApiKey: true, webhookSecret: true,
+        // Branding fields
+        logoUrl: true, brandColor: true,
       },
     }),
     db.apiKey.findMany({
@@ -45,6 +50,7 @@ export default async function SettingsPage({
       where: { workspaceId },
       select: { provider: true, isVerified: true, createdAt: true },
     }),
+    getSendingSettings().catch(() => null),
   ]);
 
   if (!workspace) return null;
@@ -65,7 +71,7 @@ export default async function SettingsPage({
     : null;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1
@@ -103,6 +109,7 @@ export default async function SettingsPage({
                   fromName: workspace.fromName,
                   hasWhopApiKey: !!workspace.whopApiKey,
                 }}
+                isAdmin={isAdmin}
               />
             </SettingsCard>
 
@@ -132,6 +139,51 @@ export default async function SettingsPage({
               <DangerZone />
             )}
           </>
+        )}
+
+        {/* ── Branding ──────────────────────────────────────────────── */}
+        {activeTab === 'branding' && (
+          <SettingsCard
+            title="Brand identity"
+            description="Customize how your brand appears in email templates sent to subscribers."
+          >
+            <BrandingSettings
+              isAdmin={isAdmin}
+              initial={{
+                logoUrl: workspace.logoUrl ?? null,
+                brandColor: workspace.brandColor ?? '#22C55E',
+              }}
+            />
+          </SettingsCard>
+        )}
+
+        {/* ── Sending ───────────────────────────────────────────────── */}
+        {activeTab === 'sending' && (
+          <SettingsCard
+            title="Smart sending"
+            description="Fine-tune how emails are filtered and throttled before each send."
+          >
+            {sendingSettings ? (
+              <SmartSendingSettings
+                isAdmin={isAdmin}
+                initial={{
+                  engagementFilterEnabled: sendingSettings.engagementFilterEnabled,
+                  engagementFilterDays:    sendingSettings.engagementFilterDays,
+                  deduplicationEnabled:    sendingSettings.deduplicationEnabled,
+                  sendRateLimitEnabled:    sendingSettings.sendRateLimitEnabled,
+                  sendRateLimitPerMinute:  sendingSettings.sendRateLimitPerMinute,
+                  abuseDetectionEnabled:   sendingSettings.abuseDetectionEnabled,
+                  abuseFlagged:            sendingSettings.abuseFlagged,
+                  abuseFlaggedReason:      sendingSettings.abuseFlaggedReason ?? null,
+                  abuseFlaggedAt:          sendingSettings.abuseFlaggedAt?.toISOString() ?? null,
+                }}
+              />
+            ) : (
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Unable to load sending settings. Please refresh.
+              </p>
+            )}
+          </SettingsCard>
         )}
 
         {/* ── Billing ───────────────────────────────────────────────── */}

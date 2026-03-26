@@ -89,6 +89,37 @@ export async function createCampaign(
     };
   }
 
+  // ── Cross-workspace ownership checks ─────────────────────────────────────
+  // Verify every tag and segment ID belongs to this workspace.
+  // Without this, a user could target contacts from another workspace
+  // by injecting foreign IDs into the audience arrays.
+
+  if (data.audienceTagIds && data.audienceTagIds.length > 0) {
+    const ownedTags = await db.tag.findMany({
+      where: { id: { in: data.audienceTagIds }, workspaceId },
+      select: { id: true },
+    });
+    const ownedTagIds = new Set(ownedTags.map((t) => t.id));
+    const invalid = data.audienceTagIds.filter((id) => !ownedTagIds.has(id));
+    if (invalid.length > 0) {
+      return { success: false, error: "One or more tag IDs are invalid or do not belong to your workspace." };
+    }
+  }
+
+  if (data.audienceSegmentIds && data.audienceSegmentIds.length > 0) {
+    const ownedSegments = await db.segment.findMany({
+      where: { id: { in: data.audienceSegmentIds }, workspaceId },
+      select: { id: true },
+    });
+    const ownedSegmentIds = new Set(ownedSegments.map((s) => s.id));
+    const invalid = data.audienceSegmentIds.filter((id) => !ownedSegmentIds.has(id));
+    if (invalid.length > 0) {
+      return { success: false, error: "One or more segment IDs are invalid or do not belong to your workspace." };
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+
   const campaign = await db.emailCampaign.create({
     data: {
       workspaceId,

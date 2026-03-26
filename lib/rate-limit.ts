@@ -3,15 +3,36 @@
  *
  * Simple sliding-window rate limiter for Next.js API routes.
  *
- * Uses an in-memory Map — sufficient for single-instance deployments.
- * For multi-instance deployments (Vercel Serverless), each instance has
- * its own window. This is acceptable for v1 — a Redis-backed limiter
- * (Upstash @upstash/ratelimit) is the recommended upgrade path.
+ * ⚠️  PRODUCTION LIMITATION: Uses an in-memory Map — each serverless instance
+ * has its own isolated store. On Vercel (where functions scale to many instances),
+ * this means the effective limit is multiplied by the number of concurrent
+ * instances. For example, if Vercel runs 10 instances, the real limit is 10×
+ * what's configured here.
  *
- * Usage:
- *   const limiter = rateLimit({ limit: 10, windowMs: 60_000 });
- *   const { success } = await limiter.check(req);
- *   if (!success) return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+ * UPGRADE PATH (recommended for production):
+ *   1. npm install @upstash/ratelimit @upstash/redis
+ *   2. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in Vercel env vars
+ *   3. Replace this module with:
+ *
+ *      import { Ratelimit } from "@upstash/ratelimit";
+ *      import { Redis } from "@upstash/redis";
+ *
+ *      export const authLimiter = new Ratelimit({
+ *        redis: Redis.fromEnv(),
+ *        limiter: Ratelimit.slidingWindow(10, "60 s"),
+ *        analytics: true,
+ *      });
+ *
+ * This in-memory implementation is adequate for:
+ *   - Local development
+ *   - Single-instance deployments (e.g., a self-hosted VPS)
+ *   - Low-traffic scenarios where imperfect rate limiting is acceptable
+ *
+ * The rate limiter IS currently applied to:
+ *   - /api/v1/* (API key calls) — via lib/api/rate-limit.ts
+ *   - registerUser server action (account creation spam)
+ *
+ * TODO: Apply authLimiter to NextAuth credentials signIn callback.
  */
 
 interface RateLimitConfig {

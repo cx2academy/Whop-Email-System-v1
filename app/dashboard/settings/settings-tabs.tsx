@@ -9,6 +9,8 @@ import Link from 'next/link';
 
 const TABS = [
   { id: 'general',      label: 'General' },
+  { id: 'branding',     label: 'Branding' },
+  { id: 'sending',      label: 'Sending' },
   { id: 'billing',      label: 'Billing' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'api',          label: 'API' },

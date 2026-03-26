@@ -39,9 +39,53 @@ export async function POST(req: NextRequest) {
 
   const { to, subject, html, text } = body as Record<string, unknown>;
 
+  // ── Input validation ──────────────────────────────────────────────────────
+  // We don't sanitize HTML (that would break legitimate email styling), but we
+  // enforce strict types and size limits so no one can abuse the endpoint to
+  // send enormous payloads or inject unexpected types.
+
   if (!to || !subject || !html) {
     return Response.json(
       { error: 'Missing required fields', required: ['to', 'subject', 'html'] },
+      { status: 400 }
+    );
+  }
+
+  // Validate `to` — must be a string or array of strings (valid email-ish)
+  const toArray = Array.isArray(to) ? to : [to];
+  if (toArray.length === 0 || toArray.length > 50) {
+    return Response.json(
+      { error: '`to` must contain between 1 and 50 recipients' },
+      { status: 400 }
+    );
+  }
+  if (!toArray.every((r) => typeof r === 'string' && r.includes('@') && r.length <= 254)) {
+    return Response.json(
+      { error: '`to` contains invalid email address(es)' },
+      { status: 400 }
+    );
+  }
+
+  // Validate subject
+  if (typeof subject !== 'string' || subject.trim().length === 0 || subject.length > 998) {
+    return Response.json(
+      { error: '`subject` must be a non-empty string under 998 characters (RFC 2822)' },
+      { status: 400 }
+    );
+  }
+
+  // Validate html — must be a string, max 2MB
+  if (typeof html !== 'string' || html.length > 2_000_000) {
+    return Response.json(
+      { error: '`html` must be a string under 2MB' },
+      { status: 400 }
+    );
+  }
+
+  // Validate optional text
+  if (text !== undefined && (typeof text !== 'string' || text.length > 500_000)) {
+    return Response.json(
+      { error: '`text` must be a string under 500KB' },
       { status: 400 }
     );
   }
@@ -73,7 +117,7 @@ export async function POST(req: NextRequest) {
 
   const fromName = workspace.fromName ?? workspace.name;
   const result = await sendEmail({
-    to: to as string | string[],
+    to: toArray as string[],
     subject: subject as string,
     html: html as string,
     text: text as string | undefined,

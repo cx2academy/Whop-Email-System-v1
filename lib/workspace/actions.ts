@@ -25,6 +25,7 @@ import {
 } from "@/lib/auth/session";
 import { slugify } from "@/lib/utils";
 import { encrypt } from "@/lib/encryption";
+import { authLimiter } from "@/lib/rate-limit";
 import type { ApiResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -70,6 +71,18 @@ const registerSchema = z.object({
 export async function registerUser(
   formData: FormData
 ): Promise<ApiResponse<{ redirectTo: string }>> {
+  // Rate-limit registration by email to prevent account-creation spam.
+  // Server Actions don't have easy IP access, so we use the submitted email
+  // as the key — this stops the same address from spamming registrations.
+  const emailValue = (formData.get("email") as string | null)?.toLowerCase().trim() ?? "unknown";
+  const rl = authLimiter.check(`register:${emailValue}`);
+  if (!rl.success) {
+    return {
+      success: false,
+      error: "Too many registration attempts. Please wait a minute and try again.",
+    };
+  }
+
   const raw = {
     name: formData.get("name"),
     email: formData.get("email"),
