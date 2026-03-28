@@ -33,6 +33,7 @@ import { applyPreSendFilters } from "@/lib/sending/smart-filter";
 import { checkAbuseSignals } from "@/lib/sending/abuse-detector";
 import { createRateLimiter } from "@/lib/sending/rate-queue";
 import { checkUsageLimit } from "@/lib/plans/gates";
+import { sendWhopDm, htmlToPlainText } from "@/lib/whop/dm";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -530,3 +531,4 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   }
   return chunks;
 }
+
