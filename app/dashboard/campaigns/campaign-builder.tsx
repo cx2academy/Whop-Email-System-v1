@@ -7,6 +7,7 @@
  * Changes from original:
  * - Step 1: name auto-generated from subject. Only subject + inbox preview shown.
  * - Step 1: A/B test moved to Step 3 advanced options (progressive disclosure)
+ * - Step 1: Channel selector — Email, Whop DMs, or both  ← NEW
  * - Step 2: editor toolbar simplified — visual is default, no mode toggle visible
  * - "Inbox preview" label instead of "Preview text"
  * - Step indicator is clean pill style, not noisy
@@ -22,6 +23,7 @@ import { VisualEditor } from '@/components/email-editor/visual-editor';
 import { AiPanel } from '@/components/email-editor/ai-panel';
 import {
   ChevronLeftIcon, CheckIcon, SparklesIcon, ChevronDownIcon, PlusIcon,
+  MailIcon, MessageCircleIcon,
 } from 'lucide-react';
 
 interface CampaignBuilderProps {
@@ -31,15 +33,17 @@ interface CampaignBuilderProps {
   fromEmail?: string;
   audienceSize?: number;
   templateInitial?: { subject?: string; htmlBody?: string; previewText?: string; templateId?: string; userTemplateId?: string };
-  initial?: { id: string; name: string; subject: string; previewText?: string | null; htmlBody: string; audienceTagIds: string[]; audienceSegmentIds?: string[]; isAbTest: boolean; abSubjectB?: string | null };
+  initial?: { id: string; name: string; subject: string; previewText?: string | null; htmlBody: string; audienceTagIds: string[]; audienceSegmentIds?: string[]; isAbTest: boolean; abSubjectB?: string | null; sendViaEmail?: boolean; sendViaWhopDm?: boolean };
   startStep?: number;
+  /** Whether the workspace has a Whop API key configured */
+  hasWhopApiKey?: boolean;
 }
 
 const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Write your email content here. Keep it personal, valuable, and to the point.</p>\n<p>– {{senderName}}</p>`;
 
 export function CampaignBuilder({
   tags, segments = [], fromName = 'Your Name', fromEmail = 'you@example.com',
-  audienceSize = 0, initial, templateInitial, startStep = 1,
+  audienceSize = 0, initial, templateInitial, startStep = 1, hasWhopApiKey = false,
 }: CampaignBuilderProps) {
   const router = useRouter();
   const [step, setStep] = useState(startStep);
@@ -53,6 +57,10 @@ export function CampaignBuilder({
   const [previewText, setPreviewText] = useState(initial?.previewText ?? templateInitial?.previewText ?? '');
   const [isAbTest, setIsAbTest] = useState(initial?.isAbTest ?? false);
   const [abSubjectB, setAbSubjectB] = useState(initial?.abSubjectB ?? '');
+
+  // ── Channel flags ─────────────────────────────────────────────────────────
+  const [sendViaEmail, setSendViaEmail] = useState(initial?.sendViaEmail ?? true);
+  const [sendViaWhopDm, setSendViaWhopDm] = useState(initial?.sendViaWhopDm ?? false);
 
   // Step 2 — content
   const [htmlBody, setHtmlBody] = useState(initial?.htmlBody ?? templateInitial?.htmlBody ?? DEFAULT_HTML);
@@ -76,6 +84,7 @@ export function CampaignBuilder({
   async function handleNext() {
     if (step === 1) {
       if (!subject.trim()) { setError('Please enter a subject line.'); return; }
+      if (!sendViaEmail && !sendViaWhopDm) { setError('Please select at least one delivery channel.'); return; }
       setError(null);
       setStep(2);
       return;
@@ -93,6 +102,8 @@ export function CampaignBuilder({
           audienceSegmentIds: selectedSegmentIds,
           isAbTest,
           abSubjectB: isAbTest ? abSubjectB : undefined,
+          sendViaEmail,
+          sendViaWhopDm,
         };
         const result = initial?.id
           ? await updateCampaign(initial.id, payload)
@@ -245,57 +256,149 @@ export function CampaignBuilder({
                 />
               </div>
 
-              {/* Inbox preview */}
+              {/* ── Delivery channels ── */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Inbox preview
-                  </label>
-                  <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Optional</span>
-                </div>
-                <input
-                  type="text"
-                  value={previewText}
-                  onChange={(e) => setPreviewText(e.target.value)}
-                  placeholder="The sentence subscribers see before opening"
-                  className="w-full rounded-lg px-3.5 py-2.5 text-sm focus:outline-none transition-all"
-                  style={{
-                    border: '1.5px solid var(--sidebar-border)',
-                    background: 'var(--surface-card)',
-                    color: 'var(--text-primary)',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--sidebar-border)')}
-                />
-                {/* Inbox mockup hint */}
-                {(subject || previewText) && (
-                  <div
-                    className="mt-2.5 rounded-lg px-3.5 py-2.5"
-                    style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Send via
+                </label>
+                <div className="flex gap-3">
+                  {/* Email toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setSendViaEmail((v) => !v)}
+                    className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all flex-1 justify-center"
+                    style={
+                      sendViaEmail
+                        ? {
+                            background: 'var(--brand-tint)',
+                            border: '1.5px solid var(--brand)',
+                            color: '#16A34A',
+                          }
+                        : {
+                            background: 'var(--surface-app)',
+                            border: '1.5px solid var(--sidebar-border)',
+                            color: 'var(--text-secondary)',
+                          }
+                    }
                   >
-                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                      Inbox preview
-                    </p>
-                    <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                      {subject || 'Your subject line'}
-                    </p>
-                    <p className="text-[12px] truncate" style={{ color: 'var(--text-secondary)' }}>
-                      {previewText || 'The start of your email content...'}
-                    </p>
-                  </div>
+                    <MailIcon className="h-4 w-4" />
+                    Email
+                    {sendViaEmail && <CheckIcon className="h-3.5 w-3.5 ml-auto" />}
+                  </button>
+
+                  {/* Whop DM toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!hasWhopApiKey && !sendViaWhopDm) return; // silently block — tooltip handles UX
+                      setSendViaWhopDm((v) => !v);
+                    }}
+                    title={!hasWhopApiKey ? 'Add your Whop API key in Settings to enable DMs' : undefined}
+                    className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all flex-1 justify-center"
+                    style={
+                      sendViaWhopDm
+                        ? {
+                            background: 'var(--brand-tint)',
+                            border: '1.5px solid var(--brand)',
+                            color: '#16A34A',
+                          }
+                        : !hasWhopApiKey
+                        ? {
+                            background: 'var(--surface-app)',
+                            border: '1.5px solid var(--sidebar-border)',
+                            color: 'var(--text-tertiary)',
+                            opacity: 0.55,
+                            cursor: 'not-allowed',
+                          }
+                        : {
+                            background: 'var(--surface-app)',
+                            border: '1.5px solid var(--sidebar-border)',
+                            color: 'var(--text-secondary)',
+                          }
+                    }
+                  >
+                    <MessageCircleIcon className="h-4 w-4" />
+                    Whop DMs
+                    {sendViaWhopDm && <CheckIcon className="h-3.5 w-3.5 ml-auto" />}
+                    {!hasWhopApiKey && (
+                      <span
+                        className="ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                        style={{ background: 'var(--sidebar-border)', color: 'var(--text-tertiary)' }}
+                      >
+                        Setup required
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Contextual hint */}
+                {sendViaWhopDm && (
+                  <p className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    Only members with a linked Whop account will receive DMs. The message will use your email body as plain text.
+                  </p>
+                )}
+                {!hasWhopApiKey && (
+                  <p className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    <Link href="/dashboard/settings" style={{ color: 'var(--brand)' }}>Add your Whop API key</Link> in Settings to enable Whop DM delivery.
+                  </p>
                 )}
               </div>
 
+              {/* Inbox preview — only shown when email is selected */}
+              {sendViaEmail && (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                      Inbox preview
+                    </label>
+                    <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>Optional</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={previewText}
+                    onChange={(e) => setPreviewText(e.target.value)}
+                    placeholder="The sentence subscribers see before opening"
+                    className="w-full rounded-lg px-3.5 py-2.5 text-sm focus:outline-none transition-all"
+                    style={{
+                      border: '1.5px solid var(--sidebar-border)',
+                      background: 'var(--surface-card)',
+                      color: 'var(--text-primary)',
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--sidebar-border)')}
+                  />
+                  {/* Inbox mockup hint */}
+                  {(subject || previewText) && (
+                    <div
+                      className="mt-2.5 rounded-lg px-3.5 py-2.5"
+                      style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                        Inbox preview
+                      </p>
+                      <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        {subject || 'Your subject line'}
+                      </p>
+                      <p className="text-[12px] truncate" style={{ color: 'var(--text-secondary)' }}>
+                        {previewText || 'The start of your email content...'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Sender */}
-              <div
-                className="rounded-lg px-3.5 py-3"
-                style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
-              >
-                <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                  Sending from <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{fromName} &lt;{fromEmail}&gt;</span>
-                  {' ·'} <Link href="/dashboard/settings" className="transition-opacity hover:opacity-70" style={{ color: 'var(--brand)' }}>Change</Link>
-                </p>
-              </div>
+              {sendViaEmail && (
+                <div
+                  className="rounded-lg px-3.5 py-3"
+                  style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
+                >
+                  <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    Sending from <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>{fromName} &lt;{fromEmail}&gt;</span>
+                    {' ·'} <Link href="/dashboard/settings" className="transition-opacity hover:opacity-70" style={{ color: 'var(--brand)' }}>Change</Link>
+                  </p>
+                </div>
+              )}
             </div>
 
             {error && <p className="mt-4 text-sm" style={{ color: '#DC2626' }}>{error}</p>}
@@ -324,6 +427,15 @@ export function CampaignBuilder({
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                   {subject}
+                </span>
+                {/* Channel badge */}
+                <span
+                  className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                  style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)', color: 'var(--text-tertiary)' }}
+                >
+                  {sendViaEmail && <MailIcon className="h-2.5 w-2.5" />}
+                  {sendViaWhopDm && <MessageCircleIcon className="h-2.5 w-2.5" />}
+                  {sendViaEmail && sendViaWhopDm ? 'Email + DM' : sendViaWhopDm ? 'Whop DM only' : 'Email only'}
                 </span>
               </div>
               <button
@@ -402,8 +514,18 @@ export function CampaignBuilder({
             >
               <div className="space-y-3">
                 <SummaryRow label="Subject" value={subject} />
-                {previewText && <SummaryRow label="Inbox preview" value={previewText} />}
-                <SummaryRow label="Sender" value={`${fromName} <${fromEmail}>`} />
+                {previewText && sendViaEmail && <SummaryRow label="Inbox preview" value={previewText} />}
+                {sendViaEmail && <SummaryRow label="Sender" value={`${fromName} <${fromEmail}>`} />}
+                <SummaryRow
+                  label="Channels"
+                  value={
+                    sendViaEmail && sendViaWhopDm
+                      ? '📧 Email  +  💬 Whop DMs'
+                      : sendViaWhopDm
+                      ? '💬 Whop DMs only'
+                      : '📧 Email only'
+                  }
+                />
               </div>
             </div>
 
@@ -420,6 +542,11 @@ export function CampaignBuilder({
                 >
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                     Sending to all <strong>{audienceSize.toLocaleString()}</strong> active subscribers.
+                    {sendViaWhopDm && (
+                      <span style={{ color: 'var(--text-tertiary)' }}>
+                        {' '}Whop DMs will only reach members with a linked Whop account.
+                      </span>
+                    )}
                   </p>
                 </div>
               ) : (

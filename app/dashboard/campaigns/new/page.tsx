@@ -3,6 +3,8 @@
  *
  * Fixed for Next.js 15+: searchParams must be awaited (it's a Promise).
  * Without this, templateId is always undefined and templates never pre-fill.
+ *
+ * Updated: passes hasWhopApiKey to CampaignBuilder to enable Whop DM channel.
  */
 import type { Metadata } from 'next';
 import { requireAdminAccess } from '@/lib/auth/session';
@@ -30,7 +32,8 @@ export default async function NewCampaignPage({ searchParams }: Props) {
   const { workspaceId } = await requireAdminAccess();
   const workspace = await db.workspace.findUnique({
     where:  { id: workspaceId },
-    select: { fromName: true, fromEmail: true },
+    // ← Added whopApiKey so we can tell the builder if DMs are available
+    select: { fromName: true, fromEmail: true, whopApiKey: true },
   });
 
   const [tags, segments, audienceSize] = await Promise.all([
@@ -83,6 +86,7 @@ export default async function NewCampaignPage({ searchParams }: Props) {
       fromName={workspace?.fromName ?? undefined}
       fromEmail={workspace?.fromEmail ?? undefined}
       audienceSize={audienceSize}
+      hasWhopApiKey={!!workspace?.whopApiKey}  // ← NEW
       startStep={params.generatedSubject && !params.generatedHtml ? 2 : 1}
     />
   );

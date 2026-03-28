@@ -290,7 +290,8 @@ model ContactTag {
 model EmailCampaign {
   id          String @id @default(cuid())
   workspaceId String
-
+  sendViaEmail  Boolean @default(true)
+  sendViaWhopDm Boolean @default(false)
   name        String
   type        CampaignType   @default(BROADCAST)
   status      CampaignStatus @default(DRAFT)

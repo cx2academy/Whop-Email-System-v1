@@ -35,6 +35,8 @@ const createCampaignSchema = z.object({
   isAbTest: z.boolean().default(false),
   abSubjectB: z.string().max(255).optional(),
   scheduledAt: z.string().datetime().optional().nullable(),
+  sendViaEmail:  z.boolean().default(true),
+  sendViaWhopDm: z.boolean().default(false),
 });
 
 const updateCampaignSchema = createCampaignSchema.partial();
@@ -497,6 +499,8 @@ export async function duplicateCampaign(
       type: source.type,
       status: "DRAFT",
       subject: source.subject,
+      sendViaEmail:  data.sendViaEmail  ?? true,
+      sendViaWhopDm: data.sendViaWhopDm ?? false,
       previewText: source.previewText,
       htmlBody: source.htmlBody,
       textBody: source.textBody,
