@@ -1,1323 +1,540 @@
-/**
- * app/page.tsx
- * RevTray landing page — production build.
- */
-
 'use client';
 
-import { useEffect } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  LineChart, Zap, Users, Sparkles, Check, ArrowRight, 
+  LayoutDashboard, Mail, PieChart, Plus, MessageSquare 
+} from 'lucide-react';
+
+const Logo = ({ className = "" }: { className?: string }) => (
+  <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={`shrink-0 ${className}`}>
+    <defs>
+      <linearGradient id="top-flap-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#4ADE80" />
+        <stop offset="100%" stopColor="#15803D" />
+      </linearGradient>
+      <linearGradient id="bot-flap-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#4ADE80" />
+        <stop offset="100%" stopColor="#22C55E" />
+      </linearGradient>
+    </defs>
+    <g transform="rotate(-12 50 50)">
+      {/* Top Flap */}
+      <path d="M 5 36 L 50 6 L 95 36 Z" fill="url(#top-flap-grad)" stroke="url(#top-flap-grad)" strokeWidth="2" strokeLinejoin="round" />
+      
+      {/* Inside Pocket */}
+      <path d="M 5 40 L 95 40 L 95 86 L 5 86 Z" fill="#064E3B" stroke="#064E3B" strokeWidth="2" strokeLinejoin="round" />
+      
+      {/* Left Flap */}
+      <path d="M 5 40 L 50 66 L 5 86 Z" fill="#16A34A" stroke="#16A34A" strokeWidth="2" strokeLinejoin="round" />
+      
+      {/* Right Flap */}
+      <path d="M 95 40 L 50 66 L 95 86 Z" fill="#15803D" stroke="#15803D" strokeWidth="2" strokeLinejoin="round" />
+      
+      {/* Bottom Flap */}
+      <path d="M 5 86 L 50 56 L 95 86 Z" fill="url(#bot-flap-grad)" stroke="url(#bot-flap-grad)" strokeWidth="2" strokeLinejoin="round" />
+      
+      {/* Gap Lines */}
+      <path d="M 5 86 L 50 56 L 95 86" fill="none" stroke="#09090B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </g>
+  </svg>
+);
 
 export default function HomePage() {
+  const [isScrolled, setIsScrolled] = useState(false);
+
   useEffect(() => {
-
-    // Nav scroll
-    const nav = document.getElementById('nav');
-    let ticking = false;
-    const onScroll = () => {
-      if (!nav) return;
-      if (window.scrollY > 32) nav.classList.add('scrolled');
-      else nav.classList.remove('scrolled');
-      ticking = false;
-    };
-    const handleScroll = () => {
-      if (!ticking) { requestAnimationFrame(onScroll); ticking = true; }
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 32);
     window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // Scroll reveal
-    const revealObs = new IntersectionObserver((entries) => {
-      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
-
-    // Bar fill animation
-    const barObs = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.querySelectorAll<HTMLElement>('.rcb-fill[data-w]').forEach((b: HTMLElement) => {
-            setTimeout(() => { b.style.width = (b.dataset.w ?? '0') + '%'; }, 180);
-          });
-          barObs.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.3 });
-    const revCard = document.querySelector('.rev-card');
-    if (revCard) barObs.observe(revCard);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      revealObs.disconnect();
-      barObs.disconnect();
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <>
-      <style>{`
+    <div className="min-h-screen bg-[#09090B] text-zinc-300 font-body selection:bg-green-500/30">
+      {/* Navbar */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 h-[60px] flex items-center justify-between px-6 transition-all duration-300 ${isScrolled ? 'bg-[#09090B]/80 backdrop-blur-xl border-b border-white/10' : 'bg-transparent'}`}>
+        <a href="/" className="flex items-center gap-2 font-display text-lg font-extrabold text-white hover:opacity-80 transition-opacity">
+          <Logo /> RevTray
+        </a>
+        <ul className="hidden md:flex gap-8 text-sm font-medium">
+          <li><a href="#features" className="text-zinc-400 hover:text-white transition-colors">Features</a></li>
+          <li><a href="#revenue" className="text-zinc-400 hover:text-white transition-colors">Revenue</a></li>
+          <li><a href="#ai" className="text-zinc-400 hover:text-white transition-colors">AI tools</a></li>
+          <li><a href="#pricing" className="text-zinc-400 hover:text-white transition-colors">Pricing</a></li>
+        </ul>
+        <a href="#pricing" className="px-4 py-2 rounded-lg text-sm font-bold bg-white/10 text-white border border-white/10 hover:bg-white/20 transition-colors">
+          Start free &rarr;
+        </a>
+      </nav>
 
-/* ─────────────────────────────────────────────────────────────
-   DESIGN TOKENS
-───────────────────────────────────────────────────────────── */
-:root {
-  --ink:        #09090B;
-  --ink-mid:    #52525B;
-  --ink-faint:  #71717A;
-  --ink-ghost:  #A1A1AA;
-  --surface:    #FAFAF9;
-  --white:      #ffffff;
-  --border:     #E4E4E7;
-  --border-light: #F4F4F5;
+      {/* Hero */}
+      <section className="relative pt-32 pb-20 px-6 flex flex-col items-center overflow-hidden">
+        <div className="absolute top-[-140px] left-1/2 -translate-x-1/2 w-[960px] h-[720px] bg-[radial-gradient(ellipse_52%_44%_at_50%_0%,rgba(34,197,94,0.15)_0%,transparent_70%)] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_75%_55%_at_50%_0%,black_0%,transparent_80%)] pointer-events-none"></div>
 
-  --green:      #16A34A;
-  --green-bright: #22C55E;
-  --green-glow: rgba(34,197,94,.28);
+        <div className="relative z-10 text-center max-w-4xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="inline-flex items-center gap-2 text-xs font-semibold text-white/50 mb-7 tracking-wide">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+            Built for Whop creators
+          </motion.div>
+          
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="text-5xl md:text-7xl font-extrabold text-white leading-[1.05] tracking-tight mb-6">
+            Know which emails<br />make you <span className="relative inline-block text-green-500">money<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 to-transparent opacity-50"></div></span>.
+          </motion.h1>
 
-  --dark:       #09090B;
-  --dark-2:     #0C1828;
-  --dark-3:     #090F1C;
-  --dark-4:     #0F1825;
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            The only email platform that connects your campaigns directly to Whop revenue — so you know what converts and what doesn't.
+          </motion.p>
 
-  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
-  --font-body:    'DM Sans', system-ui, sans-serif;
-
-  --sp-1: 8px;   --sp-2: 16px;  --sp-3: 24px;
-  --sp-4: 32px;  --sp-5: 48px;  --sp-6: 64px;
-  --sp-7: 80px;  --sp-8: 96px;
-
-  --r-sm: 8px;  --r-md: 12px;  --r-lg: 16px;
-}
-
-/* ─────────────────────────────────────────────────────────────
-   RESET + BASE
-───────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  font-family: var(--font-body);
-  background: var(--surface);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
-}
-h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.035em; line-height: 1.08; }
-img { display: block; max-width: 100%; }
-
-/* ─────────────────────────────────────────────────────────────
-   NAV
-───────────────────────────────────────────────────────────── */
-#nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  height: 60px;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 6%;
-  background: transparent;
-  transition: background 0.35s ease, border-color 0.35s ease,
-              box-shadow 0.35s ease, backdrop-filter 0.35s ease;
-  border-bottom: 1px solid transparent;
-}
-#nav.scrolled {
-  background: rgba(250,250,249,0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-color: var(--border);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
-}
-.nav-logo {
-  display: flex; align-items: center; gap: 9px;
-  font-family: var(--font-display);
-  font-size: 18px; font-weight: 800; letter-spacing: -0.04em;
-  text-decoration: none;
-  color: #fff;
-  transition: color 0.3s, opacity 0.15s;
-}
-.nav-logo:hover { opacity: 0.85; }
-#nav.scrolled .nav-logo { color: var(--ink); }
-/* nav-mark replaced by inline SVG logo */'
-/* On dark bg: SVG is visible as-is. On light nav: adjust opacity slightly */
-#nav.scrolled .nav-logo svg { opacity: 0.92; }
-.nav-links { display: flex; gap: 28px; list-style: none; }
-.nav-links a {
-  font-size: 13px; font-weight: 500; text-decoration: none;
-  transition: color 0.2s;
-}
-#nav:not(.scrolled) .nav-links a { color: rgba(255,255,255,.5); }
-#nav:not(.scrolled) .nav-links a:hover { color: #fff; }
-#nav.scrolled .nav-links a { color: var(--ink-faint); }
-#nav.scrolled .nav-links a:hover { color: var(--ink); }
-.nav-cta {
-  padding: 7px 17px; border-radius: 7px;
-  font-size: 13px; font-weight: 600; text-decoration: none;
-  transition: all 0.2s;
-}
-#nav:not(.scrolled) .nav-cta { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.15); }
-#nav:not(.scrolled) .nav-cta:hover { background: rgba(255,255,255,.18); }
-#nav.scrolled .nav-cta { background: var(--ink); color: #fff; }
-#nav.scrolled .nav-cta:hover { background: #18181B; transform: translateY(-1px); }
-
-/* ─────────────────────────────────────────────────────────────
-   HERO
-───────────────────────────────────────────────────────────── */
-.hero {
-  background: var(--dark);
-  padding: 140px 6% 80px;
-  position: relative; overflow: visible;
-  display: flex; flex-direction: column; align-items: center;
-}
-/* Radial glow */
-.hero-glow {
-  position: absolute; top: -140px; left: 50%; transform: translateX(-50%);
-  width: 960px; height: 720px;
-  background: radial-gradient(ellipse 52% 44% at 50% 0%, rgba(34,197,94,.13) 0%, transparent 70%);
-  pointer-events: none;
-}
-/* Subtle grid */
-.hero-grid {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.016) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.016) 1px, transparent 1px);
-  background-size: 72px 72px;
-  pointer-events: none;
-  mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, black 0%, transparent 80%);
-}
-/* hero-ombre removed — external .ombre div handles transition */
-
-/* Hero text block */
-.hero-body {
-  position: relative; z-index: 2;
-  text-align: center; max-width: 860px; margin: 0 auto;
-}
-/* Entrance animations */
-.hero-body > * { opacity: 0; transform: translateY(18px); animation: fade-up 0.65s ease forwards; }
-.hero-tag   { animation-delay: 0.05s; }
-.hero-h1    { animation-delay: 0.18s; }
-.hero-sub   { animation-delay: 0.30s; }
-.hero-ctas  { animation-delay: 0.40s; }
-.hero-note  { animation-delay: 0.48s; }
-@keyframes fade-up {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.hero-tag {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 600; color: rgba(255,255,255,.48);
-  margin-bottom: 28px; letter-spacing: 0.01em;
-}
-.tag-dot {
-  width: 5px; height: 5px; background: var(--green-bright);
-  border-radius: 50%;
-  animation: tag-pulse 2.2s cubic-bezier(.4,0,.6,1) infinite;
-}
-@keyframes tag-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(1.6)} }
-
-.hero-h1 {
-  font-size: clamp(48px, 6vw, 84px);
-  font-weight: 800; color: #fff; line-height: 1.01;
-  letter-spacing: -0.05em; margin-bottom: 22px;
-}
-.hero-h1 mark {
-  background: none; padding: 0;
-  color: var(--green-bright);
-  position: relative; display: inline-block;
-}
-.hero-h1 mark::after {
-  content: '';
-  display: block; position: absolute;
-  bottom: -3px; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--green-bright) 0%, transparent 80%);
-  border-radius: 2px; opacity: 0.5;
-}
-.hero-sub {
-  font-size: clamp(16px, 1.7vw, 18px); color: rgba(255,255,255,.44);
-  line-height: 1.7; max-width: 480px; margin: 0 auto 36px;
-}
-.hero-ctas {
-  display: flex; justify-content: center; gap: 10px;
-  margin-bottom: 18px; flex-wrap: wrap;
-}
-.btn-primary {
-  background: var(--green-bright); color: #fff;
-  padding: 13px 26px; border-radius: 10px;
-  font-size: 14px; font-weight: 700; text-decoration: none;
-  display: inline-flex; align-items: center; gap: 7px;
-  box-shadow: 0 4px 18px var(--green-glow);
-  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
-  border: 1px solid transparent;
-}
-.btn-primary:hover {
-  background: var(--green); transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(34,197,94,.38);
-}
-.btn-primary:active { transform: scale(0.98); }
-.btn-ghost {
-  background: transparent; color: rgba(255,255,255,.58);
-  padding: 13px 22px; border-radius: 10px;
-  font-size: 14px; font-weight: 500; text-decoration: none;
-  border: 1px solid rgba(255,255,255,.12);
-  transition: border-color 0.15s, color 0.15s, transform 0.15s;
-}
-.btn-ghost:hover { border-color: rgba(255,255,255,.3); color: #fff; transform: translateY(-1px); }
-.hero-note { font-size: 12px; color: rgba(255,255,255,.22); margin-bottom: var(--sp-5); }
-
-/* ─────────────────────────────────────────────────────────────
-   DASHBOARD MOCK
-───────────────────────────────────────────────────────────── */
-.hero-db {
-  width: 100%; max-width: 980px; margin: 0 auto;
-  position: relative; z-index: 2;
-  opacity: 0; transform: translateY(24px);
-  animation: fade-up 0.8s ease 0.55s forwards;
-}
-/* Subtle glow behind dashboard */
-.hero-db::before {
-  content: '';
-  position: absolute; bottom: -40px; left: 10%; right: 10%; height: 80px;
-  background: radial-gradient(ellipse, rgba(34,197,94,.18) 0%, transparent 70%);
-  filter: blur(16px); pointer-events: none; z-index: -1;
-}
-.db-chrome {
-  background: var(--dark-4); border-radius: 13px 13px 0 0;
-  padding: 11px 16px;
-  display: flex; align-items: center; gap: 7px;
-  border: 1px solid rgba(255,255,255,.08); border-bottom: none;
-}
-.dc-dots { display: flex; gap: 6px; }
-.dc-dot { width: 10px; height: 10px; border-radius: 50%; }
-.dc-url {
-  flex: 1; background: rgba(255,255,255,.04);
-  height: 22px; border-radius: 5px; margin: 0 16px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; color: rgba(255,255,255,.2);
-  border: 1px solid rgba(255,255,255,.05);
-}
-.db-shell {
-  border: 1px solid rgba(255,255,255,.07); border-top: none;
-  border-radius: 0 0 13px 13px; overflow: hidden;
-  display: grid; grid-template-columns: 172px 1fr;
-  min-height: 420px;
-}
-
-/* Sidebar */
-.db-side {
-  background: var(--dark-3);
-  border-right: 1px solid rgba(255,255,255,.05);
-  display: flex; flex-direction: column;
-}
-.dbs-logo {
-  padding: 13px 14px 14px;
-  display: flex; align-items: center; gap: 8px;
-  border-bottom: 1px solid rgba(255,255,255,.04);
-}
-/* dbs-mark replaced by inline SVG */
-.dbs-name {
-  font-family: var(--font-display); font-size: 13px;
-  font-weight: 800; color: #fff; letter-spacing: -0.03em;
-}
-.dbs-items { padding: 8px 0; flex: 1; }
-.dbs-item {
-  display: flex; align-items: center; gap: 9px;
-  padding: 8px 14px; font-size: 11.5px;
-  color: rgba(255,255,255,.32);
-  cursor: pointer; transition: all 0.12s;
-  position: relative; user-select: none;
-}
-.dbs-item svg { width: 13px; height: 13px; flex-shrink: 0; }
-.dbs-item:hover { color: rgba(255,255,255,.62); background: rgba(255,255,255,.03); }
-.dbs-item.active {
-  color: #4ADE80; background: rgba(34,197,94,.08); font-weight: 500;
-}
-.dbs-item.active::after {
-  content: ''; position: absolute; right: 0; top: 5px; bottom: 5px;
-  width: 2px; background: var(--green-bright); border-radius: 1px 0 0 1px;
-  box-shadow: -3px 0 10px rgba(34,197,94,.3);
-}
-
-/* Main panel */
-.db-main {
-  background: var(--dark-2);
-  padding: 18px;
-  display: flex; flex-direction: column; gap: 12px;
-}
-.dbm-top {
-  display: flex; align-items: center; justify-content: space-between;
-}
-.dbm-title {
-  font-family: var(--font-display); font-size: 15px;
-  font-weight: 700; color: #fff; letter-spacing: -0.025em;
-}
-.dbm-btn {
-  background: var(--green-bright); color: #fff;
-  padding: 6px 13px; border-radius: 7px;
-  font-size: 10px; font-weight: 600;
-  cursor: pointer; border: none;
-  font-family: var(--font-body);
-  display: flex; align-items: center; gap: 4px;
-  transition: background 0.12s;
-}
-.dbm-btn:hover { background: var(--green); }
-
-/* KPIs */
-.dbm-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 9px; }
-.kpi {
-  background: rgba(255,255,255,.035);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 8px; padding: 10px 12px;
-  transition: border-color 0.15s, background 0.15s;
-  cursor: default;
-}
-.kpi:hover { border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.048); }
-.kpi-lbl {
-  font-size: 9px; color: rgba(255,255,255,.28);
-  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px;
-}
-.kpi-val {
-  font-family: var(--font-display); font-size: 21px;
-  font-weight: 700; color: #fff; letter-spacing: -0.03em; line-height: 1;
-}
-.kpi-val.green { color: #4ADE80; }
-.kpi-delta { font-size: 9px; color: #4ADE80; margin-top: 3px; }
-.kpi-delta.muted { color: rgba(255,255,255,.2); }
-
-/* Table */
-.dbm-tbl {
-  background: rgba(0,0,0,.16); border-radius: 8px;
-  overflow: hidden; border: 1px solid rgba(255,255,255,.05);
-}
-.tbl-cols { grid-template-columns: 1fr 62px 60px 74px 56px; }
-.tbl-head {
-  display: grid; padding: 7px 12px;
-  font-size: 9px; color: rgba(255,255,255,.2);
-  font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
-  border-bottom: 1px solid rgba(255,255,255,.05);
-}
-.tbl-row {
-  display: grid; padding: 9px 12px;
-  font-size: 10px; color: rgba(255,255,255,.58);
-  border-bottom: 1px solid rgba(255,255,255,.04);
-  align-items: center; cursor: default;
-  transition: background 0.1s;
-}
-.tbl-row:last-child { border-bottom: none; }
-.tbl-row:hover { background: rgba(255,255,255,.027); }
-.tr-name { color: rgba(255,255,255,.88); font-weight: 500; font-size: 11px; }
-.tr-sub  { font-size: 9px; color: rgba(255,255,255,.27); margin-top: 1px; }
-.tr-rev  { color: #4ADE80; font-weight: 700; font-family: var(--font-display); font-size: 11px; letter-spacing: -0.02em; }
-.tr-rate-high { color: #4ADE80; font-weight: 500; }
-.tr-rate-mid  { color: rgba(255,255,255,.55); }
-.tr-muted     { color: rgba(255,255,255,.18); }
-.badge-sent {
-  background: rgba(99,102,241,.16); color: #A5B4FC;
-  border-radius: 100px; padding: 2px 8px;
-  font-size: 9px; font-weight: 600; display: inline-block;
-}
-.badge-draft {
-  background: rgba(255,255,255,.06); color: rgba(255,255,255,.32);
-  border-radius: 100px; padding: 2px 8px;
-  font-size: 9px; display: inline-block;
-}
-
-/* ─────────────────────────────────────────────────────────────
-   OMBRE + STATS
-───────────────────────────────────────────────────────────── */
-.ombre { height: 120px; background: linear-gradient(to bottom, var(--dark) 0%, var(--surface) 100%); margin-top: -1px; position: relative; z-index: 1; }
-
-.stats {
-  background: var(--surface); padding: 48px 6%;
-  border-bottom: 1px solid var(--border);
-}
-.stats-row {
-  max-width: 900px; margin: 0 auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-}
-.stat { flex: 1; text-align: center; padding: 8px 0; }
-.stat-n {
-  font-family: var(--font-display); font-size: 38px; font-weight: 800;
-  letter-spacing: -0.04em; color: var(--ink); line-height: 1;
-}
-.stat-n em { font-style: normal; color: var(--green); }
-.stat-lbl { font-size: 13px; color: var(--ink-faint); margin-top: 5px; line-height: 1.4; }
-.stat-ctx { font-size: 11px; color: var(--ink-ghost); margin-top: 3px; }
-.stat-div { width: 1px; height: 40px; background: var(--border); flex-shrink: 0; }
-
-/* ─────────────────────────────────────────────────────────────
-   FEATURES GRID
-───────────────────────────────────────────────────────────── */
-.features { background: var(--white); padding: var(--sp-8) 6%; }
-.feat-max { max-width: 1040px; margin: 0 auto; }
-.feat-intro {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: var(--sp-7); margin-bottom: var(--sp-6); align-items: end;
-}
-.feat-intro h2 {
-  font-size: clamp(28px, 3vw, 44px); font-weight: 800;
-  color: var(--ink); letter-spacing: -0.04em;
-}
-.feat-intro p { font-size: 16px; color: var(--ink-mid); line-height: 1.7; }
-.feat-grid {
-  display: grid; grid-template-columns: repeat(2,1fr);
-  gap: 1px; background: var(--border);
-  border: 1px solid var(--border); border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.fg-cell {
-  background: var(--white); padding: 32px;
-  transition: background 0.15s;
-  cursor: default;
-}
-.fg-cell:hover { background: var(--surface); }
-.fg-num {
-  font-family: var(--font-display); font-size: 11px;
-  font-weight: 700; color: var(--ink-ghost);
-  margin-bottom: 18px;
-  display: flex; align-items: center; gap: 8px;
-}
-.fg-num::after { content: ''; flex: 1; height: 1px; background: var(--border-light); }
-.fg-cell h3 {
-  font-family: var(--font-display); font-size: 18px;
-  font-weight: 700; color: var(--ink);
-  letter-spacing: -0.025em; margin-bottom: 10px;
-}
-.fg-cell p { font-size: 14px; color: var(--ink-mid); line-height: 1.65; }
-
-/* ─────────────────────────────────────────────────────────────
-   DARK FEATURE SECTIONS
-───────────────────────────────────────────────────────────── */
-.dark-feat {
-  background: var(--dark); padding: var(--sp-7) 6%;
-  position: relative; overflow: hidden;
-}
-.dark-feat + .dark-feat { border-top: 1px solid rgba(255,255,255,.06); padding-top: 64px; }
-.df-inner {
-  max-width: 1040px; margin: 0 auto;
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: var(--sp-7); align-items: center;
-}
-.df-inner.rev { /* normal order */ }
-.df-inner.ai  { /* text on right, card on left */ }
-/* For AI section: swap column order */
-.df-inner.ai .df-text  { order: 2; }
-.df-inner.ai .df-visual { order: 1; }
-
-.df-eyebrow {
-  font-size: 11px; font-weight: 700; color: var(--green-bright);
-  text-transform: uppercase; letter-spacing: .12em; margin-bottom: 14px;
-}
-.df-h {
-  font-size: clamp(26px, 3vw, 42px); font-weight: 800;
-  color: #fff; letter-spacing: -0.035em; line-height: 1.08; margin-bottom: 14px;
-}
-.df-p { font-size: 15px; color: rgba(255,255,255,.44); line-height: 1.7; margin-bottom: 28px; }
-.df-points { display: flex; flex-direction: column; gap: 12px; }
-.df-point { display: flex; align-items: flex-start; gap: 10px; }
-.df-dot {
-  width: 6px; height: 6px; background: var(--green-bright);
-  border-radius: 50%; margin-top: 6px; flex-shrink: 0;
-}
-.df-point span { font-size: 14px; color: rgba(255,255,255,.52); line-height: 1.55; }
-
-/* Revenue card */
-.rev-card {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: var(--r-lg); padding: 26px;
-  position: relative; overflow: hidden;
-  transition: border-color 0.2s;
-}
-.rev-card:hover { border-color: rgba(34,197,94,.22); }
-.rev-card-glow {
-  position: absolute; top: -60px; right: -60px;
-  width: 220px; height: 220px;
-  background: radial-gradient(circle, rgba(34,197,94,.11) 0%, transparent 65%);
-  pointer-events: none;
-}
-.rc-lbl { font-size: 11px; color: rgba(255,255,255,.28); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
-.rc-num {
-  font-family: var(--font-display); font-size: 52px;
-  font-weight: 800; color: #22C55E; letter-spacing: -0.04em;
-  line-height: 1; margin-bottom: 4px;
-}
-.rc-delta { font-size: 12px; color: rgba(255,255,255,.32); margin-bottom: 24px; }
-.rc-delta em { font-style: normal; color: #4ADE80; }
-.rc-bars-lbl {
-  font-size: 9px; color: rgba(255,255,255,.22);
-  font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
-  display: flex; justify-content: space-between; margin-bottom: 8px;
-}
-.rc-bars { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
-.rcb { display: flex; align-items: center; gap: 8px; }
-.rcb-name { font-size: 10px; color: rgba(255,255,255,.42); width: 112px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rcb-track { flex: 1; height: 4px; background: rgba(255,255,255,.06); border-radius: 100px; overflow: hidden; }
-.rcb-fill { height: 100%; background: linear-gradient(90deg, #22C55E, #4ADE80); border-radius: 100px; transition: width 1.4s cubic-bezier(.16,1,.3,1); }
-.rcb-val { font-size: 10px; color: #4ADE80; font-weight: 700; width: 36px; text-align: right; flex-shrink: 0; font-family: var(--font-display); }
-.rc-footer {
-  display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid rgba(255,255,255,.06); padding-top: 12px;
-}
-.rc-footer-l { font-size: 10px; color: rgba(255,255,255,.26); }
-.live-badge {
-  background: rgba(34,197,94,.1); color: #4ADE80;
-  padding: 3px 10px; border-radius: 100px;
-  font-size: 10px; font-weight: 700;
-  display: flex; align-items: center; gap: 5px;
-}
-.live-dot {
-  width: 5px; height: 5px; background: #22C55E; border-radius: 50%;
-  animation: tag-pulse 2s ease infinite;
-}
-
-/* AI card */
-.ai-card {
-  background: rgba(99,102,241,.07);
-  border: 1px solid rgba(99,102,241,.16);
-  border-radius: var(--r-md); padding: 16px;
-}
-.ai-card-head {
-  font-size: 11px; font-weight: 700; color: #A5B4FC;
-  margin-bottom: 12px;
-  display: flex; align-items: center; gap: 6px;
-}
-.ai-card-head svg { width: 11px; height: 11px; }
-.ai-row {
-  background: rgba(255,255,255,.04); border-radius: 7px;
-  padding: 9px 11px;
-  display: flex; align-items: center; gap: 9px;
-  margin-bottom: 6px; transition: background 0.12s; cursor: default;
-}
-.ai-row:last-child { margin-bottom: 0; }
-.ai-row:hover { background: rgba(255,255,255,.07); }
-.ai-n {
-  width: 20px; height: 20px; border-radius: 50%;
-  font-size: 9px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.ai-text { font-size: 11px; color: rgba(255,255,255,.7); line-height: 1.4; flex: 1; }
-.ai-act {
-  font-size: 9px; font-weight: 700;
-  padding: 3px 8px; border-radius: 5px;
-  cursor: pointer; flex-shrink: 0;
-  transition: opacity 0.12s;
-}
-.ai-act:hover { opacity: 0.75; }
-
-/* ─────────────────────────────────────────────────────────────
-   TESTIMONIALS
-───────────────────────────────────────────────────────────── */
-.testi {
-  background: var(--surface); padding: var(--sp-8) 6%;
-  border-top: 1px solid var(--border);
-}
-.testi-inner { max-width: 740px; margin: 0 auto; text-align: center; }
-.testi-stars { color: #F59E0B; font-size: 13px; letter-spacing: 3px; margin-bottom: 20px; }
-.testi-quote {
-  font-family: var(--font-display);
-  font-size: clamp(20px, 2.4vw, 29px); font-weight: 700;
-  color: var(--ink); line-height: 1.42; letter-spacing: -0.025em;
-  margin-bottom: 22px;
-}
-.testi-quote em { font-style: normal; color: var(--green); }
-.testi-author {
-  display: flex; align-items: center; justify-content: center;
-  gap: 12px; margin-bottom: var(--sp-5);
-}
-.testi-av {
-  width: 40px; height: 40px; border-radius: 50%;
-  background: #F0FDF4; border: 1px solid #BBF7D0;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--green);
-  flex-shrink: 0;
-}
-.testi-name { font-size: 14px; font-weight: 600; color: var(--ink); text-align: left; }
-.testi-role { font-size: 12px; color: var(--ink-faint); text-align: left; margin-top: 1px; }
-.testi-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.tm {
-  background: var(--white); border: 1px solid var(--border);
-  border-radius: var(--r-md); padding: 22px;
-  text-align: left; transition: border-color 0.15s, transform 0.15s;
-}
-.tm:hover { border-color: #BBF7D0; transform: translateY(-2px); }
-.tm-stars { color: #F59E0B; font-size: 11px; letter-spacing: 2px; margin-bottom: 10px; }
-.tm-q { font-size: 14px; color: var(--ink-mid); line-height: 1.65; }
-.tm-q strong { color: var(--green); font-weight: 600; }
-.tm-author { font-size: 12px; color: var(--ink-ghost); margin-top: 12px; }
-
-/* ─────────────────────────────────────────────────────────────
-   CTA
-───────────────────────────────────────────────────────────── */
-.cta-section {
-  background: var(--dark); padding: var(--sp-8) 6%;
-  text-align: center; position: relative; overflow: hidden;
-}
-.cta-section::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(ellipse 50% 65% at 50% 0%, rgba(34,197,94,.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-.cta-label {
-  font-size: 11px; font-weight: 700; color: rgba(255,255,255,.28);
-  text-transform: uppercase; letter-spacing: .12em;
-  margin-bottom: 16px;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.cta-label::before, .cta-label::after {
-  content: ''; width: 28px; height: 1px; background: rgba(255,255,255,.1);
-}
-.cta-h {
-  font-family: var(--font-display);
-  font-size: clamp(34px, 4.5vw, 62px); font-weight: 800;
-  color: #fff; letter-spacing: -0.045em;
-  max-width: 680px; margin: 0 auto 18px; line-height: 1.06;
-}
-.cta-h em { font-style: normal; color: var(--green-bright); }
-.cta-sub {
-  font-size: 17px; color: rgba(255,255,255,.4);
-  max-width: 400px; margin: 0 auto 32px; line-height: 1.6;
-}
-.btn-cta {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: var(--green-bright); color: #fff;
-  padding: 15px 32px; border-radius: 10px;
-  font-size: 15px; font-weight: 700; text-decoration: none;
-  box-shadow: 0 4px 20px rgba(34,197,94,.3);
-  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
-}
-.btn-cta:hover {
-  background: var(--green); transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(34,197,94,.4);
-}
-.btn-cta:active { transform: scale(0.98); }
-.cta-foot { margin-top: 14px; font-size: 12px; color: rgba(255,255,255,.2); }
-
-/* ─────────────────────────────────────────────────────────────
-   FOOTER
-───────────────────────────────────────────────────────────── */
-footer {
-  background: #060A10;
-  border-top: 1px solid rgba(255,255,255,.05);
-  padding: 52px 6% 28px;
-}
-.footer-grid {
-  max-width: 1040px; margin: 0 auto;
-  display: grid; grid-template-columns: 210px 1fr 1fr 1fr;
-  gap: 48px; margin-bottom: 36px;
-}
-.footer-brand-logo {
-  display: flex; align-items: center; gap: 8px;
-  font-family: var(--font-display); font-size: 16px;
-  font-weight: 800; color: #fff; letter-spacing: -0.04em;
-  margin-bottom: 10px;
-}
-/* footer-brand-mark replaced by inline SVG */
-.footer-brand p { font-size: 13px; color: rgba(255,255,255,.3); line-height: 1.65; max-width: 185px; }
-.footer-col h4 {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .09em; color: rgba(255,255,255,.2); margin-bottom: 12px;
-}
-.footer-col a {
-  display: block; font-size: 13px; color: rgba(255,255,255,.38);
-  text-decoration: none; margin-bottom: 9px;
-  transition: color 0.15s;
-}
-.footer-col a:hover { color: rgba(255,255,255,.78); }
-.footer-bot {
-  max-width: 1040px; margin: 0 auto;
-  padding-top: 20px; border-top: 1px solid rgba(255,255,255,.05);
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 12px; color: rgba(255,255,255,.2);
-}
-
-/* ─────────────────────────────────────────────────────────────
-   SCROLL REVEAL
-───────────────────────────────────────────────────────────── */
-.reveal {
-  opacity: 0; transform: translateY(22px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-}
-.reveal.in { opacity: 1; transform: translateY(0); }
-.reveal-d1 { transition-delay: 0.08s; }
-.reveal-d2 { transition-delay: 0.16s; }
-.reveal-d3 { transition-delay: 0.24s; }
-
-/* ─────────────────────────────────────────────────────────────
-   RESPONSIVE
-───────────────────────────────────────────────────────────── */
-@media (max-width: 960px) {
-  .feat-intro { grid-template-columns: 1fr; gap: 20px; margin-bottom: 40px; }
-  .df-inner { grid-template-columns: 1fr; gap: 40px; }
-  .df-inner.ai .df-text  { order: unset; }
-  .df-inner.ai .df-visual { order: unset; }
-  .testi-mini { grid-template-columns: 1fr; }
-  .footer-grid { grid-template-columns: 1fr 1fr; }
-  .db-shell { grid-template-columns: 1fr; }
-  .db-side { display: none; }
-}
-@media (max-width: 700px) {
-  .feat-grid { grid-template-columns: 1fr; }
-  .stats-row { flex-wrap: wrap; }
-  .stat-div { display: none; }
-  .stat { min-width: 45%; border-top: 1px solid var(--border); padding-top: 16px; }
-  .nav-links { display: none; }
-  .footer-grid { grid-template-columns: 1fr; }
-  .footer-bot { flex-direction: column; gap: 6px; text-align: center; }
-}
-
-      `}</style>
-
-<nav id="nav">
-  <Link href="/" className="nav-logo">
-    <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
-        <defs>
-          <linearGradient id="rt-ring-g" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#A3E635"/>
-            <stop offset="100%" stopColor="#16A34A"/>
-          </linearGradient>
-          <linearGradient id="rt-plane-g" x1="30" y1="10" x2="85" y2="75" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#D9F99D"/>
-            <stop offset="60%" stopColor="#22C55E"/>
-            <stop offset="100%" stopColor="#15803D"/>
-          </linearGradient>
-        </defs>
-        {/* Orbital ring — thick, open at upper-right, with swoosh tail */}
-        <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="url(#rt-ring-g)" strokeWidth="6" fill="none" strokeLinecap="round"/>
-        {/* Paper airplane — pointing upper-right */}
-        <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="url(#rt-plane-g)"/>
-        {/* Fold crease */}
-        <path d="M44 58 L85 15" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    RevTray
-  </Link>
-  <ul className="nav-links">
-    <li><a href="#features">Features</a></li>
-    <li><a href="#revenue">Revenue</a></li>
-    <li><a href="#ai">AI tools</a></li>
-    <li><a href="#pricing">Pricing</a></li>
-  </ul>
-  <Link href="/auth/login" className="nav-cta">Start free →</Link>
-</nav>
-
-
-<section className="hero">
-  <div className="hero-glow"></div>
-  <div className="hero-grid"></div>
-
-  <div className="hero-body">
-    <div className="hero-tag">
-      <div className="tag-dot"></div>
-      Built for Whop creators
-    </div>
-    <h1 className="hero-h1">Know which emails<br/>make you <mark>money</mark>.</h1>
-    <p className="hero-sub">The only email platform that connects your campaigns directly to Whop revenue — so you know what converts and what doesn't.</p>
-    <div className="hero-ctas">
-      <Link href="/auth/login" className="btn-primary">
-        Create free account
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h8M8 4l3 3-3 3"/></svg>
-      </Link>
-      <a href="#features" className="btn-ghost">See how it works</a>
-    </div>
-    <p className="hero-note">Free to start · No credit card · Connects to Whop in 2 minutes</p>
-  </div>
-
-  
-  <div className="hero-db">
-    <div className="db-chrome">
-      <div className="dc-dots">
-        <div className="dc-dot" style={{background:"#FF5F57"}}></div>
-        <div className="dc-dot" style={{background:"#FFBD2E"}}></div>
-        <div className="dc-dot" style={{background:"#28CA41"}}></div>
-      </div>
-      <div className="dc-url">app.revtray.com/dashboard/campaigns</div>
-    </div>
-    <div className="db-shell">
-      
-      <div className="db-side">
-        <div className="dbs-logo">
-          <svg width="20" height="20" viewBox="0 0 100 100" fill="none" style={{flexShrink:0}}>
-              <defs>
-                <linearGradient id="rt-ring-sb" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#A3E635"/><stop offset="100%" stopColor="#16A34A"/>
-                </linearGradient>
-                <linearGradient id="rt-plane-sb" x1="30" y1="10" x2="85" y2="75" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#D9F99D"/><stop offset="60%" stopColor="#22C55E"/><stop offset="100%" stopColor="#15803D"/>
-                </linearGradient>
-              </defs>
-              <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="url(#rt-ring-sb)" strokeWidth="6" fill="none" strokeLinecap="round"/>
-              <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="url(#rt-plane-sb)"/>
-              <path d="M44 58 L85 15" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          <div className="dbs-name">RevTray</div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+            <a href="#pricing" className="inline-flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 text-black px-8 py-4 rounded-xl text-sm font-bold shadow-[0_4px_20px_rgba(34,197,94,0.3)] hover:shadow-[0_6px_24px_rgba(34,197,94,0.4)] transition-all hover:-translate-y-0.5">
+              Create free account <ArrowRight size={16} />
+            </a>
+            <a href="#features" className="inline-flex items-center justify-center gap-2 bg-transparent hover:bg-white/5 text-zinc-300 hover:text-white border border-white/10 hover:border-white/20 px-8 py-4 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5">
+              See how it works
+            </a>
+          </motion.div>
+          
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-xs text-zinc-500">
+            Free to start &middot; No credit card &middot; Connects to Whop in 2 minutes
+          </motion.p>
         </div>
-        <div className="dbs-items">
-          <div className="dbs-item">
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><rect x="1.5" y="1.5" width="4.5" height="4.5" rx="1"/><rect x="8" y="1.5" width="4.5" height="4.5" rx="1"/><rect x="1.5" y="8" width="4.5" height="4.5" rx="1"/><rect x="8" y="8" width="4.5" height="4.5" rx="1"/></svg>
-            Dashboard
+
+        {/* Dashboard Mockup */}
+        <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.4 }} className="w-full max-w-5xl mx-auto relative z-10 mt-20">
+          <div className="absolute -bottom-10 left-[10%] right-[10%] h-20 bg-[radial-gradient(ellipse,rgba(34,197,94,0.2)_0%,transparent_70%)] blur-2xl pointer-events-none -z-10"></div>
+          
+          <div className="bg-[#0F1825] rounded-t-xl p-3 flex items-center gap-2 border border-white/10 border-b-0">
+            <div className="flex gap-1.5 pl-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-[#28CA41]"></div>
+            </div>
+            <div className="flex-1 bg-white/5 h-7 rounded-md mx-4 flex items-center justify-center text-[11px] text-white/40 border border-white/5 font-mono tracking-wide">
+              app.revtray.com/dashboard/campaigns
+            </div>
           </div>
-          <div className="dbs-item active">
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><rect x="1.5" y="4" width="11" height="8" rx="1.5"/><path d="M1.5 6.5h11"/></svg>
-            Campaigns
+          
+          <div className="border border-white/10 border-t-0 rounded-b-xl overflow-hidden grid grid-cols-1 md:grid-cols-[180px_1fr] min-h-[420px] bg-[#090F1C]">
+            <div className="hidden md:flex flex-col bg-[#090F1C] border-r border-white/5">
+              <div className="p-4 border-b border-white/5 flex items-center gap-2">
+                <Logo className="w-5 h-5" />
+                <span className="font-display text-sm font-extrabold text-white">RevTray</span>
+              </div>
+              <div className="p-2 flex-1 space-y-1">
+                {[
+                  { icon: LayoutDashboard, label: 'Dashboard' },
+                  { icon: Mail, label: 'Campaigns', active: true },
+                  { icon: Users, label: 'Contacts' },
+                  { icon: LineChart, label: 'Revenue' },
+                  { icon: Zap, label: 'Automations' },
+                  { icon: PieChart, label: 'Analytics' }
+                ].map((item, i) => (
+                  <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium cursor-default transition-colors ${item.active ? 'bg-green-500/10 text-green-400 relative' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+                    <item.icon size={14} /> {item.label}
+                    {item.active && <div className="absolute right-0 top-1.5 bottom-1.5 w-0.5 bg-green-500 rounded-l-full shadow-[-3px_0_10px_rgba(34,197,94,0.3)]"></div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="bg-[#0C1828] p-6 flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold text-white">Campaigns</h3>
+                <button className="flex items-center gap-1.5 bg-green-500 hover:bg-green-400 text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                  <Plus size={14} /> New Campaign
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Revenue attributed</div>
+                  <div className="font-display text-2xl font-bold text-green-400 mb-1">$47,823</div>
+                  <div className="text-[10px] text-green-500">&uarr; $3,240 this week</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Total sent</div>
+                  <div className="font-display text-2xl font-bold text-white mb-1">48,291</div>
+                  <div className="text-[10px] text-zinc-500">5 campaigns</div>
+                </div>
+                <div className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Avg open rate</div>
+                  <div className="font-display text-2xl font-bold text-white mb-1">34.2%</div>
+                  <div className="text-[10px] text-green-500">&uarr; 4.1% vs last month</div>
+                </div>
+              </div>
+              
+              <div className="bg-black/20 border border-white/5 rounded-xl overflow-hidden">
+                <div className="grid grid-cols-[1fr_60px_60px_70px_50px] gap-4 p-3 border-b border-white/5 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  <div>Campaign</div><div>Status</div><div>Opens</div><div>Revenue</div><div>$/sent</div>
+                </div>
+                {[
+                  { name: 'Real Estate Masterclass', sub: 'Dec 12 · 12,430 recipients', status: 'Sent', opens: '38.4%', rev: '$18,240', rps: '$1.47', high: true },
+                  { name: '5-Day Deal Sequence', sub: 'Dec 8 · 10,891 recipients', status: 'Sent', opens: '42.1%', rev: '$11,700', rps: '$1.07', high: true },
+                  { name: 'Flash Sale — 48hrs Only', sub: 'Dec 4 · 8,204 recipients', status: 'Sent', opens: '29.8%', rev: '$9,340', rps: '$1.14', high: false },
+                ].map((row, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_60px_60px_70px_50px] gap-4 p-3 border-b border-white/5 items-center hover:bg-white/[0.02] transition-colors">
+                    <div>
+                      <div className="text-xs font-medium text-white/90">{row.name}</div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">{row.sub}</div>
+                    </div>
+                    <div><span className="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full text-[9px] font-bold">Sent</span></div>
+                    <div className={`text-xs ${row.high ? 'text-green-400 font-medium' : 'text-zinc-400'}`}>{row.opens}</div>
+                    <div className="text-xs font-display font-bold text-green-400">{row.rev}</div>
+                    <div className="text-[10px] text-zinc-600">{row.rps}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="dbs-item">
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><circle cx="6" cy="5" r="2.8"/><path d="M1 12c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5"/></svg>
-            Contacts
-          </div>
-          <div className="dbs-item">
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M2 10l3.5-5 2.5 3.2 4-6.2"/></svg>
-            Revenue
-          </div>
-          <div className="dbs-item">
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><path d="M7 1.5a4.5 4.5 0 0 1 4.5 4.5v3.5a1.5 1.5 0 0 1-3 0V6a1.5 1.5 0 0 0-3 0v3.5a1.5 1.5 0 0 1-3 0V6A4.5 4.5 0 0 1 7 1.5z"/></svg>
-            Automations
-          </div>
-          <div className="dbs-item">
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.5l2 1.5"/></svg>
-            Analytics
+        </motion.div>
+      </section>
+
+      {/* Logo Marquee */}
+      <section className="py-10 border-y border-white/5 bg-white/[0.01] overflow-hidden">
+        <div className="text-center text-[11px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-8">Trusted by 400+ top Whop communities</div>
+        <div className="flex whitespace-nowrap">
+          <motion.div 
+            animate={{ x: ["0%", "-50%"] }} 
+            transition={{ repeat: Infinity, ease: "linear", duration: 30 }}
+            className="flex gap-16 items-center w-max px-8"
+          >
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex gap-16 items-center">
+                <span className="text-xl font-display font-bold text-white/20">WealthSquad</span>
+                <span className="text-xl font-display font-bold text-white/20">EcomKings</span>
+                <span className="text-xl font-display font-bold text-white/20">AlphaPicks</span>
+                <span className="text-xl font-display font-bold text-white/20">FitnessPro</span>
+                <span className="text-xl font-display font-bold text-white/20">TradeHunters</span>
+                <span className="text-xl font-display font-bold text-white/20">CopyCamp</span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="py-16 px-6 border-b border-white/5 bg-[#09090B]">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 divide-x divide-white/5">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center px-4">
+            <div className="font-display text-4xl font-extrabold text-white mb-2"><span className="text-green-500">$2.4M</span></div>
+            <div className="text-sm text-zinc-400 mb-1">Revenue attributed</div>
+            <div className="text-xs text-zinc-600">Tracked across all creators</div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="text-center px-4">
+            <div className="font-display text-4xl font-extrabold text-white mb-2">400+</div>
+            <div className="text-sm text-zinc-400 mb-1">Whop creators</div>
+            <div className="text-xs text-zinc-600">Courses, communities, products</div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="text-center px-4">
+            <div className="font-display text-4xl font-extrabold text-white mb-2">34%</div>
+            <div className="text-sm text-zinc-400 mb-1">Avg open rate</div>
+            <div className="text-xs text-zinc-600">vs. 21% industry average</div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.3 }} className="text-center px-4">
+            <div className="font-display text-4xl font-extrabold text-white mb-2"><span className="text-green-500">5x</span></div>
+            <div className="text-sm text-zinc-400 mb-1">ROI vs traditional</div>
+            <div className="text-xs text-zinc-600">When you know what works</div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Features (Bento Grid) */}
+      <section className="py-24 px-6 bg-[#09090B]" id="features">
+        <div className="max-w-6xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="grid md:grid-cols-2 gap-12 mb-16 items-end">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">Every tool you need to grow revenue through email.</h2>
+            <p className="text-lg text-zinc-400 leading-relaxed">RevTray is built around one core idea: Whop creators deserve to know exactly what their emails earn — not just how many people opened them.</p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-zinc-900/50 border border-white/10 p-8 rounded-2xl hover:bg-zinc-900 transition-colors md:col-span-2">
+              <div className="text-green-500 mb-4"><LineChart size={28} /></div>
+              <h3 className="text-xl font-bold text-white mb-3">Revenue attribution</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">Every campaign shows exactly how much revenue it generated. Whop purchases within 7 days of a click are attributed automatically — no setup required.</p>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-zinc-900/50 border border-white/10 p-8 rounded-2xl hover:bg-zinc-900 transition-colors">
+              <div className="text-green-500 mb-4"><Sparkles size={28} /></div>
+              <h3 className="text-xl font-bold text-white mb-3">AI sequence builder</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">Describe your product once. Get a 5-email launch sequence using proven frameworks.</p>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="bg-zinc-900/50 border border-white/10 p-8 rounded-2xl hover:bg-zinc-900 transition-colors">
+              <div className="text-green-500 mb-4"><Users size={28} /></div>
+              <h3 className="text-xl font-bold text-white mb-3">Whop native sync</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">Your members sync automatically. New joins, cancellations, tag changes — RevTray stays in sync.</p>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.3 }} className="bg-zinc-900/50 border border-white/10 p-8 rounded-2xl hover:bg-zinc-900 transition-colors md:col-span-2">
+              <div className="text-green-500 mb-4"><Zap size={28} /></div>
+              <h3 className="text-xl font-bold text-white mb-3">Smart segmentation & Automations</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">Target buyers vs. free members, recent openers, high-value subscribers. Trigger welcome flows and purchase follow-ups automatically based on what members do on Whop.</p>
+            </motion.div>
           </div>
         </div>
-      </div>
-      
-      <div className="db-main">
-        <div className="dbm-top">
-          <div className="dbm-title">Campaigns</div>
-          <button className="dbm-btn">
-            <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M4.5 1v7M1 4.5h7"/></svg>
-            New Campaign
-          </button>
+      </section>
+
+      {/* Deep Dive: Revenue */}
+      <section className="py-24 px-6 relative overflow-hidden border-t border-white/5" id="revenue">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
+            <div className="text-xs font-bold text-green-500 uppercase tracking-[0.12em] mb-4">Revenue Attribution</div>
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4">Stop guessing which email made the sale.</h2>
+            <p className="text-zinc-400 text-lg mb-8 leading-relaxed">Every click is tracked. Every Whop purchase is matched. Your dashboard shows the revenue number next to every campaign — automatically, in real time.</p>
+            <ul className="space-y-4">
+              <li className="flex gap-3 text-zinc-300"><div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div> 7-day attribution window — any purchase after a click is credited.</li>
+              <li className="flex gap-3 text-zinc-300"><div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div> Per-campaign revenue breakdown with revenue-per-email-sent.</li>
+              <li className="flex gap-3 text-zinc-300"><div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div> Real-time Whop webhook — new purchases appear in seconds.</li>
+            </ul>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative">
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 relative overflow-hidden backdrop-blur-sm">
+              <div className="absolute -top-16 -right-16 w-56 h-56 bg-[radial-gradient(circle,rgba(34,197,94,0.15)_0%,transparent_65%)] pointer-events-none"></div>
+              <div className="text-xs text-white/30 uppercase tracking-widest mb-2">Total revenue from email</div>
+              <div className="text-5xl font-display font-extrabold text-green-500 mb-1">$49,783</div>
+              <div className="text-sm text-white/40 mb-8">this month &middot; <span className="text-green-400">&uarr; 28%</span> vs last month</div>
+              
+              <div className="flex justify-between text-[10px] text-white/30 font-semibold uppercase tracking-wider mb-3">
+                <span>Top campaigns</span><span>Revenue</span>
+              </div>
+              <div className="space-y-3 mb-6">
+                {[
+                  { name: 'Masterclass launch', w: '92%', val: '$18.2k' },
+                  { name: '5-day deal sequence', w: '64%', val: '$11.7k' },
+                  { name: 'Flash sale — 48hrs', w: '51%', val: '$9.3k' },
+                  { name: 'New member welcome', w: '38%', val: '$7.1k' }
+                ].map((bar, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="text-xs text-white/50 w-28 truncate">{bar.name}</div>
+                    <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div initial={{ width: 0 }} whileInView={{ width: bar.w }} viewport={{ once: true }} transition={{ duration: 1, delay: 0.2 + (i * 0.1) }} className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"></motion.div>
+                    </div>
+                    <div className="text-xs font-bold text-green-400 w-10 text-right">{bar.val}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                <div className="text-[10px] text-white/30">Last purchase: 4 minutes ago</div>
+                <div className="flex items-center gap-1.5 bg-green-500/10 text-green-400 px-2.5 py-1 rounded-full text-[10px] font-bold">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div> Live
+                </div>
+              </div>
+            </div>
+          </motion.div>
         </div>
-        <div className="dbm-kpis">
-          <div className="kpi">
-            <div className="kpi-lbl">Revenue attributed</div>
-            <div className="kpi-val green">$47,823</div>
-            <div className="kpi-delta">↑ $3,240 this week</div>
+      </section>
+
+      {/* Deep Dive: AI */}
+      <section className="py-24 px-6 relative overflow-hidden border-t border-white/5" id="ai">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+          <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="order-2 md:order-1 relative">
+            <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-6">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-300 mb-4">
+                <Sparkles size={14} /> AI Sequence Builder
+              </div>
+              <div className="space-y-2">
+                {[
+                  { n: 1, text: 'My first wholesale deal made $12k with $0 down', color: 'indigo' },
+                  { n: 2, text: 'The 3-step system I use to find deals every week', color: 'blue' },
+                  { n: 3, text: 'How Marcus closed his first deal in 31 days', color: 'green' },
+                  { n: 4, text: 'Doors open: Real Estate Masterclass enrollment', color: 'yellow' },
+                  { n: 5, text: 'Last chance — enrollment closes tonight at midnight', color: 'red' }
+                ].map((row, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold bg-${row.color}-500/20 text-${row.color}-300 shrink-0`}>{row.n}</div>
+                    <div className="text-xs text-white/70 flex-1">{row.text}</div>
+                    <div className={`text-[9px] font-bold px-2 py-1 rounded bg-${row.color}-500/10 text-${row.color}-300 cursor-pointer hover:opacity-80`}>Write</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="order-1 md:order-2">
+            <div className="text-xs font-bold text-green-500 uppercase tracking-[0.12em] mb-4">AI Tools</div>
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4">A strategist. Not a text generator.</h2>
+            <p className="text-zinc-400 text-lg mb-8 leading-relaxed">Generate complete launch sequences using proven frameworks. Real email strategy tailored to your product and audience — not generic filler content.</p>
+            <ul className="space-y-4">
+              <li className="flex gap-3 text-zinc-300"><div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div> 5-email sequence from a one-sentence brief.</li>
+              <li className="flex gap-3 text-zinc-300"><div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div> Subject line scorer — rates 1-10, gives 3 alternatives.</li>
+              <li className="flex gap-3 text-zinc-300"><div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 shrink-0"></div> Engagement predictor — estimate open rate before you send.</li>
+            </ul>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Testimonials (Wall of Love) */}
+      <section className="py-24 px-6 border-t border-white/5 bg-[#09090B]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4">Trusted by top creators</h2>
+            <p className="text-zinc-400 text-lg">Join hundreds of Whop communities scaling their revenue with RevTray.</p>
           </div>
-          <div className="kpi">
-            <div className="kpi-lbl">Total sent</div>
-            <div className="kpi-val">48,291</div>
-            <div className="kpi-delta muted">5 campaigns</div>
-          </div>
-          <div className="kpi">
-            <div className="kpi-lbl">Avg open rate</div>
-            <div className="kpi-val">34.2%</div>
-            <div className="kpi-delta">↑ 4.1% vs last month</div>
-          </div>
-        </div>
-        <div className="dbm-tbl">
-          <div className="tbl-head tbl-cols">
-            <div>Campaign</div><div>Status</div><div>Opens</div><div>Revenue</div><div>$/sent</div>
-          </div>
-          <div className="tbl-row tbl-cols">
-            <div><div className="tr-name">Real Estate Masterclass</div><div className="tr-sub">Dec 12 · 12,430 recipients</div></div>
-            <div><span className="badge-sent">Sent</span></div>
-            <div className="tr-rate-high">38.4%</div>
-            <div className="tr-rev">$18,240</div>
-            <div style={{fontSize:"9px",color:"rgba(255,255,255,.26)"}}>$1.47</div>
-          </div>
-          <div className="tbl-row tbl-cols">
-            <div><div className="tr-name">5-Day Deal Sequence</div><div className="tr-sub">Dec 8 · 10,891 recipients</div></div>
-            <div><span className="badge-sent">Sent</span></div>
-            <div className="tr-rate-high">42.1%</div>
-            <div className="tr-rev">$11,700</div>
-            <div style={{fontSize:"9px",color:"rgba(255,255,255,.26)"}}>$1.07</div>
-          </div>
-          <div className="tbl-row tbl-cols">
-            <div><div className="tr-name">Flash Sale — 48hrs Only</div><div className="tr-sub">Dec 4 · 8,204 recipients</div></div>
-            <div><span className="badge-sent">Sent</span></div>
-            <div className="tr-rate-mid">29.8%</div>
-            <div className="tr-rev">$9,340</div>
-            <div style={{fontSize:"9px",color:"rgba(255,255,255,.26)"}}>$1.14</div>
-          </div>
-          <div className="tbl-row tbl-cols">
-            <div><div className="tr-name">January Newsletter</div><div className="tr-sub">Draft · Scheduled Jan 3</div></div>
-            <div><span className="badge-draft">Draft</span></div>
-            <div className="tr-muted">—</div>
-            <div className="tr-muted">—</div>
-            <div className="tr-muted" style={{fontSize:"9px"}}>—</div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="bg-zinc-900/40 border border-white/10 p-6 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <img src="https://picsum.photos/seed/jordan/100/100" alt="Jordan M." className="w-10 h-10 rounded-full" referrerPolicy="no-referrer" />
+                <div>
+                  <div className="text-sm font-bold text-white">Jordan M.</div>
+                  <div className="text-xs text-zinc-500">@jordan_realestate</div>
+                </div>
+                <div className="ml-auto text-[#1DA1F2]"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></div>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed">I sent one campaign to 3,200 subscribers and immediately saw <span className="text-green-400 font-semibold">$4,200 attributed to that single email</span>. I've never had that kind of visibility before — I knew exactly what was working. RevTray is a gamechanger.</p>
+            </motion.div>
+            
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="bg-zinc-900/40 border border-white/10 p-6 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <img src="https://picsum.photos/seed/taylor/100/100" alt="Taylor C." className="w-10 h-10 rounded-full" referrerPolicy="no-referrer" />
+                <div>
+                  <div className="text-sm font-bold text-white">Taylor C.</div>
+                  <div className="text-xs text-zinc-500">@taylor_fitness</div>
+                </div>
+                <div className="ml-auto text-[#1DA1F2]"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></div>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed">Described my fitness course in 3 sentences and got a <span className="text-white font-semibold">complete 5-email launch plan</span> that genuinely sounded like me. Sent the whole sequence the same afternoon.</p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="bg-zinc-900/40 border border-white/10 p-6 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <img src="https://picsum.photos/seed/ryan/100/100" alt="Ryan B." className="w-10 h-10 rounded-full" referrerPolicy="no-referrer" />
+                <div>
+                  <div className="text-sm font-bold text-white">Ryan B.</div>
+                  <div className="text-xs text-zinc-500">@ryan_trades</div>
+                </div>
+                <div className="ml-auto text-[#1DA1F2]"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></div>
+              </div>
+              <p className="text-sm text-zinc-300 leading-relaxed">Finally a tool that syncs with Whop automatically. My entire audience was imported and ready to email <span className="text-white font-semibold">in under 5 minutes</span>. No CSV exports, no broken imports.</p>
+            </motion.div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
+      </section>
 
-</section>
+      {/* Pricing */}
+      <section className="py-24 px-6 bg-[#060A10] border-t border-white/5" id="pricing">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-block bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-xs font-bold tracking-widest uppercase px-4 py-1.5 mb-6">Simple Pricing</div>
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-4">Start free. Scale as you grow.</h2>
+            <p className="text-zinc-400 text-lg max-w-2xl mx-auto">Every plan includes Whop sync, campaign sending, and open/click tracking. Upgrade when you need more.</p>
+          </div>
 
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Free */}
+            <div className="bg-zinc-900/30 border border-white/10 rounded-2xl p-8 flex flex-col">
+              <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Free</div>
+              <div className="text-4xl font-extrabold text-white mb-1">$0 <span className="text-lg text-zinc-500 font-normal">/mo</span></div>
+              <div className="text-sm text-zinc-500 mb-6">For creators just getting started</div>
+              <div className="h-px bg-white/10 mb-6"></div>
+              <ul className="space-y-3 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 500 emails / month</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 250 contacts</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 3 campaigns / month</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 3-day revenue attribution</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-600"><Check size={16} className="text-zinc-700 shrink-0" /> Automations</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-600"><Check size={16} className="text-zinc-700 shrink-0" /> Segments</li>
+              </ul>
+              <a href="#" className="block w-full py-3 px-4 bg-white/5 hover:bg-white/10 text-white text-center font-bold rounded-xl transition-colors">Get started free</a>
+            </div>
 
-<div className="ombre"></div>
-<section className="stats">
-  <div className="stats-row">
-    <div className="stat reveal">
-      <div className="stat-n"><em>$2.4M</em></div>
-      <div className="stat-lbl">Revenue attributed to email</div>
-      <div className="stat-ctx">Tracked across all creators</div>
-    </div>
-    <div className="stat-div"></div>
-    <div className="stat reveal reveal-d1">
-      <div className="stat-n">400+</div>
-      <div className="stat-lbl">Whop creators using RevTray</div>
-      <div className="stat-ctx">Courses, communities, products</div>
-    </div>
-    <div className="stat-div"></div>
-    <div className="stat reveal reveal-d2">
-      <div className="stat-n">34%</div>
-      <div className="stat-lbl">Average email open rate</div>
-      <div className="stat-ctx">vs. 21% industry average</div>
-    </div>
-    <div className="stat-div"></div>
-    <div className="stat reveal reveal-d3">
-      <div className="stat-n"><em>5x</em></div>
-      <div className="stat-lbl">ROI vs traditional tools</div>
-      <div className="stat-ctx">When you know what works</div>
-    </div>
-  </div>
-</section>
+            {/* Starter */}
+            <div className="bg-zinc-900/30 border border-white/10 rounded-2xl p-8 flex flex-col">
+              <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Starter</div>
+              <div className="text-4xl font-extrabold text-white mb-1">$29 <span className="text-lg text-zinc-500 font-normal">/mo</span></div>
+              <div className="text-sm text-zinc-500 mb-6">For growing communities</div>
+              <div className="h-px bg-white/10 mb-6"></div>
+              <ul className="space-y-3 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 5,000 emails / month</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 2,500 contacts</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Unlimited campaigns</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 14-day revenue attribution</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 3 automations</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-600"><Check size={16} className="text-zinc-700 shrink-0" /> A/B testing</li>
+              </ul>
+              <a href="#" className="block w-full py-3 px-4 bg-green-500 hover:bg-green-400 text-black text-center font-bold rounded-xl transition-colors">Start Starter</a>
+            </div>
 
+            {/* Growth */}
+            <div className="bg-green-500/5 border border-green-500/30 rounded-2xl p-8 flex flex-col relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-black text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Most Popular</div>
+              <div className="text-sm font-bold text-green-400 uppercase tracking-widest mb-2">Growth</div>
+              <div className="text-4xl font-extrabold text-white mb-1">$79 <span className="text-lg text-zinc-500 font-normal">/mo</span></div>
+              <div className="text-sm text-zinc-500 mb-6">For serious email marketers</div>
+              <div className="h-px bg-white/10 mb-6"></div>
+              <ul className="space-y-3 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 25,000 emails / month</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 10,000 contacts</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Unlimited campaigns</li>
+                <li className="flex items-center gap-3 text-sm text-white font-semibold"><Check size={16} className="text-green-500 shrink-0" /> Unlimited attribution</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Unlimited automations</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> A/B testing</li>
+              </ul>
+              <a href="#" className="block w-full py-3 px-4 bg-green-500 hover:bg-green-400 text-black text-center font-bold rounded-xl transition-colors shadow-[0_0_20px_rgba(34,197,94,0.3)]">Start Growth</a>
+            </div>
 
-<section className="features" id="features">
-  <div className="feat-max">
-    <div className="feat-intro reveal">
-      <h2>Every tool you need to grow revenue through email.</h2>
-      <p>RevTray is built around one core idea: Whop creators deserve to know exactly what their emails earn — not just how many people opened them.</p>
-    </div>
-    <div className="feat-grid">
-      <div className="fg-cell reveal">
-        <div className="fg-num">01</div>
-        <h3>Revenue attribution</h3>
-        <p>Every campaign shows exactly how much revenue it generated. Whop purchases within 7 days of a click are attributed automatically — no setup required.</p>
-      </div>
-      <div className="fg-cell reveal reveal-d1">
-        <div className="fg-num">02</div>
-        <h3>AI sequence builder</h3>
-        <p>Describe your product once. Get a 5-email launch sequence using Story → Value → Proof → Offer → Urgency frameworks. Real strategy, not filler.</p>
-      </div>
-      <div className="fg-cell reveal">
-        <div className="fg-num">03</div>
-        <h3>Whop native sync</h3>
-        <p>Your members sync automatically. New joins, cancellations, tag changes — RevTray stays in sync without any manual work or CSV exports.</p>
-      </div>
-      <div className="fg-cell reveal reveal-d1">
-        <div className="fg-num">04</div>
-        <h3>Smart segmentation</h3>
-        <p>Target buyers vs. free members, recent openers, high-value subscribers. Send relevant emails — not generic blasts to everyone.</p>
-      </div>
-      <div className="fg-cell reveal">
-        <div className="fg-num">05</div>
-        <h3>Automation sequences</h3>
-        <p>Welcome flows, purchase follow-ups, re-engagement. Triggered automatically by what members do on Whop.</p>
-      </div>
-      <div className="fg-cell reveal reveal-d1">
-        <div className="fg-num">06</div>
-        <h3>Deliverability tools</h3>
-        <p>Spam score analysis, domain authentication, warmup schedules. Built to reach the inbox — not the promotions tab.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<section className="dark-feat" id="revenue">
-  <div className="df-inner rev">
-    <div className="df-text reveal">
-      <div className="df-eyebrow">Revenue Attribution</div>
-      <h2 className="df-h">Stop guessing which email made the sale.</h2>
-      <p className="df-p">Every click is tracked. Every Whop purchase is matched. Your dashboard shows the revenue number next to every campaign — automatically, in real time.</p>
-      <div className="df-points">
-        <div className="df-point"><div className="df-dot"></div><span>7-day attribution window — any purchase after a click is credited to that campaign</span></div>
-        <div className="df-point"><div className="df-dot"></div><span>Per-campaign revenue breakdown with revenue-per-email-sent</span></div>
-        <div className="df-point"><div className="df-dot"></div><span>Real-time Whop webhook — new purchases appear in your dashboard within seconds</span></div>
-      </div>
-    </div>
-    <div className="df-visual reveal reveal-d2">
-      <div className="rev-card">
-        <div className="rev-card-glow"></div>
-        <div className="rc-lbl">Total revenue from email</div>
-        <div className="rc-num">$49,783</div>
-        <div className="rc-delta">this month · <em>↑ 28%</em> vs last month</div>
-        <div className="rc-bars-lbl"><span>Top campaigns</span><span>Revenue</span></div>
-        <div className="rc-bars">
-          <div className="rcb"><div className="rcb-name">Masterclass launch</div><div className="rcb-track"><div className="rcb-fill" data-w="92" style={{width:"0%"}}></div></div><div className="rcb-val">$18.2k</div></div>
-          <div className="rcb"><div className="rcb-name">5-day deal sequence</div><div className="rcb-track"><div className="rcb-fill" data-w="64" style={{width:"0%"}}></div></div><div className="rcb-val">$11.7k</div></div>
-          <div className="rcb"><div className="rcb-name">Flash sale — 48hrs</div><div className="rcb-track"><div className="rcb-fill" data-w="51" style={{width:"0%"}}></div></div><div className="rcb-val">$9.3k</div></div>
-          <div className="rcb"><div className="rcb-name">New member welcome</div><div className="rcb-track"><div className="rcb-fill" data-w="38" style={{width:"0%"}}></div></div><div className="rcb-val">$7.1k</div></div>
+            {/* Scale */}
+            <div className="bg-zinc-900/30 border border-white/10 rounded-2xl p-8 flex flex-col">
+              <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Scale</div>
+              <div className="text-4xl font-extrabold text-white mb-1">$199 <span className="text-lg text-zinc-500 font-normal">/mo</span></div>
+              <div className="text-sm text-zinc-500 mb-6">For high-volume senders</div>
+              <div className="h-px bg-white/10 mb-6"></div>
+              <ul className="space-y-3 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Unlimited emails</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Unlimited contacts</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> All Growth features</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Multiple email providers</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Priority support</li>
+                <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Dedicated onboarding</li>
+              </ul>
+              <a href="#" className="block w-full py-3 px-4 bg-white/10 hover:bg-white/20 text-white text-center font-bold rounded-xl transition-colors">Start Scale</a>
+            </div>
+          </div>
         </div>
-        <div className="rc-footer">
-          <div className="rc-footer-l">Last purchase: 4 minutes ago</div>
-          <div className="live-badge"><div className="live-dot"></div>Live</div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-[#060A10] border-t border-white/5 pt-20 pb-10 px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-12 mb-16">
+          <div className="col-span-2">
+            <div className="flex items-center gap-2 font-display text-lg font-extrabold text-white mb-4">
+              <Logo className="w-6 h-6" /> RevTray
+            </div>
+            <p className="text-sm text-zinc-500 leading-relaxed max-w-xs">Email marketing built for Whop creators. Send smarter. Earn more.</p>
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-6">Product</h4>
+            <ul className="space-y-4 text-sm text-zinc-500">
+              <li><a href="#" className="hover:text-white transition-colors">Campaigns</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">AI Tools</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Revenue</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Automations</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-6">Resources</h4>
+            <ul className="space-y-4 text-sm text-zinc-500">
+              <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">API Reference</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Changelog</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-6">Company</h4>
+            <ul className="space-y-4 text-sm text-zinc-500">
+              <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+            </ul>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<section className="dark-feat" id="ai">
-  <div className="df-inner ai">
-    <div className="df-text reveal">
-      <div className="df-eyebrow">AI Tools</div>
-      <h2 className="df-h">A strategist. Not a text generator.</h2>
-      <p className="df-p">Generate complete launch sequences using proven frameworks. Real email strategy tailored to your product and audience — not generic filler content.</p>
-      <div className="df-points">
-        <div className="df-point"><div className="df-dot"></div><span>5-email sequence from a one-sentence brief — Story → Value → Proof → Offer → Urgency</span></div>
-        <div className="df-point"><div className="df-dot"></div><span>Subject line scorer — rates 1-10, gives 3 alternatives with conversion reasoning</span></div>
-        <div className="df-point"><div className="df-dot"></div><span>Engagement predictor — estimate open rate and conversions before you send</span></div>
-      </div>
-    </div>
-    <div className="df-visual reveal reveal-d1">
-      <div className="ai-card">
-        <div className="ai-card-head">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 1l1.2 3.5H11L8 6.8l1.2 3.7L6 8.4 2.8 10.5 4 6.8 1 4.5h3.8L6 1z"/></svg>
-          AI Sequence Builder
+        <div className="max-w-6xl mx-auto pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-zinc-600">
+          <div>&copy; 2026 RevTray. All rights reserved.</div>
+          <div>Built for Whop creators</div>
         </div>
-        <div className="ai-row">
-          <div className="ai-n" style={{background:"rgba(99,102,241,.2)",color:"#A5B4FC"}}>1</div>
-          <div className="ai-text">My first wholesale deal made $12k with $0 down</div>
-          <div className="ai-act" style={{background:"rgba(99,102,241,.15)",color:"#A5B4FC"}}>Write</div>
-        </div>
-        <div className="ai-row">
-          <div className="ai-n" style={{background:"rgba(59,130,246,.2)",color:"#93C5FD"}}>2</div>
-          <div className="ai-text">The 3-step system I use to find deals every week</div>
-          <div className="ai-act" style={{background:"rgba(59,130,246,.15)",color:"#93C5FD"}}>Write</div>
-        </div>
-        <div className="ai-row">
-          <div className="ai-n" style={{background:"rgba(34,197,94,.15)",color:"#4ADE80"}}>3</div>
-          <div className="ai-text">How Marcus closed his first deal in 31 days</div>
-          <div className="ai-act" style={{background:"rgba(34,197,94,.12)",color:"#4ADE80"}}>Write</div>
-        </div>
-        <div className="ai-row">
-          <div className="ai-n" style={{background:"rgba(251,191,36,.15)",color:"#FCD34D"}}>4</div>
-          <div className="ai-text">Doors open: Real Estate Masterclass enrollment</div>
-          <div className="ai-act" style={{background:"rgba(251,191,36,.12)",color:"#FCD34D"}}>Write</div>
-        </div>
-        <div className="ai-row">
-          <div className="ai-n" style={{background:"rgba(239,68,68,.15)",color:"#FCA5A5"}}>5</div>
-          <div className="ai-text">Last chance — enrollment closes tonight at midnight</div>
-          <div className="ai-act" style={{background:"rgba(239,68,68,.12)",color:"#FCA5A5"}}>Write</div>
-        </div>
-      </div>
+      </footer>
     </div>
-  </div>
-</section>
-
-
-<section className="testi">
-  <div className="testi-inner">
-    <div className="testi-stars">★★★★★</div>
-    <p className="testi-quote reveal">"I sent one campaign to 3,200 subscribers and immediately saw <em>$4,200 attributed to that single email</em>. I've never had that kind of visibility before — I knew exactly what was working."</p>
-    <div className="testi-author reveal">
-      <div className="testi-av">JM</div>
-      <div>
-        <div className="testi-name">Jordan M.</div>
-        <div className="testi-role">Real estate educator · 3,200 members on Whop</div>
-      </div>
-    </div>
-    <div className="testi-mini">
-      <div className="tm reveal">
-        <div className="tm-stars">★★★★★</div>
-        <p className="tm-q">"Described my fitness course in 3 sentences and got a <strong>complete 5-email launch plan</strong> that genuinely sounded like me. Sent the whole sequence the same afternoon."</p>
-        <div className="tm-author">Taylor C. · Fitness coach · 1,800 Whop members</div>
-      </div>
-      <div className="tm reveal reveal-d1">
-        <div className="tm-stars">★★★★★</div>
-        <p className="tm-q">"Finally a tool that syncs with Whop automatically. My entire audience was imported and ready to email <strong>in under 5 minutes</strong>. No CSV exports, no broken imports."</p>
-        <div className="tm-author">Ryan B. · Stock trading community · 5,100 Whop members</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<style>{`
-  /* ── Pricing ───────────────────────────────────────────────── */
-  .pricing { padding: 100px 24px; background: #060d18; }
-  .pricing-head { text-align: center; margin-bottom: 56px; }
-  .pricing-eyebrow { display: inline-block; background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.22); border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 4px 14px; margin-bottom: 18px; }
-  .pricing-h { font-size: clamp(28px,4vw,42px); font-weight: 800; color: #fff; letter-spacing: -.02em; margin: 0 0 14px; }
-  .pricing-sub { font-size: 16px; color: rgba(255,255,255,.46); max-width: 460px; margin: 0 auto; }
-  .pricing-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; max-width: 1080px; margin: 0 auto; }
-  .pc { border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 28px 24px 32px; background: rgba(255,255,255,.03); position: relative; display: flex; flex-direction: column; }
-  .pc.popular { border-color: #22c55e; background: rgba(34,197,94,.06); }
-  .pc-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #22c55e; color: #000; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 12px; border-radius: 99px; white-space: nowrap; }
-  .pc-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
-  .pc-price { font-size: 36px; font-weight: 800; color: #fff; letter-spacing: -.03em; margin-bottom: 4px; }
-  .pc-price span { font-size: 15px; font-weight: 400; color: rgba(255,255,255,.4); }
-  .pc-tagline { font-size: 13px; color: rgba(255,255,255,.4); margin-bottom: 24px; }
-  .pc-divider { height: 1px; background: rgba(255,255,255,.07); margin-bottom: 20px; }
-  .pc-features { list-style: none; padding: 0; margin: 0 0 28px; flex: 1; }
-  .pc-features li { font-size: 13px; color: rgba(255,255,255,.65); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
-  .pc-features li::before { content: ''; display: inline-block; width: 14px; height: 14px; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.5 7l3 3 6-6' stroke='%2322c55e' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat; flex-shrink: 0; }
-  .pc-features li.dim { color: rgba(255,255,255,.25); }
-  .pc-features li.dim::before { background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 10l6-6M10 10L4 4' stroke='rgba(255,255,255,.2)' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E"); }
-  .pc-cta { display: block; text-align: center; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700; text-decoration: none; transition: opacity .15s; }
-  .pc-cta-free { background: rgba(255,255,255,.07); color: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.1); }
-  .pc-cta-free:hover { opacity: .8; }
-  .pc-cta-paid { background: #22c55e; color: #000; }
-  .pc-cta-paid:hover { opacity: .88; }
-  .pricing-footer { text-align: center; margin-top: 32px; font-size: 13px; color: rgba(255,255,255,.28); }
-  @media(max-width:900px){ .pricing-grid { grid-template-columns: 1fr 1fr; } }
-  @media(max-width:540px){ .pricing-grid { grid-template-columns: 1fr; } }
-`}</style>
-
-<section className="pricing" id="pricing">
-  <div className="pricing-head">
-    <div className="pricing-eyebrow">Simple pricing</div>
-    <h2 className="pricing-h">Start free. Scale as you grow.</h2>
-    <p className="pricing-sub">Every plan includes Whop sync, campaign sending, and open/click tracking. Upgrade when you need more.</p>
-  </div>
-
-  <div className="pricing-grid">
-
-    {/* Free */}
-    <div className="pc">
-      <p className="pc-name">Free</p>
-      <p className="pc-price">$0 <span>/mo</span></p>
-      <p className="pc-tagline">For creators just getting started</p>
-      <div className="pc-divider" />
-      <ul className="pc-features">
-        <li>500 emails / month</li>
-        <li>250 contacts</li>
-        <li>3 campaigns / month</li>
-        <li>10 AI credits</li>
-        <li>Open &amp; click tracking</li>
-        <li className="dim">Automations</li>
-        <li className="dim">Segments</li>
-        <li className="dim">A/B testing</li>
-        <li className="dim">Revenue attribution</li>
-        <li className="dim">API access</li>
-      </ul>
-      <Link href="/auth/register" className="pc-cta pc-cta-free">Get started free</Link>
-    </div>
-
-    {/* Starter */}
-    <div className="pc">
-      <p className="pc-name">Starter</p>
-      <p className="pc-price">$29 <span>/mo</span></p>
-      <p className="pc-tagline">For growing communities</p>
-      <div className="pc-divider" />
-      <ul className="pc-features">
-        <li>5,000 emails / month</li>
-        <li>2,500 contacts</li>
-        <li>Unlimited campaigns</li>
-        <li>50 AI credits / month</li>
-        <li>3 automations</li>
-        <li>Segments</li>
-        <li>Custom sending domain</li>
-        <li>30-day analytics history</li>
-        <li className="dim">A/B testing</li>
-        <li className="dim">Revenue attribution</li>
-      </ul>
-      <Link href="/auth/register" className="pc-cta pc-cta-paid">Start Starter</Link>
-    </div>
-
-    {/* Growth */}
-    <div className="pc popular">
-      <div className="pc-badge">Most popular</div>
-      <p className="pc-name">Growth</p>
-      <p className="pc-price">$79 <span>/mo</span></p>
-      <p className="pc-tagline">For serious email marketers</p>
-      <div className="pc-divider" />
-      <ul className="pc-features">
-        <li>25,000 emails / month</li>
-        <li>10,000 contacts</li>
-        <li>Unlimited campaigns</li>
-        <li>150 AI credits / month</li>
-        <li>Unlimited automations</li>
-        <li>A/B testing</li>
-        <li>Revenue attribution</li>
-        <li>API access</li>
-        <li>Advanced analytics (1yr)</li>
-        <li>AI deliverability rewrite</li>
-      </ul>
-      <Link href="/auth/register" className="pc-cta pc-cta-paid">Start Growth</Link>
-    </div>
-
-    {/* Scale */}
-    <div className="pc">
-      <p className="pc-name">Scale</p>
-      <p className="pc-price">$199 <span>/mo</span></p>
-      <p className="pc-tagline">For high-volume senders</p>
-      <div className="pc-divider" />
-      <ul className="pc-features">
-        <li>Unlimited emails</li>
-        <li>Unlimited contacts</li>
-        <li>Unlimited campaigns</li>
-        <li>500 AI credits / month</li>
-        <li>Unlimited automations</li>
-        <li>All Growth features</li>
-        <li>Multiple email providers</li>
-        <li>Priority support</li>
-        <li>Unlimited analytics history</li>
-        <li>Dedicated onboarding</li>
-      </ul>
-      <Link href="/auth/register" className="pc-cta pc-cta-paid">Start Scale</Link>
-    </div>
-
-  </div>
-
-  <p className="pricing-footer">
-    All plans include a free trial period · No credit card required to start · Cancel anytime
-  </p>
-</section>
-
-
-<section className="cta-section">
-  <div className="cta-label">Start for free</div>
-  <h2 className="cta-h reveal">Know which emails<br/>make you <em>money</em>.</h2>
-  <p className="cta-sub reveal">Connect your Whop store, import your audience, and send your first revenue-attributed campaign — free.</p>
-  <Link href="/auth/login" className="btn-cta reveal">
-    Create free account
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h8M8 4l3 3-3 3"/></svg>
-  </Link>
-  <p className="cta-foot">Free to start · No credit card required · Connects to Whop in 2 minutes</p>
-</section>
-
-
-<footer>
-  <div className="footer-grid">
-    <div className="footer-brand">
-      <div className="footer-brand-logo">
-        <svg width="26" height="26" viewBox="0 0 100 100" fill="none">
-          <defs>
-            <linearGradient id="rt-ring-ft" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#A3E635"/><stop offset="100%" stopColor="#16A34A"/>
-            </linearGradient>
-            <linearGradient id="rt-plane-ft" x1="30" y1="10" x2="85" y2="75" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#D9F99D"/><stop offset="60%" stopColor="#22C55E"/><stop offset="100%" stopColor="#15803D"/>
-            </linearGradient>
-          </defs>
-          <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="url(#rt-ring-ft)" strokeWidth="6" fill="none" strokeLinecap="round"/>
-          <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="url(#rt-plane-ft)"/>
-          <path d="M44 58 L85 15" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-        RevTray
-      </div>
-      <p>Email marketing built for Whop creators. Send smarter. Earn more.</p>
-    </div>
-    <div className="footer-col">
-      <h4>Product</h4>
-      <a href="#">Campaigns</a>
-      <a href="#">AI Tools</a>
-      <a href="#">Revenue</a>
-      <a href="#">Automations</a>
-      <a href="#">Templates</a>
-    </div>
-    <div className="footer-col">
-      <h4>Resources</h4>
-      <a href="#">Documentation</a>
-      <a href="#">API Reference</a>
-      <a href="#">Blog</a>
-      <a href="#">Changelog</a>
-    </div>
-    <div className="footer-col">
-      <h4>Company</h4>
-      <a href="#">About</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#">Privacy Policy</a>
-      <a href="#">Terms of Service</a>
-    </div>
-  </div>
-  <div className="footer-bot">
-    <div>© 2025 RevTray. All rights reserved.</div>
-    <div>Built for Whop creators</div>
-  </div>
-</footer>
-    </>
   );
 }
