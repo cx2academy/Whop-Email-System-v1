@@ -108,8 +108,8 @@ export function CampaignBuilder({
         const result = initial?.id
           ? await updateCampaign(initial.id, payload)
           : await createCampaign(payload);
-        if (!result.success) { setError((result as any).error ?? 'Failed to save'); return; }
-        if ('data' in result && (result as any).data?.id) setSavedCampaignId((result as any).data.id);
+        if (!result.success) { setError((result as any).error ?? (result as any).message ?? 'You have reached your plan limit. Please upgrade to create more campaigns.'); return; }
+        if ('data' in result && ((result as any).data?.id || (result as any).data?.campaignId)) setSavedCampaignId((result as any).data?.id ?? (result as any).data?.campaignId);
         setStep(3);
       } catch { setError('An unexpected error occurred.'); }
       finally { setIsLoading(false); }
@@ -125,7 +125,7 @@ export function CampaignBuilder({
       if (result.success && result.data) {
         setSendResult({ type: result.data.totalFailed > 0 ? 'partial' : 'success', totalSent: result.data.totalSent, totalFailed: result.data.totalFailed, message: `Sent to ${result.data.totalSent} contacts${result.data.totalFailed > 0 ? `, ${result.data.totalFailed} failed` : ''}` });
       } else {
-        setSendResult({ type: 'error', message: (!result.success && (result as any).error) ? (result as any).error : 'Send failed.' });
+        setSendResult({ type: 'error', message: (!result.success && ((result as any).error || (result as any).message)) ? ((result as any).error ?? (result as any).message) : 'Send failed.' });
       }
     } catch { setSendResult({ type: 'error', message: 'An unexpected error occurred.' }); }
     finally { setIsLoading(false); }
