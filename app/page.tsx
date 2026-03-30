@@ -63,7 +63,7 @@ export default function HomePage() {
           <li><a href="#ai" className="text-zinc-400 hover:text-white transition-colors">AI tools</a></li>
           <li><a href="#pricing" className="text-zinc-400 hover:text-white transition-colors">Pricing</a></li>
         </ul>
-        <a href="#pricing" className="px-4 py-2 rounded-lg text-sm font-bold bg-white/10 text-white border border-white/10 hover:bg-white/20 transition-colors">
+        <a href="/auth/login" className="px-4 py-2 rounded-lg text-sm font-bold bg-white/10 text-white border border-white/10 hover:bg-white/20 transition-colors">
           Start free &rarr;
         </a>
       </nav>
@@ -88,7 +88,7 @@ export default function HomePage() {
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="flex flex-col sm:flex-row justify-center gap-4 mb-6">
-            <a href="#pricing" className="inline-flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 text-black px-8 py-4 rounded-xl text-sm font-bold shadow-[0_4px_20px_rgba(34,197,94,0.3)] hover:shadow-[0_6px_24px_rgba(34,197,94,0.4)] transition-all hover:-translate-y-0.5">
+            <a href="/auth/login" className="inline-flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 text-black px-8 py-4 rounded-xl text-sm font-bold shadow-[0_4px_20px_rgba(34,197,94,0.3)] hover:shadow-[0_6px_24px_rgba(34,197,94,0.4)] transition-all hover:-translate-y-0.5">
               Create free account <ArrowRight size={16} />
             </a>
             <a href="#features" className="inline-flex items-center justify-center gap-2 bg-transparent hover:bg-white/5 text-zinc-300 hover:text-white border border-white/10 hover:border-white/20 px-8 py-4 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5">
@@ -435,7 +435,7 @@ export default function HomePage() {
                 <li className="flex items-center gap-3 text-sm text-zinc-600"><Check size={16} className="text-zinc-700 shrink-0" /> Automations</li>
                 <li className="flex items-center gap-3 text-sm text-zinc-600"><Check size={16} className="text-zinc-700 shrink-0" /> Segments</li>
               </ul>
-              <a href="#" className="block w-full py-3 px-4 bg-white/5 hover:bg-white/10 text-white text-center font-bold rounded-xl transition-colors">Get started free</a>
+              <a href="/auth/login" className="block w-full py-3 px-4 bg-white/5 hover:bg-white/10 text-white text-center font-bold rounded-xl transition-colors">Get started free</a>
             </div>
 
             {/* Starter */}
@@ -452,7 +452,7 @@ export default function HomePage() {
                 <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> 3 automations</li>
                 <li className="flex items-center gap-3 text-sm text-zinc-600"><Check size={16} className="text-zinc-700 shrink-0" /> A/B testing</li>
               </ul>
-              <a href="#" className="block w-full py-3 px-4 bg-green-500 hover:bg-green-400 text-black text-center font-bold rounded-xl transition-colors">Start Starter</a>
+              <a href="/auth/login?callbackUrl=%2Fdashboard%2Fsettings%2Fbilling%3Fplan%3DSTARTER" className="block w-full py-3 px-4 bg-green-500 hover:bg-green-400 text-black text-center font-bold rounded-xl transition-colors">Start Starter</a>
             </div>
 
             {/* Growth */}
@@ -470,7 +470,7 @@ export default function HomePage() {
                 <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Unlimited automations</li>
                 <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> A/B testing</li>
               </ul>
-              <a href="#" className="block w-full py-3 px-4 bg-green-500 hover:bg-green-400 text-black text-center font-bold rounded-xl transition-colors shadow-[0_0_20px_rgba(34,197,94,0.3)]">Start Growth</a>
+              <a href="/auth/login?callbackUrl=%2Fdashboard%2Fsettings%2Fbilling%3Fplan%3DGROWTH" className="block w-full py-3 px-4 bg-green-500 hover:bg-green-400 text-black text-center font-bold rounded-xl transition-colors shadow-[0_0_20px_rgba(34,197,94,0.3)]">Start Growth</a>
             </div>
 
             {/* Scale */}
@@ -487,7 +487,7 @@ export default function HomePage() {
                 <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Priority support</li>
                 <li className="flex items-center gap-3 text-sm text-zinc-300"><Check size={16} className="text-green-500 shrink-0" /> Dedicated onboarding</li>
               </ul>
-              <a href="#" className="block w-full py-3 px-4 bg-white/10 hover:bg-white/20 text-white text-center font-bold rounded-xl transition-colors">Start Scale</a>
+              <a href="/auth/login?callbackUrl=%2Fdashboard%2Fsettings%2Fbilling%3Fplan%3DSCALE" className="block w-full py-3 px-4 bg-white/10 hover:bg-white/20 text-white text-center font-bold rounded-xl transition-colors">Start Scale</a>
             </div>
           </div>
         </div>
