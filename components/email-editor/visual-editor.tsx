@@ -7,8 +7,8 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  PlusIcon, GripVerticalIcon, TrashIcon, SparklesIcon, EyeIcon, EyeOffIcon,
-  TypeIcon, Heading2Icon, MousePointerClickIcon, ImageIcon, LayoutTemplateIcon,
+  PlusIcon, GripVerticalIcon, TrashIcon, EyeIcon, EyeOffIcon,
+  TypeIcon, Heading2Icon, MousePointerClickIcon, ImageIcon,
   MinusIcon, MoveVerticalIcon, XIcon, BoldIcon, ItalicIcon, LinkIcon, Columns2Icon,
   AlignLeftIcon, AlignCenterIcon, AlignRightIcon
 } from 'lucide-react';
@@ -33,7 +33,7 @@ function makeBlock(type: BlockType): Block {
   switch (type) {
     case 'heading': return { id:uid(), type:'heading', content:'Your headline here', level:2 };
     case 'text':    return { id:uid(), type:'text',    content:'Write your content here.' };
-    case 'button':  return { id:uid(), type:'button',  text:'Click here →', url:'https://', color:'var(--brand, #22C55E)', align:'center' };
+    case 'button':  return { id:uid(), type:'button',  text:'Click here →', url:'https://', color:'#22C55E', align:'center' };
     case 'image':   return { id:uid(), type:'image',   src:'', alt:'' };
     case 'divider': return { id:uid(), type:'divider' };
     case 'spacer':  return { id:uid(), type:'spacer',  height:24 };
@@ -136,27 +136,14 @@ function htmlToBlocks(html: string): Block[] {
   } catch { return []; }
 }
 
-// ── Tokens ────────────────────────────────────────────────────────────────────
-
-const BG   = 'var(--surface-app, #F7F8FA)';
-const CARD = 'var(--surface-card, #FFFFFF)';
-const BD   = 'var(--sidebar-border, #E6E8EC)';
-const BR   = 'var(--brand, #22C55E)';
-const BBG  = 'var(--brand-tint, rgba(34,197,94,0.08))';
-const TX   = 'var(--text-primary, #0D0F12)';
-const TX2  = 'var(--text-secondary, #5A6472)';
-const TX3  = 'var(--text-tertiary, #9AA3AF)';
-const RED  = '#EF4444';
-const IS: React.CSSProperties = { width:'100%', padding:'8px 12px', fontSize:13, border:`1px solid ${BD}`, borderRadius:6, outline:'none', fontFamily:'inherit', color:TX, background:CARD, boxSizing:'border-box', transition: 'border-color 0.15s' };
-
 const BLOCK_TYPES: [BlockType, string, React.ReactNode, string][] = [
-  ['heading', 'Heading',  <Heading2Icon size={14}/>,          'Title or section header'],
-  ['text',    'Text',     <TypeIcon size={14}/>,              'Paragraph with rich formatting'],
-  ['button',  'Button',   <MousePointerClickIcon size={14}/>, 'Call-to-action button'],
-  ['image',   'Image',    <ImageIcon size={14}/>,             'Photo or graphic'],
-  ['columns', 'Columns',  <Columns2Icon size={14}/>,          'Two-column layout'],
-  ['divider', 'Divider',  <MinusIcon size={14}/>,             'Horizontal rule'],
-  ['spacer',  'Spacer',   <MoveVerticalIcon size={14}/>,      'Empty vertical space'],
+  ['heading', 'Heading',  <Heading2Icon size={16}/>,          'Title or section header'],
+  ['text',    'Text',     <TypeIcon size={16}/>,              'Paragraph with rich formatting'],
+  ['button',  'Button',   <MousePointerClickIcon size={16}/>, 'Call-to-action button'],
+  ['image',   'Image',    <ImageIcon size={16}/>,             'Photo or graphic'],
+  ['columns', 'Columns',  <Columns2Icon size={16}/>,          'Two-column layout'],
+  ['divider', 'Divider',  <MinusIcon size={16}/>,             'Horizontal rule'],
+  ['spacer',  'Spacer',   <MoveVerticalIcon size={16}/>,      'Empty vertical space'],
 ];
 
 // ── Main Editor Component ─────────────────────────────────────────────────────
@@ -177,7 +164,7 @@ export function VisualEditor({ value, onChange }: Props) {
     const initial = p.length > 0 ? p : [
       { id:uid(), type:'heading' as const, content:"Hello {{firstName | fallback: 'there'}}!", level:2 as const },
       { id:uid(), type:'text' as const,    content:'Write your email content here. Keep it personal, valuable, and to the point.' },
-      { id:uid(), type:'button' as const,  text:'Claim your offer', url:'https://', color:'var(--brand, #22C55E)', align:'center' as const },
+      { id:uid(), type:'button' as const,  text:'Claim your offer', url:'https://', color:'#22C55E', align:'center' as const },
       { id:uid(), type:'text' as const,    content:'– {{senderName}}' },
     ];
     setBlocks(initial);
@@ -222,27 +209,35 @@ export function VisualEditor({ value, onChange }: Props) {
   const selectedBlock = blocks.find(b => b.id === selId);
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', background:BG, height: '100%', minHeight: '800px', borderRadius: 8, border: `1px solid ${BD}`, overflow: 'hidden' }}>
+    <div className="flex flex-col h-full min-h-[800px] bg-gray-50 rounded-b-2xl overflow-hidden">
       
       {/* ── Top Toolbar ── */}
-      <div style={{ display:'flex', alignItems:'center', gap:6, padding:'12px 16px', background:CARD, borderBottom:`1px solid ${BD}`, flexShrink:0 }}>
-        <AddBlockButton onSelect={t => addBlock(t)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, border: `1px solid ${BD}`, background: CARD, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: TX }}/>
-        <div style={{ flex:1 }}/>
-        <button onClick={() => { setShowPreview(s => !s); setSelId(null); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, border: `1px solid ${showPreview ? BR : BD}`, background: showPreview ? BBG : CARD, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: showPreview ? BR : TX2 }}>
-          {showPreview ? <EyeOffIcon size={14}/> : <EyeIcon size={14}/>}
+      <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
+        <AddBlockButton onSelect={t => addBlock(t)} />
+        <div className="flex-1" />
+        <button 
+          onClick={() => { setShowPreview(s => !s); setSelId(null); }}
+          className={\`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors \${
+            showPreview 
+              ? 'bg-green-50 text-green-600 border border-green-200' 
+              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }\`}
+        >
+          {showPreview ? <EyeOffIcon size={16}/> : <EyeIcon size={16}/>}
           {showPreview ? 'Exit Preview' : 'Preview'}
         </button>
       </div>
 
-      <div style={{ display:'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="flex flex-1 overflow-hidden">
         
         {/* ── Left: Canvas Area ── */}
-        <div style={{ flex:1, minWidth:0, overflowY: 'auto', padding: '32px 24px' }} onClick={() => setSelId(null)}>
-          <div style={{ maxWidth: 600, margin: '0 auto', background: CARD, borderRadius: 12, border: `1px solid ${BD}`, padding: '40px 32px', minHeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }} onClick={e => e.stopPropagation()}>
-            
+        <div className="flex-1 min-w-0 overflow-y-auto p-8" onClick={() => setSelId(null)}>
+          <div 
+            className="max-w-[600px] mx-auto bg-white rounded-xl border border-gray-200 p-10 min-h-[600px] shadow-sm"
+            onClick={e => e.stopPropagation()}
+          >
             {showPreview ? (
-              <div dangerouslySetInnerHTML={{ __html: previewHtml }} style={{ fontFamily: FONT, color: TX, lineHeight: 1.75 }} />
+              <div dangerouslySetInnerHTML={{ __html: previewHtml }} className="font-sans text-gray-800 leading-relaxed" />
             ) : (
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext items={blocks.map(b=>b.id)} strategy={verticalListSortingStrategy}>
@@ -258,10 +253,12 @@ export function VisualEditor({ value, onChange }: Props) {
             )}
 
             {!showPreview && (
-              <div style={{ marginTop: 32, paddingTop: 32, borderTop: `1px solid ${BD}` }}>
-                <AddBlockButton onSelect={t => addBlock(t)}
-                  style={{ width:'100%', padding:'16px', borderRadius:8, border:`1px dashed ${BD}`, background:'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, color:TX2, fontSize:14, fontWeight: 500, transition: 'background 0.2s' }}>
-                  <PlusIcon size={16} />
+              <div className="mt-8 pt-8 border-t border-gray-100">
+                <AddBlockButton 
+                  onSelect={t => addBlock(t)}
+                  className="w-full py-4 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all font-medium"
+                >
+                  <PlusIcon size={18} />
                   <span>Click to add a new block</span>
                 </AddBlockButton>
               </div>
@@ -271,21 +268,21 @@ export function VisualEditor({ value, onChange }: Props) {
 
         {/* ── Right: Properties Sidebar ── */}
         {!showPreview && selId && selectedBlock && (
-          <div style={{ width: 320, background: CARD, borderLeft: `1px solid ${BD}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-            <div style={{ padding: '16px', borderBottom: `1px solid ${BD}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: TX3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div className="w-80 bg-white border-l border-gray-200 flex flex-col shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                 {BLOCK_TYPES.find(t => t[0] === selectedBlock.type)?.[1]} Properties
               </span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={() => deleteBlock(selectedBlock.id)} style={{ padding: 6, color: RED, background: 'none', border: 'none', cursor: 'pointer', borderRadius: 4 }} title="Delete block">
-                  <TrashIcon size={14}/>
+              <div className="flex items-center gap-1">
+                <button onClick={() => deleteBlock(selectedBlock.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete block">
+                  <TrashIcon size={16}/>
                 </button>
-                <button onClick={() => setSelId(null)} style={{ padding: 6, color: TX3, background: 'none', border: 'none', cursor: 'pointer', borderRadius: 4 }}>
-                  <XIcon size={14}/>
+                <button onClick={() => setSelId(null)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors">
+                  <XIcon size={16}/>
                 </button>
               </div>
             </div>
-            <div style={{ padding: '20px 16px', overflowY: 'auto', flex: 1 }}>
+            <div className="p-5 overflow-y-auto flex-1">
               <PropertiesPanel block={selectedBlock} onUpdate={p => updateBlock(selectedBlock.id, p)} />
             </div>
           </div>
@@ -301,15 +298,19 @@ function SBlock({ block, selected, onSelect, onUpdate }: { block:Block; selected
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id:block.id });
   
   return (
-    <div ref={setNodeRef} style={{ transform:CSS.Transform.toString(transform), transition, opacity:isDragging?0.4:1, position: 'relative', margin: '0 -16px', padding: '4px 16px' }}>
+    <div ref={setNodeRef} style={{ transform:CSS.Transform.toString(transform), transition }} className={\`relative -mx-4 px-4 py-1 group \${isDragging ? 'opacity-40' : 'opacity-100'}\`}>
       
       {/* Drag Handle (Visible on hover/select) */}
-      <div {...attributes} {...listeners} style={{ position: 'absolute', left: -12, top: '50%', transform: 'translateY(-50%)', cursor: 'grab', color: TX3, opacity: selected ? 1 : 0, padding: '8px 4px', zIndex: 10 }} className="group-hover:opacity-100 transition-opacity">
-        <GripVerticalIcon size={14}/>
+      <div 
+        {...attributes} {...listeners} 
+        className={\`absolute -left-3 top-1/2 -translate-y-1/2 cursor-grab text-gray-300 hover:text-gray-500 p-2 z-10 transition-opacity \${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}\`}
+      >
+        <GripVerticalIcon size={16}/>
       </div>
 
-      <div onClick={onSelect}
-        style={{ borderRadius: 8, background: selected ? 'var(--surface-hover, #F3F4F6)' : 'transparent', padding: '8px 16px', cursor: 'pointer', transition: 'background 0.15s' }}
+      <div 
+        onClick={onSelect}
+        className={\`rounded-xl px-4 py-2 cursor-pointer transition-colors \${selected ? 'bg-blue-50/50 ring-1 ring-blue-100' : 'hover:bg-gray-50'}\`}
       >
         <BlockCanvasRender block={block} selected={selected} onUpdate={onUpdate} />
       </div>
@@ -323,37 +324,38 @@ function BlockCanvasRender({ block, selected, onUpdate }: { block:Block; selecte
   switch (block.type) {
     case 'heading': 
       if (selected) {
-        const sz = ({1:28,2:22,3:18} as Record<number,number>)[block.level];
-        return <VarInput value={block.content} onChange={v=>onUpdate({content:v})} style={{ fontSize: sz, fontWeight: 700, border: 'none', background: 'transparent', padding: 0, outline: 'none', width: '100%', color: TX, fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", resize: 'none' }} placeholder="Heading..." autoFocus/>;
+        const sz = ({1:'text-3xl',2:'text-2xl',3:'text-xl'} as Record<number,string>)[block.level];
+        return <VarInput value={block.content} onChange={v=>onUpdate({content:v})} className={\`w-full bg-transparent border-none p-0 outline-none font-bold text-gray-900 resize-none \${sz}\`} placeholder="Heading..." autoFocus/>;
       }
-      return <div style={{ fontFamily:"'Bricolage Grotesque',system-ui,sans-serif", fontSize:block.level===1?28:block.level===2?22:18, fontWeight:700, color:TX, lineHeight:1.2 }}>{block.content||<span style={{color:TX3}}>Heading…</span>}</div>;
+      const sz = ({1:'text-3xl',2:'text-2xl',3:'text-xl'} as Record<number,string>)[block.level];
+      return <div className={\`font-bold text-gray-900 leading-tight \${sz}\`}>{block.content||<span className="text-gray-300">Heading…</span>}</div>;
     
     case 'text':    
       if (selected) {
-        return <RichTextEdit value={block.content} onChange={v=>onUpdate({content:v})} style={{ border: 'none', background: 'transparent', padding: 0, minHeight: 40 }} />;
+        return <RichTextEdit value={block.content} onChange={v=>onUpdate({content:v})} className="border-none bg-transparent p-0 min-h-[40px]" />;
       }
-      return <div style={{ fontSize:15, color:TX2, lineHeight:1.75 }} dangerouslySetInnerHTML={{__html:block.content||`<span style="color:${TX3}">Type something…</span>`}}/>;
+      return <div className="text-[15px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{__html:block.content||'<span class="text-gray-300">Type something…</span>'}}/>;
     
     case 'button':  
-      return <div style={{ textAlign:block.align, padding:'12px 0' }}><span style={{ display:'inline-block', background:block.color, color:'#fff', padding:'12px 28px', borderRadius:8, fontSize:15, fontWeight:600 }}>{block.text||'Button'}</span></div>;
+      return <div className={\`py-3 text-\${block.align}\`}><span style={{ background:block.color }} className="inline-block text-white px-7 py-3 rounded-lg text-[15px] font-semibold shadow-sm">{block.text||'Button'}</span></div>;
     
     case 'image':   
-      return <div style={{ textAlign:'center', padding:'12px 0' }}>{block.src?<img src={block.src} alt={block.alt} style={{maxWidth:'100%',maxHeight:300,borderRadius:8,objectFit:'contain', margin:'0 auto'}}/>:<div style={{height:120,border:`2px dashed ${BD}`,borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',color:TX3,fontSize:13,gap:8,background:BG}}><ImageIcon size={24} style={{opacity:0.5}}/> Image placeholder</div>}</div>;
+      return <div className="text-center py-3">{block.src?<img src={block.src} alt={block.alt} className="max-w-full max-h-[300px] rounded-lg object-contain mx-auto shadow-sm border border-gray-100"/>:<div className="h-32 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 text-sm gap-2 bg-gray-50"><ImageIcon size={24} className="opacity-50"/> Image placeholder</div>}</div>;
     
     case 'divider': 
-      return <hr style={{ border:'none', borderTop:`1px solid ${BD}`, margin:'24px 0' }}/>;
+      return <hr className="border-none border-t border-gray-200 my-6"/>;
     
     case 'spacer':  
-      return <div style={{ height:block.height, border: selected ? `1px dashed ${BD}` : '1px solid transparent', borderRadius: 4, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:TX3, transition: 'border 0.2s' }}>{selected && `${block.height}px`}</div>;
+      return <div style={{ height:block.height }} className={\`flex items-center justify-center text-[11px] text-gray-400 transition-colors rounded-md \${selected ? 'border border-dashed border-gray-300 bg-gray-50/50' : 'border border-transparent'}\`}>{selected && \`\${block.height}px\`}</div>;
     
     case 'columns': 
       return (
-        <div style={{ display:'flex', gap:16, padding:'8px 0' }}>
-          <div style={{ flex:1 }}>
-            {selected ? <RichTextEdit value={block.left} onChange={v=>onUpdate({left:v})} style={{ border: `1px dashed ${BD}`, padding: 8, borderRadius: 6 }} /> : <div style={{ fontSize:15, color:TX2, lineHeight:1.75 }} dangerouslySetInnerHTML={{__html:block.left}}/>}
+        <div className="flex gap-4 py-2">
+          <div className="flex-1">
+            {selected ? <RichTextEdit value={block.left} onChange={v=>onUpdate({left:v})} className="border border-dashed border-gray-300 p-2 rounded-lg bg-white" /> : <div className="text-[15px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{__html:block.left}}/>}
           </div>
-          <div style={{ flex:1 }}>
-            {selected ? <RichTextEdit value={block.right} onChange={v=>onUpdate({right:v})} style={{ border: `1px dashed ${BD}`, padding: 8, borderRadius: 6 }} /> : <div style={{ fontSize:15, color:TX2, lineHeight:1.75 }} dangerouslySetInnerHTML={{__html:block.right}}/>}
+          <div className="flex-1">
+            {selected ? <RichTextEdit value={block.right} onChange={v=>onUpdate({right:v})} className="border border-dashed border-gray-300 p-2 rounded-lg bg-white" /> : <div className="text-[15px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{__html:block.right}}/>}
           </div>
         </div>
       );
@@ -363,52 +365,54 @@ function BlockCanvasRender({ block, selected, onUpdate }: { block:Block; selecte
 // ── Right Sidebar Properties Panel ────────────────────────────────────────────
 
 function PropertiesPanel({ block, onUpdate }: { block:Block; onUpdate:(p:Partial<Block>)=>void }) {
-  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: TX2, display: 'block', marginBottom: 6 };
-  const sectionStyle: React.CSSProperties = { marginBottom: 24 };
+  const Label = ({ children }: { children: React.ReactNode }) => <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">{children}</label>;
+  const Input = (props: any) => <input className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50 focus:bg-white" {...props} />;
 
   switch (block.type) {
     case 'heading':
       return (
-        <div style={sectionStyle}>
-          <label style={labelStyle}>Heading Level</label>
-          <div style={{ display:'flex', gap:6, background: BG, padding: 4, borderRadius: 8 }}>
-            {([1,2,3] as const).map(l=>(
-              <button key={l} onClick={()=>onUpdate({level:l})} style={{ flex: 1, padding:'6px 0', borderRadius:6, border:'none', fontSize:12, fontWeight:600, fontFamily:'inherit', cursor:'pointer', background:block.level===l?CARD:'transparent', color:block.level===l?TX:TX2, boxShadow: block.level===l ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>H{l}</button>
-            ))}
+        <div className="space-y-6">
+          <div>
+            <Label>Heading Level</Label>
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+              {([1,2,3] as const).map(l=>(
+                <button key={l} onClick={()=>onUpdate({level:l})} className={\`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all \${block.level===l ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}\`}>H{l}</button>
+              ))}
+            </div>
           </div>
-          <p style={{ fontSize: 12, color: TX3, marginTop: 16 }}>Edit the text directly on the canvas.</p>
+          <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-gray-100">Edit the text directly on the canvas.</p>
         </div>
       );
     case 'text':
     case 'columns':
-      return <p style={{ fontSize: 13, color: TX2, lineHeight: 1.6 }}>Edit the text content directly on the canvas. Highlight text to see formatting options.</p>;
+      return <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-gray-100">Edit the text content directly on the canvas. Highlight text to see formatting options.</p>;
     
     case 'button':
       return (
-        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+        <div className="space-y-5">
           <div>
-            <label style={labelStyle}>Button Label</label>
-            <input value={block.text} onChange={e=>onUpdate({text:e.target.value})} style={IS} placeholder="Click here"/>
+            <Label>Button Label</Label>
+            <Input value={block.text} onChange={(e:any)=>onUpdate({text:e.target.value})} placeholder="Click here"/>
           </div>
           <div>
-            <label style={labelStyle}>Link URL</label>
-            <input value={block.url} onChange={e=>onUpdate({url:e.target.value})} style={IS} placeholder="https://..."/>
+            <Label>Link URL</Label>
+            <Input value={block.url} onChange={(e:any)=>onUpdate({url:e.target.value})} placeholder="https://..."/>
           </div>
           <div>
-            <label style={labelStyle}>Alignment</label>
-            <div style={{ display:'flex', gap:4, background: BG, padding: 4, borderRadius: 8 }}>
+            <Label>Alignment</Label>
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
               {(['left','center','right'] as const).map(a=>(
-                <button key={a} onClick={()=>onUpdate({align:a})} style={{ flex: 1, display: 'flex', justifyContent: 'center', padding:'6px 0', borderRadius:6, border:'none', cursor:'pointer', background:block.align===a?CARD:'transparent', color:block.align===a?TX:TX2, boxShadow: block.align===a ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
+                <button key={a} onClick={()=>onUpdate({align:a})} className={\`flex-1 flex justify-center py-1.5 rounded-md transition-all \${block.align===a ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}\`}>
                   {a === 'left' ? <AlignLeftIcon size={16}/> : a === 'center' ? <AlignCenterIcon size={16}/> : <AlignRightIcon size={16}/>}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label style={labelStyle}>Button Color</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, ...IS }}>
-              <input type="color" value={block.color} onChange={e=>onUpdate({color:e.target.value})} style={{ width:24, height:24, border:'none', borderRadius:4, cursor:'pointer', padding:0, background: 'transparent' }}/>
-              <span style={{ fontFamily: 'monospace', fontSize: 12, color: TX2, textTransform: 'uppercase' }}>{block.color}</span>
+            <Label>Button Color</Label>
+            <div className="flex items-center gap-3 p-2 border border-gray-200 rounded-lg bg-gray-50">
+              <input type="color" value={block.color} onChange={e=>onUpdate({color:e.target.value})} className="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent"/>
+              <span className="font-mono text-xs text-gray-500 uppercase">{block.color}</span>
             </div>
           </div>
         </div>
@@ -416,11 +420,11 @@ function PropertiesPanel({ block, onUpdate }: { block:Block; onUpdate:(p:Partial
     
     case 'image': 
       return (
-        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+        <div className="space-y-5">
           <div>
-            <label style={labelStyle}>Upload Image</label>
-            <label style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:8, padding:'24px 16px', borderRadius:8, cursor:'pointer', border:`2px dashed ${BD}`, background:BG, transition:'all 0.15s' }}>
-              <input type="file" accept="image/*" style={{ display:'none' }} onChange={e=>{
+            <Label>Upload Image</Label>
+            <label className="flex flex-col items-center justify-center gap-2 p-6 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-all cursor-pointer group">
+              <input type="file" accept="image/*" className="hidden" onChange={e=>{
                 const f=e.target.files?.[0];
                 if(f) {
                   const reader = new FileReader();
@@ -428,33 +432,33 @@ function PropertiesPanel({ block, onUpdate }: { block:Block; onUpdate:(p:Partial
                   reader.readAsDataURL(f);
                 }
               }}/>
-              <ImageIcon size={24} style={{color:TX3}}/>
-              <span style={{fontSize:13,color:BR,fontWeight:600}}>Click to upload</span>
+              <ImageIcon size={24} className="text-gray-400 group-hover:text-blue-500 transition-colors"/>
+              <span className="text-sm font-semibold text-blue-600">Click to upload</span>
             </label>
-            {block.src && <button onClick={()=>onUpdate({src:''})} style={{ marginTop: 8, fontSize:12, color:RED, background:'none', border:'none', cursor:'pointer', padding:0 }}>Remove image</button>}
+            {block.src && <button onClick={()=>onUpdate({src:''})} className="mt-2 text-xs font-medium text-red-500 hover:text-red-600">Remove image</button>}
           </div>
           <div>
-            <label style={labelStyle}>Image Link (Optional)</label>
-            <input value={block.url || ''} onChange={e=>onUpdate({url:e.target.value})} style={IS} placeholder="https://..."/>
+            <Label>Image Link (Optional)</Label>
+            <Input value={block.url || ''} onChange={(e:any)=>onUpdate({url:e.target.value})} placeholder="https://..."/>
           </div>
           <div>
-            <label style={labelStyle}>Alt Text</label>
-            <input value={block.alt} onChange={e=>onUpdate({alt:e.target.value})} style={IS} placeholder="Describe the image..."/>
+            <Label>Alt Text</Label>
+            <Input value={block.alt} onChange={(e:any)=>onUpdate({alt:e.target.value})} placeholder="Describe the image..."/>
           </div>
         </div>
       );
     
     case 'spacer':
       return (
-        <div>
-          <label style={labelStyle}>Height ({block.height}px)</label>
-          <input type="range" min={8} max={120} step={4} value={block.height} onChange={e=>onUpdate({height:+e.target.value})} style={{ width: '100%', accentColor: BR, cursor: 'pointer' }}/>
-          <input type="number" min={8} max={120} value={block.height} onChange={e=>onUpdate({height:+e.target.value})} style={{ ...IS, marginTop: 12 }}/>
+        <div className="space-y-4">
+          <Label>Height ({block.height}px)</Label>
+          <input type="range" min={8} max={120} step={4} value={block.height} onChange={e=>onUpdate({height:+e.target.value})} className="w-full accent-blue-500"/>
+          <Input type="number" min={8} max={120} value={block.height} onChange={(e:any)=>onUpdate({height:+e.target.value})} />
         </div>
       );
       
     case 'divider':
-      return <p style={{ fontSize: 13, color: TX2 }}>Horizontal divider — no settings available.</p>;
+      return <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-gray-100">Horizontal divider — no settings available.</p>;
   }
 }
 
@@ -469,44 +473,48 @@ function PortalMenu({ pos, onSelect, onClose }: { pos: MenuPos; onSelect:(t:Bloc
     return () => document.removeEventListener('mousedown', h);
   }, [onClose]);
 
-  const menuH = BLOCK_TYPES.length * 52 + 32;
-  const top = pos.openUp ? pos.top - menuH : pos.top + 4;
+  const menuH = BLOCK_TYPES.length * 56 + 40;
+  const top = pos.openUp ? pos.top - menuH - 8 : pos.top + 8;
 
   return createPortal(
-    <div data-bm="1" style={{ position:'fixed', top, left:pos.left, zIndex:9999, background:CARD, border:`1px solid ${BD}`, borderRadius:10, boxShadow:'0 8px 32px rgba(0,0,0,0.12)', padding:6, minWidth:220 }}>
-      <p style={{ fontSize:10, fontWeight:700, color:TX3, textTransform:'uppercase', letterSpacing:'0.07em', padding:'4px 8px 6px', margin:0 }}>Add block</p>
-      {BLOCK_TYPES.map(([type, label, icon, desc]) => (
-        <button key={type}
-          onMouseDown={e => { e.preventDefault(); onSelect(type); }}
-          style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'7px 10px', borderRadius:7, border:'none', background:'none', cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}
-          onMouseEnter={e => (e.currentTarget.style.background = BG)}
-          onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-        >
-          <span style={{ color:TX2 }}>{icon}</span>
-          <div>
-            <p style={{ fontSize:13, fontWeight:600, color:TX, margin:0 }}>{label}</p>
-            <p style={{ fontSize:11, color:TX3, margin:0 }}>{desc}</p>
-          </div>
-        </button>
-      ))}
+    <div data-bm="1" style={{ top, left:pos.left }} className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-xl p-2 min-w-[240px] animate-in fade-in zoom-in-95 duration-100">
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-3 py-2">Add block</p>
+      <div className="space-y-0.5">
+        {BLOCK_TYPES.map(([type, label, icon, desc]) => (
+          <button key={type}
+            onMouseDown={e => { e.preventDefault(); onSelect(type); }}
+            className="w-full flex items-center gap-3 p-2.5 rounded-lg border-none bg-transparent cursor-pointer text-left hover:bg-gray-50 transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-md bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-sm transition-all">
+              {icon}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 m-0">{label}</p>
+              <p className="text-xs text-gray-500 m-0">{desc}</p>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>,
     document.body
   );
 }
 
-function AddBlockButton({ label, onSelect, style, children }: { label?: string; onSelect:(t:BlockType)=>void; style?: React.CSSProperties; children?: React.ReactNode; }) {
+function AddBlockButton({ label, onSelect, className, children }: { label?: string; onSelect:(t:BlockType)=>void; className?: string; children?: React.ReactNode; }) {
   const [pos, setPos] = useState<MenuPos|null>(null);
   const ref = useRef<HTMLButtonElement>(null);
   function toggle() {
     if (pos) { setPos(null); return; }
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
-    setPos({ top: r.bottom, left: r.left, openUp: window.innerHeight - r.bottom < 380 });
+    const spaceBelow = window.innerHeight - r.bottom;
+    const openUp = spaceBelow < 400 && r.top > 400;
+    setPos({ top: openUp ? r.top : r.bottom, left: r.left, openUp });
   }
   return (
     <>
-      <button ref={ref} onClick={toggle} style={style}>
-        {children ?? <><PlusIcon size={14}/> {label ?? 'Add block'}</>}
+      <button ref={ref} onClick={toggle} className={className || "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm"}>
+        {children ?? <><PlusIcon size={16}/> {label ?? 'Add block'}</>}
       </button>
       {pos && <PortalMenu pos={pos} onSelect={t => { onSelect(t); setPos(null); }} onClose={() => setPos(null)} />}
     </>
@@ -531,20 +539,19 @@ function VarPicker({ onInsert }: { onInsert:(v:string)=>void }) {
   }, [open]);
 
   return (
-    <div data-vp="1" style={{ position:'relative', display:'inline-block', marginTop:8 }}>
+    <div data-vp="1" className="relative inline-block mt-2">
       <button type="button" onMouseDown={e => { e.preventDefault(); setOpen(o=>!o); }}
-        style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 10px', borderRadius:6, border:`1px solid ${BD}`, background:BG, cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight: 500, color:TX2 }}>
-        {'{ }'} Insert Variable
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 bg-gray-50 hover:bg-gray-100 text-xs font-medium text-gray-600 transition-colors">
+        <span className="font-mono text-[10px] bg-white border border-gray-200 rounded px-1 py-0.5 text-gray-400">{'{ }'}</span> Insert Variable
       </button>
       {open && (
-        <div style={{ position:'absolute', top:'100%', left:0, zIndex:200, marginTop:4, background:CARD, border:`1px solid ${BD}`, borderRadius:10, boxShadow:'0 4px 20px rgba(0,0,0,0.1)', padding:6, minWidth:220 }}>
+        <div className="absolute top-full left-0 z-[200] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-1 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-100">
           {VARS.map(v => (
             <button key={v.value} type="button"
               onMouseDown={e => { e.preventDefault(); onInsert(v.value); setOpen(false); }}
-              style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, padding:'8px 10px', borderRadius:6, border:'none', background:'none', cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}
-              onMouseEnter={e=>(e.currentTarget.style.background=BG)} onMouseLeave={e=>(e.currentTarget.style.background='none')}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-gray-50 text-left transition-colors"
             >
-              <span style={{ fontSize:13, fontWeight:500, color:TX }}>{v.label}</span>
+              <span className="text-sm font-medium text-gray-700">{v.label}</span>
             </button>
           ))}
         </div>
@@ -553,7 +560,7 @@ function VarPicker({ onInsert }: { onInsert:(v:string)=>void }) {
   );
 }
 
-function RichTextEdit({ value, onChange, placeholder, style }: { value:string; onChange:(v:string)=>void; placeholder?:string; style?: React.CSSProperties }) {
+function RichTextEdit({ value, onChange, placeholder, className }: { value:string; onChange:(v:string)=>void; placeholder?:string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [toolbar, setToolbar] = useState<{top:number;left:number}|null>(null);
   const syncing = useRef(false);
@@ -596,7 +603,7 @@ function RichTextEdit({ value, onChange, placeholder, style }: { value:string; o
   }
 
   return (
-    <div style={{ position:'relative' }}>
+    <div className="relative group">
       <div
         ref={ref}
         contentEditable
@@ -606,33 +613,34 @@ function RichTextEdit({ value, onChange, placeholder, style }: { value:string; o
         onMouseUp={checkSelection}
         onKeyUp={checkSelection}
         data-ph={placeholder || 'Write here…'}
-        style={{ fontSize:15, lineHeight:1.75, outline:'none', color:TX, fontFamily:'inherit', ...style }}
+        className={\`text-[15px] leading-relaxed outline-none text-gray-800 \${className || ''}\`}
       />
-      <VarPicker onInsert={v => { ref.current?.focus(); document.execCommand('insertText', false, v); sync(); }} />
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
+        <VarPicker onInsert={v => { ref.current?.focus(); document.execCommand('insertText', false, v); sync(); }} />
+      </div>
 
       {toolbar && createPortal(
-        <div style={{ position:'fixed', top:toolbar.top - 40, left:toolbar.left, transform:'translateX(-50%)', zIndex:9999, background:'#1a1a2e', borderRadius:8, display:'flex', gap:2, padding:'4px 6px', boxShadow:'0 4px 16px rgba(0,0,0,0.3)' }}>
+        <div style={{ top:toolbar.top - 44, left:toolbar.left }} className="fixed -translate-x-1/2 z-[9999] bg-gray-900 rounded-lg flex items-center gap-1 p-1 shadow-xl animate-in fade-in zoom-in-95 duration-100">
           {[
             { cmd:'bold',      icon:<BoldIcon size={14}/>,    title:'Bold' },
             { cmd:'italic',    icon:<ItalicIcon size={14}/>,  title:'Italic' },
           ].map(({ cmd, icon, title }) => (
-            <button key={cmd} title={title} onMouseDown={e => { e.preventDefault(); exec(cmd); }} style={{ padding:'4px 8px', borderRadius:5, border:'none', background:'none', cursor:'pointer', color:'rgba(255,255,255,0.85)' }} onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.1)')} onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background='none')}>{icon}</button>
+            <button key={cmd} title={title} onMouseDown={e => { e.preventDefault(); exec(cmd); }} className="p-1.5 rounded-md text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">{icon}</button>
           ))}
-          <div style={{ width:1, background:'rgba(255,255,255,0.2)', margin:'4px 4px' }}/>
-          <button title="Link" onMouseDown={e => { e.preventDefault(); insertLink(); }} style={{ padding:'4px 8px', borderRadius:5, border:'none', background:'none', cursor:'pointer', color:'rgba(255,255,255,0.85)' }} onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.1)')} onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background='none')}><LinkIcon size={14}/></button>
-          <button title="Remove formatting" onMouseDown={e => { e.preventDefault(); exec('removeFormat'); }} style={{ padding:'4px 8px', borderRadius:5, border:'none', background:'none', cursor:'pointer', color:'rgba(255,255,255,0.5)', fontSize:12, fontFamily:'inherit' }} onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.1)')} onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background='none')}>✕</button>
+          <div className="w-px h-4 bg-gray-700 mx-1"/>
+          <button title="Link" onMouseDown={e => { e.preventDefault(); insertLink(); }} className="p-1.5 rounded-md text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"><LinkIcon size={14}/></button>
+          <button title="Remove formatting" onMouseDown={e => { e.preventDefault(); exec('removeFormat'); }} className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors text-xs font-bold">✕</button>
         </div>,
         document.body
       )}
-      <style>{`[data-ph]:empty:before{content:attr(data-ph);color:${TX3};pointer-events:none}`}</style>
+      <style>{\`[data-ph]:empty:before{content:attr(data-ph);color:#9CA3AF;pointer-events:none}\`}</style>
     </div>
   );
 }
 
-function VarInput({ value, onChange, placeholder, autoFocus, style }: { value:string; onChange:(v:string)=>void; placeholder?:string; autoFocus?:boolean; style?: React.CSSProperties }) {
+function VarInput({ value, onChange, placeholder, autoFocus, className }: { value:string; onChange:(v:string)=>void; placeholder?:string; autoFocus?:boolean; className?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   
-  // Auto-resize logic
   useEffect(() => {
     if (ref.current) {
       ref.current.style.height = 'auto';
@@ -659,18 +667,20 @@ function VarInput({ value, onChange, placeholder, autoFocus, style }: { value:st
   }
 
   return (
-    <div style={{ display:'flex', flexDirection:'column' }}>
+    <div className="flex flex-col group">
       <textarea 
         ref={ref} 
         autoFocus={autoFocus} 
         value={value} 
         onChange={e=>onChange(e.target.value)} 
         onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
-        style={{ ...style, overflow: 'hidden' }} 
+        className={\`overflow-hidden \${className || ''}\`}
         placeholder={placeholder}
         rows={1}
       />
-      <VarPicker onInsert={handleInsert}/>
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
+        <VarPicker onInsert={handleInsert}/>
+      </div>
     </div>
   );
 }

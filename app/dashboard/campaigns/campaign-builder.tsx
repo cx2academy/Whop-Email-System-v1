@@ -418,77 +418,65 @@ export function CampaignBuilder({
 
         {/* ── Step 2: Content (Full Width Layout) ─────────────────────── */}
         {step === 2 && (
-          <div className="flex flex-col h-[calc(100vh-160px)] min-h-[800px]">
+          <div className="flex flex-col h-[calc(100vh-120px)] min-h-[800px] -mx-4 sm:-mx-8 lg:-mx-12">
             {/* Toolbar — minimal */}
-            <div
-              className="flex items-center justify-between px-6 py-3 bg-white rounded-t-2xl"
-              style={{ border: '1px solid var(--sidebar-border)', borderBottom: 'none' }}
-            >
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shadow-sm z-10">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => setStep(1)}
-                  className="p-1.5 rounded-md text-sm transition-colors hover:bg-gray-100"
-                  style={{ color: 'var(--text-secondary)' }}
+                  className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                   title="Back to Subject"
                 >
                   <ChevronLeftIcon className="w-5 h-5" />
                 </button>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                <div className="flex items-center gap-3">
+                  <span className="text-base font-semibold text-gray-900">
                     {subject}
                   </span>
                   {/* Channel badge */}
-                  <span
-                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                    style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)', color: 'var(--text-tertiary)' }}
-                  >
-                    {sendViaEmail && <MailIcon className="h-2.5 w-2.5" />}
-                    {sendViaWhopDm && <MessageCircleIcon className="h-2.5 w-2.5" />}
+                  <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                    {sendViaEmail && <MailIcon className="h-3 w-3" />}
+                    {sendViaWhopDm && <MessageCircleIcon className="h-3 w-3" />}
                     {sendViaEmail && sendViaWhopDm ? 'Email + DM' : sendViaWhopDm ? 'Whop DM only' : 'Email only'}
                   </span>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => setShowAi(!showAi)}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
-                  style={
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
                     showAi
-                      ? { background: 'var(--brand-tint)', color: '#16A34A' }
-                      : { background: 'var(--surface-app)', color: 'var(--text-secondary)', border: '1px solid var(--sidebar-border)' }
-                  }
+                      ? 'bg-green-50 text-green-600 border border-green-200 shadow-sm'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 shadow-sm'
+                  }`}
                 >
-                  <SparklesIcon className="h-3.5 w-3.5" />
+                  <SparklesIcon className="h-4 w-4" />
                   AI assist
                 </button>
                 
-                <div className="w-px h-4" style={{ background: 'var(--sidebar-border)' }} />
+                <div className="w-px h-6 bg-gray-200" />
                 
                 <button
                   onClick={handleNext}
                   disabled={isLoading || !htmlBody.trim()}
-                  className="flex items-center gap-2 rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
-                  style={{ background: 'var(--brand)' }}
+                  className="flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
                 >
                   {isLoading ? 'Saving...' : 'Review & send →'}
                 </button>
               </div>
             </div>
 
-            {error && <p className="px-6 py-2 text-sm bg-red-50" style={{ color: '#DC2626', borderLeft: '1px solid var(--sidebar-border)', borderRight: '1px solid var(--sidebar-border)' }}>{error}</p>}
+            {error && <p className="px-6 py-3 text-sm font-medium bg-red-50 text-red-600 border-b border-red-100">{error}</p>}
 
-            <div className="flex flex-1 overflow-hidden" style={{ border: '1px solid var(--sidebar-border)', borderTop: 'none', borderRadius: '0 0 16px 16px' }}>
+            <div className="flex flex-1 overflow-hidden bg-gray-50">
               {/* Editor */}
               <div className="flex-1 min-w-0 h-full">
                 <VisualEditor value={htmlBody} onChange={setHtmlBody} />
               </div>
               {/* AI panel — slide in */}
               {showAi && (
-                <div
-                  className="w-80 flex-shrink-0 bg-white h-full overflow-y-auto"
-                  style={{ borderLeft: '1px solid var(--sidebar-border)' }}
-                >
+                <div className="w-80 flex-shrink-0 bg-white h-full overflow-y-auto border-l border-gray-200 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
                   <AiPanel
                     subject={subject}
                     htmlBody={htmlBody}
