@@ -217,11 +217,11 @@ export function VisualEditor({ value, onChange }: Props) {
         <div className="flex-1" />
         <button 
           onClick={() => { setShowPreview(s => !s); setSelId(null); }}
-          className={\`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors \${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
             showPreview 
               ? 'bg-green-50 text-green-600 border border-green-200' 
               : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-          }\`}
+          }`}
         >
           {showPreview ? <EyeOffIcon size={16}/> : <EyeIcon size={16}/>}
           {showPreview ? 'Exit Preview' : 'Preview'}
@@ -298,19 +298,19 @@ function SBlock({ block, selected, onSelect, onUpdate }: { block:Block; selected
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id:block.id });
   
   return (
-    <div ref={setNodeRef} style={{ transform:CSS.Transform.toString(transform), transition }} className={\`relative -mx-4 px-4 py-1 group \${isDragging ? 'opacity-40' : 'opacity-100'}\`}>
+    <div ref={setNodeRef} style={{ transform:CSS.Transform.toString(transform), transition }} className={`relative -mx-4 px-4 py-1 group ${isDragging ? 'opacity-40' : 'opacity-100'}`}>
       
       {/* Drag Handle (Visible on hover/select) */}
       <div 
         {...attributes} {...listeners} 
-        className={\`absolute -left-3 top-1/2 -translate-y-1/2 cursor-grab text-gray-300 hover:text-gray-500 p-2 z-10 transition-opacity \${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}\`}
+        className={`absolute -left-3 top-1/2 -translate-y-1/2 cursor-grab text-gray-300 hover:text-gray-500 p-2 z-10 transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
       >
         <GripVerticalIcon size={16}/>
       </div>
 
       <div 
         onClick={onSelect}
-        className={\`rounded-xl px-4 py-2 cursor-pointer transition-colors \${selected ? 'bg-blue-50/50 ring-1 ring-blue-100' : 'hover:bg-gray-50'}\`}
+        className={`rounded-xl px-4 py-2 cursor-pointer transition-colors ${selected ? 'bg-blue-50/50 ring-1 ring-blue-100' : 'hover:bg-gray-50'}`}
       >
         <BlockCanvasRender block={block} selected={selected} onUpdate={onUpdate} />
       </div>
@@ -325,10 +325,10 @@ function BlockCanvasRender({ block, selected, onUpdate }: { block:Block; selecte
     case 'heading': 
       if (selected) {
         const sz = ({1:'text-3xl',2:'text-2xl',3:'text-xl'} as Record<number,string>)[block.level];
-        return <VarInput value={block.content} onChange={v=>onUpdate({content:v})} className={\`w-full bg-transparent border-none p-0 outline-none font-bold text-gray-900 resize-none \${sz}\`} placeholder="Heading..." autoFocus/>;
+        return <VarInput value={block.content} onChange={v=>onUpdate({content:v})} className={`w-full bg-transparent border-none p-0 outline-none font-bold text-gray-900 resize-none ${sz}`} placeholder="Heading..." autoFocus/>;
       }
       const sz = ({1:'text-3xl',2:'text-2xl',3:'text-xl'} as Record<number,string>)[block.level];
-      return <div className={\`font-bold text-gray-900 leading-tight \${sz}\`}>{block.content||<span className="text-gray-300">Heading…</span>}</div>;
+      return <div className={`font-bold text-gray-900 leading-tight ${sz}`}>{block.content||<span className="text-gray-300">Heading…</span>}</div>;
     
     case 'text':    
       if (selected) {
@@ -337,7 +337,7 @@ function BlockCanvasRender({ block, selected, onUpdate }: { block:Block; selecte
       return <div className="text-[15px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{__html:block.content||'<span class="text-gray-300">Type something…</span>'}}/>;
     
     case 'button':  
-      return <div className={\`py-3 text-\${block.align}\`}><span style={{ background:block.color }} className="inline-block text-white px-7 py-3 rounded-lg text-[15px] font-semibold shadow-sm">{block.text||'Button'}</span></div>;
+      return <div className={`py-3 text-${block.align}`}><span style={{ background:block.color }} className="inline-block text-white px-7 py-3 rounded-lg text-[15px] font-semibold shadow-sm">{block.text||'Button'}</span></div>;
     
     case 'image':   
       return <div className="text-center py-3">{block.src?<img src={block.src} alt={block.alt} className="max-w-full max-h-[300px] rounded-lg object-contain mx-auto shadow-sm border border-gray-100"/>:<div className="h-32 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 text-sm gap-2 bg-gray-50"><ImageIcon size={24} className="opacity-50"/> Image placeholder</div>}</div>;
@@ -346,7 +346,7 @@ function BlockCanvasRender({ block, selected, onUpdate }: { block:Block; selecte
       return <hr className="border-none border-t border-gray-200 my-6"/>;
     
     case 'spacer':  
-      return <div style={{ height:block.height }} className={\`flex items-center justify-center text-[11px] text-gray-400 transition-colors rounded-md \${selected ? 'border border-dashed border-gray-300 bg-gray-50/50' : 'border border-transparent'}\`}>{selected && \`\${block.height}px\`}</div>;
+      return <div style={{ height:block.height }} className={`flex items-center justify-center text-[11px] text-gray-400 transition-colors rounded-md ${selected ? 'border border-dashed border-gray-300 bg-gray-50/50' : 'border border-transparent'}`}>{selected && `${block.height}px`}</div>;
     
     case 'columns': 
       return (
@@ -376,7 +376,7 @@ function PropertiesPanel({ block, onUpdate }: { block:Block; onUpdate:(p:Partial
             <Label>Heading Level</Label>
             <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
               {([1,2,3] as const).map(l=>(
-                <button key={l} onClick={()=>onUpdate({level:l})} className={\`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all \${block.level===l ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}\`}>H{l}</button>
+                <button key={l} onClick={()=>onUpdate({level:l})} className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all ${block.level===l ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>H{l}</button>
               ))}
             </div>
           </div>
@@ -402,7 +402,7 @@ function PropertiesPanel({ block, onUpdate }: { block:Block; onUpdate:(p:Partial
             <Label>Alignment</Label>
             <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
               {(['left','center','right'] as const).map(a=>(
-                <button key={a} onClick={()=>onUpdate({align:a})} className={\`flex-1 flex justify-center py-1.5 rounded-md transition-all \${block.align===a ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}\`}>
+                <button key={a} onClick={()=>onUpdate({align:a})} className={`flex-1 flex justify-center py-1.5 rounded-md transition-all ${block.align===a ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>
                   {a === 'left' ? <AlignLeftIcon size={16}/> : a === 'center' ? <AlignCenterIcon size={16}/> : <AlignRightIcon size={16}/>}
                 </button>
               ))}
@@ -613,7 +613,7 @@ function RichTextEdit({ value, onChange, placeholder, className }: { value:strin
         onMouseUp={checkSelection}
         onKeyUp={checkSelection}
         data-ph={placeholder || 'Write here…'}
-        className={\`text-[15px] leading-relaxed outline-none text-gray-800 \${className || ''}\`}
+        className={`text-[15px] leading-relaxed outline-none text-gray-800 ${className || ''}`}
       />
       <div className="opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
         <VarPicker onInsert={v => { ref.current?.focus(); document.execCommand('insertText', false, v); sync(); }} />
@@ -633,7 +633,7 @@ function RichTextEdit({ value, onChange, placeholder, className }: { value:strin
         </div>,
         document.body
       )}
-      <style>{\`[data-ph]:empty:before{content:attr(data-ph);color:#9CA3AF;pointer-events:none}\`}</style>
+      <style>{`[data-ph]:empty:before{content:attr(data-ph);color:#9CA3AF;pointer-events:none}`}</style>
     </div>
   );
 }
@@ -674,7 +674,7 @@ function VarInput({ value, onChange, placeholder, autoFocus, className }: { valu
         value={value} 
         onChange={e=>onChange(e.target.value)} 
         onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
-        className={\`overflow-hidden \${className || ''}\`}
+        className={`overflow-hidden ${className || ''}`}
         placeholder={placeholder}
         rows={1}
       />
