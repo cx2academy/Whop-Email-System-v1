@@ -177,7 +177,7 @@ export function CampaignBuilder({
   ];
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className={`mx-auto transition-all duration-300 ${step === 2 ? 'max-w-[1200px] w-full' : 'max-w-2xl'}`}>
       {/* Back + Step indicator */}
       <div className="flex items-center justify-between mb-8">
         <Link
@@ -217,10 +217,10 @@ export function CampaignBuilder({
         <div className="w-20" />
       </div>
 
-      {/* Card */}
+      {/* Card Wrapper (Only for Step 1 and 3) */}
       <div
-        className="rounded-2xl shadow-card-md"
-        style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}
+        className={step === 2 ? '' : 'rounded-2xl shadow-card-md'}
+        style={step === 2 ? {} : { background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}
       >
 
         {/* ── Step 1: Subject ─────────────────────────────────────────── */}
@@ -416,51 +416,77 @@ export function CampaignBuilder({
           </div>
         )}
 
-        {/* ── Step 2: Content ─────────────────────────────────────────── */}
+        {/* ── Step 2: Content (Full Width Layout) ─────────────────────── */}
         {step === 2 && (
-          <div>
+          <div className="flex flex-col h-[calc(100vh-160px)] min-h-[800px]">
             {/* Toolbar — minimal */}
             <div
-              className="flex items-center justify-between px-6 py-3"
-              style={{ borderBottom: '1px solid var(--sidebar-border)' }}
+              className="flex items-center justify-between px-6 py-3 bg-white rounded-t-2xl"
+              style={{ border: '1px solid var(--sidebar-border)', borderBottom: 'none' }}
             >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {subject}
-                </span>
-                {/* Channel badge */}
-                <span
-                  className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                  style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)', color: 'var(--text-tertiary)' }}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setStep(1)}
+                  className="p-1.5 rounded-md text-sm transition-colors hover:bg-gray-100"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Back to Subject"
                 >
-                  {sendViaEmail && <MailIcon className="h-2.5 w-2.5" />}
-                  {sendViaWhopDm && <MessageCircleIcon className="h-2.5 w-2.5" />}
-                  {sendViaEmail && sendViaWhopDm ? 'Email + DM' : sendViaWhopDm ? 'Whop DM only' : 'Email only'}
-                </span>
+                  <ChevronLeftIcon className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {subject}
+                  </span>
+                  {/* Channel badge */}
+                  <span
+                    className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)', color: 'var(--text-tertiary)' }}
+                  >
+                    {sendViaEmail && <MailIcon className="h-2.5 w-2.5" />}
+                    {sendViaWhopDm && <MessageCircleIcon className="h-2.5 w-2.5" />}
+                    {sendViaEmail && sendViaWhopDm ? 'Email + DM' : sendViaWhopDm ? 'Whop DM only' : 'Email only'}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={() => setShowAi(!showAi)}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
-                style={
-                  showAi
-                    ? { background: 'var(--brand-tint)', color: '#16A34A' }
-                    : { background: 'var(--surface-app)', color: 'var(--text-secondary)', border: '1px solid var(--sidebar-border)' }
-                }
-              >
-                <SparklesIcon className="h-3.5 w-3.5" />
-                AI assist
-              </button>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowAi(!showAi)}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+                  style={
+                    showAi
+                      ? { background: 'var(--brand-tint)', color: '#16A34A' }
+                      : { background: 'var(--surface-app)', color: 'var(--text-secondary)', border: '1px solid var(--sidebar-border)' }
+                  }
+                >
+                  <SparklesIcon className="h-3.5 w-3.5" />
+                  AI assist
+                </button>
+                
+                <div className="w-px h-4" style={{ background: 'var(--sidebar-border)' }} />
+                
+                <button
+                  onClick={handleNext}
+                  disabled={isLoading || !htmlBody.trim()}
+                  className="flex items-center gap-2 rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                  style={{ background: 'var(--brand)' }}
+                >
+                  {isLoading ? 'Saving...' : 'Review & send →'}
+                </button>
+              </div>
             </div>
 
-            <div className="flex">
+            {error && <p className="px-6 py-2 text-sm bg-red-50" style={{ color: '#DC2626', borderLeft: '1px solid var(--sidebar-border)', borderRight: '1px solid var(--sidebar-border)' }}>{error}</p>}
+
+            <div className="flex flex-1 overflow-hidden" style={{ border: '1px solid var(--sidebar-border)', borderTop: 'none', borderRadius: '0 0 16px 16px' }}>
               {/* Editor */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 h-full">
                 <VisualEditor value={htmlBody} onChange={setHtmlBody} />
               </div>
               {/* AI panel — slide in */}
               {showAi && (
                 <div
-                  className="w-72 flex-shrink-0"
+                  className="w-80 flex-shrink-0 bg-white h-full overflow-y-auto"
                   style={{ borderLeft: '1px solid var(--sidebar-border)' }}
                 >
                   <AiPanel
@@ -470,29 +496,6 @@ export function CampaignBuilder({
                   />
                 </div>
               )}
-            </div>
-
-            {error && <p className="px-6 pb-3 text-sm" style={{ color: '#DC2626' }}>{error}</p>}
-
-            <div
-              className="flex items-center justify-between px-6 py-4"
-              style={{ borderTop: '1px solid var(--sidebar-border)' }}
-            >
-              <button
-                onClick={() => setStep(1)}
-                className="text-sm transition-opacity hover:opacity-70"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={isLoading || !htmlBody.trim()}
-                className="flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
-                style={{ background: 'var(--brand)' }}
-              >
-                {isLoading ? 'Saving...' : 'Review & send →'}
-              </button>
             </div>
           </div>
         )}
