@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -209,58 +209,54 @@ export function VisualEditor({ value, onChange }: Props) {
   const selectedBlock = blocks.find(b => b.id === selId);
 
   return (
-    <div className="flex flex-col h-full min-h-[800px] bg-gray-50 rounded-b-2xl overflow-hidden">
+    <div className="flex flex-col h-full min-h-[800px] bg-white overflow-hidden relative">
       
       {/* ── Top Toolbar ── */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
-        <AddBlockButton onSelect={t => addBlock(t)} />
-        <div className="flex-1" />
-        <button 
-          onClick={() => { setShowPreview(s => !s); setSelId(null); }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-            showPreview 
-              ? 'bg-green-50 text-green-600 border border-green-200' 
-              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-          }`}
-        >
-          {showPreview ? <EyeOffIcon size={16}/> : <EyeIcon size={16}/>}
-          {showPreview ? 'Exit Preview' : 'Preview'}
-        </button>
+      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+          <button 
+            onClick={() => { setShowPreview(false); }}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${!showPreview ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <TypeIcon size={16} />
+            Editor
+          </button>
+          <button 
+            onClick={() => { setShowPreview(true); setSelId(null); }}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${showPreview ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <EyeIcon size={16} />
+            Preview
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        
-        {/* ── Left: Canvas Area ── */}
-        <div className="flex-1 min-w-0 overflow-y-auto p-8" onClick={() => setSelId(null)}>
+        {/* ── Center: Canvas Area ── */}
+        <div className="flex-1 overflow-y-auto p-8 bg-[#F8F9FA]" onClick={() => setSelId(null)}>
           <div 
-            className="max-w-[600px] mx-auto bg-white rounded-xl border border-gray-200 p-10 min-h-[600px] shadow-sm"
+            className="max-w-[600px] mx-auto bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {showPreview ? (
-              <div dangerouslySetInnerHTML={{ __html: previewHtml }} className="font-sans text-gray-800 leading-relaxed" />
+              <div dangerouslySetInnerHTML={{ __html: previewHtml }} className="font-sans text-gray-800 leading-relaxed p-8" />
             ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={blocks.map(b=>b.id)} strategy={verticalListSortingStrategy}>
-                  {blocks.map(block => (
-                    <SBlock
-                      key={block.id} block={block} selected={selId===block.id}
-                      onSelect={() => setSelId(block.id)}
-                      onUpdate={p => updateBlock(block.id,p)}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            )}
+              <div className="p-8">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                  <SortableContext items={blocks.map(b=>b.id)} strategy={verticalListSortingStrategy}>
+                    {blocks.map(block => (
+                      <SBlock
+                        key={block.id} block={block} selected={selId===block.id}
+                        onSelect={() => setSelId(block.id)}
+                        onUpdate={p => updateBlock(block.id,p)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
 
-            {!showPreview && (
-              <div className="mt-8 pt-8 border-t border-gray-100">
-                <AddBlockButton 
-                  onSelect={t => addBlock(t)}
-                  className="w-full py-4 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-all font-medium"
-                >
-                  <PlusIcon size={18} />
-                  <span>Click to add a new block</span>
-                </AddBlockButton>
+                <div className="mt-8 flex justify-center">
+                  <AddBlockButton onSelect={addBlock} />
+                </div>
               </div>
             )}
           </div>
@@ -268,7 +264,7 @@ export function VisualEditor({ value, onChange }: Props) {
 
         {/* ── Right: Properties Sidebar ── */}
         {!showPreview && selId && selectedBlock && (
-          <div className="w-80 bg-white border-l border-gray-200 flex flex-col shrink-0 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+          <div className="w-80 bg-white border-l border-gray-200 flex flex-col shrink-0 z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                 {BLOCK_TYPES.find(t => t[0] === selectedBlock.type)?.[1]} Properties
