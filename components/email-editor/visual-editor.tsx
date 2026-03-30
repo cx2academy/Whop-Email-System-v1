@@ -209,33 +209,57 @@ export function VisualEditor({ value, onChange }: Props) {
   const selectedBlock = blocks.find(b => b.id === selId);
 
   return (
-    <div className="flex flex-col h-full min-h-[800px] bg-white overflow-hidden relative">
+    <div className="flex h-full min-h-[800px] bg-white overflow-hidden relative">
       
-      {/* ── Top Toolbar ── */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white shrink-0">
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
+      {/* ── Left: Blocks Sidebar ── */}
+      {!showPreview && (
+        <div className="w-72 bg-gray-50/50 border-r border-gray-200 flex flex-col shrink-0 z-10">
+          <div className="px-6 py-5 border-b border-gray-100 bg-white">
+            <h3 className="text-sm font-bold text-gray-900">Content Blocks</h3>
+            <p className="text-xs text-gray-500 mt-1">Click to add to your email</p>
+          </div>
+          <div className="p-4 space-y-3 overflow-y-auto flex-1">
+            {BLOCK_TYPES.map(([type, label, icon, desc]) => (
+              <button 
+                key={type} 
+                onClick={() => addBlock(type)}
+                className="w-full flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl cursor-pointer hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5 transition-all text-left group"
+              >
+                <div className="p-2.5 bg-gray-50 rounded-lg text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                  {icon}
+                </div>
+                <div className="mt-0.5">
+                  <p className="text-sm font-bold text-gray-700 group-hover:text-gray-900">{label}</p>
+                  <p className="text-[11px] text-gray-400 leading-tight mt-0.5">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Center: Canvas Area ── */}
+      <div className="flex-1 min-w-0 flex flex-col relative bg-[#F3F4F6]">
+        
+        {/* Floating View Toggle */}
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center p-1 bg-white rounded-full shadow-sm border border-gray-200">
           <button 
             onClick={() => { setShowPreview(false); }}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${!showPreview ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 px-5 py-1.5 rounded-full text-xs font-bold transition-all ${!showPreview ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            <TypeIcon size={16} />
-            Editor
+            Edit
           </button>
           <button 
             onClick={() => { setShowPreview(true); setSelId(null); }}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-semibold transition-all ${showPreview ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`flex items-center gap-2 px-5 py-1.5 rounded-full text-xs font-bold transition-all ${showPreview ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            <EyeIcon size={16} />
             Preview
           </button>
         </div>
-      </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* ── Center: Canvas Area ── */}
-        <div className="flex-1 overflow-y-auto p-8 bg-[#F8F9FA]" onClick={() => setSelId(null)}>
+        <div className="flex-1 overflow-y-auto p-8 pt-24" onClick={() => setSelId(null)}>
           <div 
-            className="max-w-[600px] mx-auto bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] overflow-hidden"
+            className="max-w-[600px] mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 min-h-[600px] overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {showPreview ? (
@@ -253,37 +277,37 @@ export function VisualEditor({ value, onChange }: Props) {
                     ))}
                   </SortableContext>
                 </DndContext>
-
+                
                 <div className="mt-8 flex justify-center">
-                  <AddBlockButton onSelect={addBlock} />
+                  <AddBlockButton onSelect={t => addBlock(t)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-white border-2 border-dashed border-gray-200 text-gray-500 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all" />
                 </div>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* ── Right: Properties Sidebar ── */}
-        {!showPreview && selId && selectedBlock && (
-          <div className="w-80 bg-white border-l border-gray-200 flex flex-col shrink-0 z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                {BLOCK_TYPES.find(t => t[0] === selectedBlock.type)?.[1]} Properties
-              </span>
-              <div className="flex items-center gap-1">
-                <button onClick={() => deleteBlock(selectedBlock.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete block">
-                  <TrashIcon size={16}/>
-                </button>
-                <button onClick={() => setSelId(null)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors">
-                  <XIcon size={16}/>
-                </button>
-              </div>
-            </div>
-            <div className="p-5 overflow-y-auto flex-1">
-              <PropertiesPanel block={selectedBlock} onUpdate={p => updateBlock(selectedBlock.id, p)} />
+      {/* ── Right: Properties Sidebar ── */}
+      {!showPreview && selId && selectedBlock && (
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col shrink-0 z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              {BLOCK_TYPES.find(t => t[0] === selectedBlock.type)?.[1]} Properties
+            </span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => deleteBlock(selectedBlock.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors" title="Delete block">
+                <TrashIcon size={16}/>
+              </button>
+              <button onClick={() => setSelId(null)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-md transition-colors">
+                <XIcon size={16}/>
+              </button>
             </div>
           </div>
-        )}
-      </div>
+          <div className="p-5 overflow-y-auto flex-1">
+            <PropertiesPanel block={selectedBlock} onUpdate={p => updateBlock(selectedBlock.id, p)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

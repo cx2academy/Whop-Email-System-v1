@@ -177,7 +177,7 @@ export function CampaignBuilder({
   ];
 
   return (
-    <div className={`mx-auto transition-all duration-300 ${step === 2 ? 'max-w-[1200px] w-full' : 'max-w-2xl'}`}>
+    <div className={`mx-auto transition-all duration-300 ${step === 2 ? 'max-w-[1400px] w-full px-4' : 'max-w-2xl'}`}>
       {/* Back + Step indicator */}
       <div className="flex items-center justify-between mb-8">
         <Link
@@ -418,9 +418,9 @@ export function CampaignBuilder({
 
         {/* ── Step 2: Content (Full Width Layout) ─────────────────────── */}
         {step === 2 && (
-          <div className="flex flex-col h-[calc(100vh-120px)] min-h-[800px] -mx-4 sm:-mx-8 lg:-mx-12">
-            {/* Toolbar — minimal */}
-            <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shadow-sm z-10">
+          <div className="flex flex-col h-[calc(100vh-120px)] min-h-[800px] bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Top Toolbar */}
+            <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shrink-0 z-10">
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setStep(1)}
@@ -469,7 +469,7 @@ export function CampaignBuilder({
 
             {error && <p className="px-6 py-3 text-sm font-medium bg-red-50 text-red-600 border-b border-red-100">{error}</p>}
 
-            <div className="flex flex-1 overflow-hidden bg-gray-50">
+            <div className="flex flex-1 overflow-hidden">
               {/* Editor */}
               <div className="flex-1 min-w-0 h-full">
                 <VisualEditor value={htmlBody} onChange={setHtmlBody} />
