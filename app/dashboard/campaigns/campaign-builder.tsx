@@ -418,7 +418,7 @@ export function CampaignBuilder({
 
         {/* ── Step 2: Content (Full Width Layout) ─────────────────────── */}
         {step === 2 && (
-          <div className="flex flex-col h-[calc(100vh-120px)] min-h-[800px] bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="flex flex-col h-[calc(100vh-120px)] min-h-[600px] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             {/* Top Toolbar */}
             <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 shrink-0 z-10">
               <div className="flex items-center gap-4">
