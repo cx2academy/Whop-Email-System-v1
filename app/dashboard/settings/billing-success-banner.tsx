@@ -48,11 +48,7 @@ export function BillingSuccessBanner({ message }: BillingSuccessBannerProps) {
   return (
     <div
       role="status"
-      className="flex items-start gap-3 rounded-lg border px-4 py-3"
-      style={{
-        background: 'rgba(34,197,94,0.08)',
-        borderColor: 'rgba(34,197,94,0.3)',
-      }}
+      className="flex items-start gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3"
     >
       <CheckCircleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-400" />
       <div className="flex-1 min-w-0">
