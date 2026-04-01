@@ -7,7 +7,8 @@
  * Also fixed: handleAddon now redirects to checkoutUrl when returned.
  */
 
-import { useUpgradeModal, UsageBar } from '@/components/ui/plan-usage';
+import Link from 'next/link';
+import { UsageBar } from '@/components/ui/plan-usage';
 import { purchaseAddon } from '@/lib/plans/actions';
 import { ADDON_PACKAGES } from '@/lib/plans/packages';
 import { PLANS, formatLimit } from '@/lib/plans/config';
@@ -30,7 +31,6 @@ function Spinner() {
 }
 
 export function PlanBillingSettings({ usage, isAdmin }: PlanBillingProps) {
-  const { open } = useUpgradeModal();
   const plan = PLANS[usage.plan];
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [addonMsg, setAddonMsg] = useState('');
@@ -82,12 +82,12 @@ export function PlanBillingSettings({ usage, isAdmin }: PlanBillingProps) {
         </div>
 
         {isAdmin && (
-          <button
-            onClick={() => open()}
+          <Link
+            href="/upgrade"
             className="shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
           >
             {plan.monthlyUsd === 0 ? 'Upgrade plan' : 'Change plan'}
-          </button>
+          </Link>
         )}
       </div>
 

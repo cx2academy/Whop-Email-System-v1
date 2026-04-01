@@ -11,6 +11,52 @@ import { formatLimit } from '@/lib/plans/config';
 import type { WorkspaceUsage } from '@/lib/plans/gates';
 import type { UpgradeRequiredPayload } from '@/lib/plans/gates';
 
+import { createContext, useContext, useState } from 'react';
+
+// ── Upgrade Modal Context ─────────────────────────────────────────────────────
+
+interface UpgradeModalContextType {
+  isOpen: boolean;
+  open: (suggestedPlan?: string) => void;
+  close: () => void;
+}
+
+const UpgradeModalContext = createContext<UpgradeModalContextType | undefined>(undefined);
+
+export function UpgradeModalProvider({ children }: { children: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // Since we moved to a full-screen upgrade page, we can either:
+  // 1. Keep the modal for quick upgrades
+  // 2. Redirect to /upgrade when open() is called
+  // For now, we'll just keep the state to avoid breaking existing code.
+  
+  const open = () => setIsOpen(true);
+  const close = () => setIsOpen(false);
+
+  return (
+    <UpgradeModalContext.Provider value={{ isOpen, open, close }}>
+      {children}
+      {/* If you still want a modal, you'd render it here. 
+          But we are prioritizing the full-screen /upgrade page. */}
+    </UpgradeModalContext.Provider>
+  );
+}
+
+export function useUpgradeModal() {
+  const context = useContext(UpgradeModalContext);
+  if (context === undefined) {
+    // Return a fallback that redirects to /upgrade to ensure the app doesn't crash
+    // and still achieves the goal of getting the user to the upgrade page.
+    return {
+      isOpen: false,
+      open: () => { window.location.href = '/upgrade'; },
+      close: () => {},
+    };
+  }
+  return context;
+}
+
 // ── UsageBar ──────────────────────────────────────────────────────────────────
 
 export function UsageBar({
