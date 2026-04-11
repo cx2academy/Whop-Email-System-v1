@@ -59,7 +59,8 @@ export default async function DashboardPage() {
     onboardingDismissedAt: user?.onboardingDismissedAt,
   });
 
-  const isNewUser = onboarding.shouldShow && onboarding.completedCount < 2;
+  const isPreview = process.env.PREVIEW_MODE === "true" || process.env.NEXT_PUBLIC_PREVIEW_MODE === "true";
+  const isNewUser = onboarding.shouldShow && onboarding.completedCount < 2 && !isPreview;
 
   // ── New user view: onboarding fills the screen ──────────────────────────
   if (isNewUser && user?.email) {
@@ -117,7 +118,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Onboarding (partial progress) */}
-      {onboarding.shouldShow && !isNewUser && user?.email && (
+      {onboarding.shouldShow && !isNewUser && user?.email && !isPreview && (
         <OnboardingChecklist
           steps={onboarding.steps}
           completedCount={onboarding.completedCount}

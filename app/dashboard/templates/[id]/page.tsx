@@ -6,17 +6,20 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronLeftIcon } from 'lucide-react';
+import DOMPurify from 'isomorphic-dompurify';
 import { notFound } from 'next/navigation';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { getTemplateById, CATEGORY_LABELS, estimateReadingTime } from '@/lib/templates/library';
 import { parseVariables, PREVIEW_VARIABLES, extractVariables } from '@/lib/templates/variable-parser';
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const t = getTemplateById(params.id);
   return { title: t ? `Preview: ${t.name}` : 'Template' };
 }
 
-export default async function TemplatePreviewPage({ params }: { params: { id: string } }) {
+export default async function TemplatePreviewPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { workspaceRole } = await requireWorkspaceAccess();
   const template = getTemplateById(params.id);
   if (!template) notFound();
@@ -99,7 +102,7 @@ export default async function TemplatePreviewPage({ params }: { params: { id: st
           <p className="text-xs font-medium text-muted-foreground">Email preview (with sample data)</p>
         </div>
         <div className="bg-white p-6">
-          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }} />
         </div>
       </div>
 

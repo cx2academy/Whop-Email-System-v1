@@ -56,7 +56,7 @@ export class PlanLimitError {
   toActionError() {
     return {
       success:         false as const,
-      upgradeRequired: true  as const,
+      error:           'plan_limit_reached' as const,
       ...this.payload,
     };
   }
@@ -64,8 +64,7 @@ export class PlanLimitError {
   /** For API routes: return a JSON-serialisable body */
   toResponse() {
     return {
-      error:           'plan_limit_reached',
-      upgradeRequired: true,
+      error:           'plan_limit_reached' as const,
       ...this.payload,
     };
   }
@@ -77,7 +76,7 @@ export interface GateAllowed {
   limit?:        number | null;
 }
 
-export type GateResult = GateAllowed | PlanLimitError;
+export type GateResult = GateAllowed | (PlanLimitError & { allowed: false });
 
 // ---------------------------------------------------------------------------
 // Workspace plan loader (with add-on bonuses applied)

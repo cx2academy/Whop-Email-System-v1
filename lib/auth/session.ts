@@ -13,9 +13,31 @@
  */
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { db } from "@/lib/db/client";
 import type { WorkspaceMemberRole } from "@prisma/client";
+
+// ---------------------------------------------------------------------------
+// Bypass Helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Checks if the preview/staging bypass should be active.
+ * In production, it requires a 'staging_bypass' cookie matching STAGING_BYPASS_TOKEN.
+ */
+export async function isBypassActive(): Promise<boolean> {
+  const isDev = process.env.NODE_ENV === "development" && process.env.PREVIEW_MODE === "true";
+  if (isDev) return true;
+
+  if (process.env.NEXT_PUBLIC_STAGING_MODE === "true" && process.env.STAGING_BYPASS_TOKEN) {
+    const cookieStore = await cookies();
+    const bypassCookie = cookieStore.get("staging_bypass")?.value;
+    return bypassCookie === process.env.STAGING_BYPASS_TOKEN;
+  }
+
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,6 +85,16 @@ export async function getSession() {
  * @returns Verified { userId, workspaceId, workspaceRole }
  */
 export async function requireWorkspaceAccess(): Promise<AuthenticatedContext> {
+  // --- PREVIEW MODE BYPASS ---
+  if (await isBypassActive()) {
+    return {
+      userId: "preview-user-id",
+      workspaceId: "preview-workspace-id",
+      workspaceRole: "OWNER",
+    };
+  }
+  // --- END PREVIEW MODE BYPASS ---
+
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -103,6 +135,13 @@ export async function requireWorkspaceAccess(): Promise<AuthenticatedContext> {
  * @throws AuthError if unauthenticated or unauthorized
  */
 export async function requireWorkspaceAccessOrThrow(): Promise<AuthenticatedContext> {
+  // --- PREVIEW MODE BYPASS ---
+  if (await isBypassActive()) {
+    // Reuse the logic from requireWorkspaceAccess
+    return requireWorkspaceAccess();
+  }
+  // --- END PREVIEW MODE BYPASS ---
+
   const session = await auth();
 
   if (!session?.user?.id) {

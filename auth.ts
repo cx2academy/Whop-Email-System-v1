@@ -121,11 +121,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       // `user` is only present on the initial sign-in
       if (user?.id) {
-        token.userId = user.id;
+        token.sub = user.id;
+      }
 
-        // Fetch workspace membership and embed in the token
+      // Always ensure workspaceId is in the token if we have a userId
+      // This handles cases where the initial sign-in might have missed it
+      // or where we want to refresh the token without a full sign-out.
+      if (token.sub && !token.workspaceId) {
         const membership = await db.workspaceMembership.findFirst({
-          where: { userId: user.id },
+          where: { userId: token.sub as string },
           orderBy: { createdAt: "desc" },
           select: { workspaceId: true, role: true },
         });

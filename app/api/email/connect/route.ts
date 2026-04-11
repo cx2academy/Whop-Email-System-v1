@@ -113,8 +113,8 @@ export async function POST(
   }
 
   // --- 2. Rate limit: 10 per workspace per hour ---
-  const rl = await rateLimit(`email:connect:${workspaceId}`, 10, 3600);
-  if (!rl.allowed) {
+  const rl = rateLimit({ limit: 10, windowMs: 3600_000 }).check(`email:connect:${workspaceId}`);
+  if (!rl.success) {
     return NextResponse.json(
       { success: false, error: 'Too many connection attempts. Try again in an hour.' },
       { status: 429 }

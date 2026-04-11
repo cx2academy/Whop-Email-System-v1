@@ -71,10 +71,8 @@ export default async function NewCampaignPage({ searchParams }: Props) {
     }
   } else if (params.generatedSubject) {
     templateInitial = {
-      subject:  decodeURIComponent(params.generatedSubject),
-      htmlBody: params.generatedHtml
-        ? decodeURIComponent(params.generatedHtml)
-        : undefined,
+      subject:  params.generatedSubject,
+      htmlBody: params.generatedHtml,
     };
   }
 

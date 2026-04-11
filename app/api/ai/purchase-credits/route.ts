@@ -34,6 +34,7 @@ export const CREDIT_PACKAGES = {
     credits:  25,
     priceUsd: 4.99,
     popular:  false,
+    productId: process.env.WHOP_ADDON_AI_STARTER_PRODUCT_ID,
   },
   pro: {
     id:       'pro',
@@ -41,6 +42,7 @@ export const CREDIT_PACKAGES = {
     credits:  100,
     priceUsd: 14.99,
     popular:  true,
+    productId: process.env.WHOP_ADDON_AI_PRO_PRODUCT_ID,
   },
   unlimited: {
     id:       'unlimited',
@@ -48,6 +50,7 @@ export const CREDIT_PACKAGES = {
     credits:  500,
     priceUsd: 49.99,
     popular:  false,
+    productId: process.env.WHOP_ADDON_AI_UNLIMITED_PRODUCT_ID,
   },
 } as const;
 
@@ -78,7 +81,7 @@ export async function GET() {
 }
 
 // ---------------------------------------------------------------------------
-// POST — simulate credit purchase (swap for real payment gate later)
+// POST — generate Whop checkout URL
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
@@ -117,30 +120,17 @@ export async function POST(req: NextRequest) {
   }
 
   const pkg = CREDIT_PACKAGES[packageId as CreditPackageId];
+  
+  if (!pkg.productId) {
+    return NextResponse.json({ error: 'Product ID not configured for this package.' }, { status: 500 });
+  }
 
-  // -------------------------------------------------------------------------
-  // TODO: Replace this block with real payment verification before going live
-  //
-  // Stripe example:
-  //   const session = await stripe.checkout.sessions.retrieve(sessionId);
-  //   if (session.payment_status !== 'paid') return error;
-  //
-  // Whop example:
-  //   verify the Whop purchase webhook payload before calling addCredits()
-  // -------------------------------------------------------------------------
-
-  const { newBalance } = await addCredits(
-    workspaceId,
-    pkg.credits,
-    'purchase',
-    `pkg:${pkg.id}`
-  );
+  const appUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || 'http://localhost:3000';
+  const callbackUrl = `${appUrl}/api/ai/purchase-credits/success?pkg=${packageId}&workspace=${workspaceId}`;
+  const checkoutUrl = `https://whop.com/checkout/${pkg.productId}/?redirectUrl=${encodeURIComponent(callbackUrl)}`;
 
   return NextResponse.json({
     success: true,
-    creditsAdded: pkg.credits,
-    newBalance,
-    package: pkg,
-    message: `${pkg.credits} credits added to your workspace.`,
+    checkoutUrl,
   });
 }

@@ -5,13 +5,15 @@
  * Phase 5 fix: added Templates nav item between Campaigns and Contacts.
  */
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   HomeIcon, MailIcon, UsersIcon, Workflow,
   BarChart2Icon, SettingsIcon, ShieldCheckIcon,
   FormInputIcon, LayoutTemplateIcon,
-  ChevronLeft, ChevronRight, ZapIcon
+  ChevronLeft, ChevronRight, ZapIcon, XIcon,
+  FilterIcon, CircleDollarSignIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar-context';
@@ -23,6 +25,7 @@ const NAV_GROUPS = [
       { href: '/dashboard',                label: 'Home',         icon: HomeIcon,            exact: true },
       { href: '/dashboard/campaigns',      label: 'Campaigns',    icon: MailIcon },
       { href: '/dashboard/contacts',       label: 'Contacts',     icon: UsersIcon },
+      { href: '/dashboard/segments',       label: 'Segments',     icon: FilterIcon },
     ]
   },
   {
@@ -37,6 +40,7 @@ const NAV_GROUPS = [
     label: 'Insights',
     items: [
       { href: '/dashboard/analytics',      label: 'Analytics',    icon: BarChart2Icon },
+      { href: '/dashboard/revenue',        label: 'Revenue',      icon: CircleDollarSignIcon },
       { href: '/dashboard/deliverability', label: 'Inbox health', icon: ShieldCheckIcon },
     ]
   }
@@ -49,6 +53,17 @@ const BOTTOM_NAV = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar } = useSidebar();
+  const [isPlanDismissed, setIsPlanDismissed] = useState(true); // Default true to prevent hydration mismatch, then set false
+
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem('planDismissed') === 'true';
+    setIsPlanDismissed(dismissed);
+  }, []);
+
+  function dismissPlan() {
+    sessionStorage.setItem('planDismissed', 'true');
+    setIsPlanDismissed(true);
+  }
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
@@ -206,34 +221,43 @@ export function DashboardSidebar() {
         </ul>
 
         {/* Plan badge */}
-        {!isCollapsed ? (
-          <div
-            className="flex flex-col gap-3 rounded-xl p-4"
-            style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
-          >
-            <div>
-              <p className="text-[13px] font-semibold text-foreground" style={{ color: 'var(--text-primary)' }}>Free plan</p>
-              <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>0 / 10,000 emails</p>
+        {!isPlanDismissed && (
+          !isCollapsed ? (
+            <div
+              className="flex flex-col gap-3 rounded-xl p-4 relative"
+              style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
+            >
+              <button 
+                onClick={dismissPlan}
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
+                title="Dismiss"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+              <div>
+                <p className="text-[13px] font-semibold text-foreground" style={{ color: 'var(--text-primary)' }}>Free plan</p>
+                <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>0 / 10,000 emails</p>
+              </div>
+              <Link
+                href="/upgrade"
+                className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-[13px] font-semibold text-white transition-all hover:opacity-90"
+                style={{ background: '#16A34A', boxShadow: '0 2px 8px rgba(22, 163, 74, 0.2)' }}
+              >
+                Upgrade plan
+              </Link>
             </div>
-            <Link
-              href="/upgrade"
-              className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-[13px] font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: '#16A34A', boxShadow: '0 2px 8px rgba(22, 163, 74, 0.2)' }}
-            >
-              Upgrade plan
-            </Link>
-          </div>
-        ) : (
-          <div className="flex justify-center">
-             <Link
-              href="/upgrade"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-all hover:opacity-90"
-              style={{ background: '#16A34A' }}
-              title="Upgrade plan"
-            >
-              <ZapIcon className="h-4 w-4" />
-            </Link>
-          </div>
+          ) : (
+            <div className="flex justify-center">
+               <Link
+                href="/upgrade"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-white transition-all hover:opacity-90"
+                style={{ background: '#16A34A' }}
+                title="Upgrade plan"
+              >
+                <ZapIcon className="h-4 w-4" />
+              </Link>
+            </div>
+          )
         )}
       </div>
     </aside>

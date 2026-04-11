@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     // Role check
     if (workspaceRole === "MEMBER") {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json<ApiResponse<any>>(
         { success: false, error: "Admin or Owner role required", code: "UNAUTHORIZED" },
         { status: 403 }
       );
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     // Rate limit per workspace
     const rateCheck = syncLimiter.check(`sync:${workspaceId}`);
     if (!rateCheck.success) {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json<ApiResponse<any>>(
         {
           success: false,
           error: "Sync rate limit exceeded. You can trigger up to 5 syncs per hour.",
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!workspace?.whopApiKey) {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json<ApiResponse<any>>(
         {
           success: false,
           error: "No Whop API key configured. Add it in Settings.",
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (activeSyncs > 0) {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json<ApiResponse<any>>(
         {
           success: false,
           error: "A sync is already running for this workspace.",
@@ -84,8 +84,15 @@ export async function POST(req: NextRequest) {
       triggeredBy: userId,
     });
 
-    return NextResponse.json<ApiResponse>({
-      success: result.status !== "FAILED",
+    if (result.status === "FAILED") {
+      return NextResponse.json<ApiResponse<any>>({
+        success: false,
+        error: "Sync failed",
+      });
+    }
+
+    return NextResponse.json<ApiResponse<any>>({
+      success: true,
       data: {
         syncLogId: result.syncLogId,
         status: result.status,
@@ -98,13 +105,13 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json<ApiResponse<any>>(
         { success: false, error: err.message, code: err.code },
         { status: err.code === "UNAUTHENTICATED" ? 401 : 403 }
       );
     }
     console.error("[POST /api/sync]", err);
-    return NextResponse.json<ApiResponse>(
+    return NextResponse.json<ApiResponse<any>>(
       { success: false, error: "Internal server error" },
       { status: 500 }
     );

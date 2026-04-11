@@ -100,12 +100,15 @@ export async function registerUser(
 
   const { name, email, password, workspaceName } = parsed.data;
 
+  console.log(`[registerUser] Starting registration for ${email}`);
+
   // Check if email already in use
   const existing = await db.user.findUnique({
     where: { email },
     select: { id: true },
   });
   if (existing) {
+    console.log(`[registerUser] Email ${email} already in use`);
     return {
       success: false,
       error: "An account with this email already exists",
@@ -113,11 +116,15 @@ export async function registerUser(
     };
   }
 
+  console.log(`[registerUser] Hashing password...`);
   // Hash password
   const passwordHash = await hash(password, 12);
+  console.log(`[registerUser] Password hashed`);
 
+  console.log(`[registerUser] Starting database transaction...`);
   // Create user + workspace + membership in a transaction
   await db.$transaction(async (tx) => {
+    console.log(`[registerUser] Creating user...`);
     const user = await tx.user.create({
       data: {
         name,
@@ -126,6 +133,7 @@ export async function registerUser(
       },
     });
 
+    console.log(`[registerUser] Generating workspace slug...`);
     // Generate unique workspace slug
     const baseSlug = slugify(workspaceName);
     const count = await tx.workspace.count({
@@ -133,6 +141,7 @@ export async function registerUser(
     });
     const slug = count === 0 ? baseSlug : `${baseSlug}-${count}`;
 
+    console.log(`[registerUser] Creating workspace...`);
     const workspace = await tx.workspace.create({
       data: {
         name: workspaceName,
@@ -140,6 +149,7 @@ export async function registerUser(
       },
     });
 
+    console.log(`[registerUser] Creating workspace membership...`);
     await tx.workspaceMembership.create({
       data: {
         workspaceId: workspace.id,
@@ -148,6 +158,7 @@ export async function registerUser(
       },
     });
   });
+  console.log(`[registerUser] Transaction complete`);
 
   return { success: true, data: { redirectTo: "/auth/login" } };
 }

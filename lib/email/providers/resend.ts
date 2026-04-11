@@ -51,6 +51,7 @@ export class ResendProvider implements EmailProvider {
         html: options.html,
         text: options.text,
         ...(options.replyTo && { reply_to: options.replyTo }),
+        ...(options.scheduledAt && { scheduled_at: options.scheduledAt }),
         headers: options.idempotencyKey
           ? { 'X-Idempotency-Key': options.idempotencyKey }
           : undefined,

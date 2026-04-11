@@ -72,7 +72,7 @@ export default function StepSequence({ onNext, aiCredits }: Props) {
       // Full path — write all 5 emails and create campaigns
       setStatus('Writing your 5 emails with AI…');
       const brief: CampaignBrief = { product, audience, tone: 'friendly', goal };
-      const matRes = await materializeSequence({ sequence: seqRes.data as any, brief });
+      const matRes = await materializeSequence({ sequence: seqRes.data as any, brief, audienceTagIds: [] });
       if (!matRes.success) { setPhase('error'); setError(matRes.error ?? 'Failed to create campaigns.'); return; }
 
       const firstId = matRes.data?.campaigns[0]?.id ?? null;

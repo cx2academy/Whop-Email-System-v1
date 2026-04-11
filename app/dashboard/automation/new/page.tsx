@@ -136,8 +136,8 @@ function useFlowState(initial: FlowStep[]) {
     );
   }, []);
 
-  const updateStep = useCallback((id: string, config: Record<string, unknown>) => {
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, config } : s)));
+  const updateStep = useCallback((id: string, config: any) => {
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, config } as FlowStep : s)));
   }, []);
 
   const updateBranchStep = useCallback(
@@ -735,6 +735,13 @@ export default function NewWorkflowPage() {
   const [upgradePayload, setUpgradePayload] = useState<Parameters<typeof UpgradeBanner>[0]['payload'] | null>(null);
   const [products, setProducts] = useState<WhopProduct[]>([]);
 
+  // AI Builder state
+  const [buildMode, setBuildMode] = useState<'manual' | 'ai'>('ai');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiBuilding, setIsAiBuilding] = useState(false);
+  const [generatedWorkflow, setGeneratedWorkflow] = useState<any | null>(null);
+  const [enableImmediately, setEnableImmediately] = useState(false);
+
   const { steps, addAt, addToBranch, updateStep, updateBranchStep, removeStep, removeBranchStep } = useFlowState([
     { id: uid(), type: 'TRIGGER', config: { triggerType: 'membership_activated' } },
   ]);
@@ -766,7 +773,7 @@ export default function NewWorkflowPage() {
       const wf = await createWorkflow(name.trim());
       if (!wf.success) {
         if (isUpgradeRequired(wf)) setUpgradePayload(wf);
-        else setError(wf.error ?? 'Failed to create workflow');
+        else setError((wf as any).error ?? 'Failed to create workflow');
         return;
       }
       for (let i = 0; i < steps.length; i++) {
@@ -778,6 +785,51 @@ export default function NewWorkflowPage() {
         );
       }
       router.push(`/dashboard/automation/${wf.data.workflowId}`);
+    });
+  }
+
+  async function handleAiBuild() {
+    if (!aiPrompt.trim()) return;
+    setIsAiBuilding(true);
+    setError('');
+    try {
+      const res = await fetch('/api/ai/build-automation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: aiPrompt }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedWorkflow(data.data);
+        setName(data.data.name);
+      } else {
+        setError(data.error || 'Failed to build automation');
+      }
+    } catch (err) {
+      setError('An error occurred while building the automation');
+    } finally {
+      setIsAiBuilding(false);
+    }
+  }
+
+  async function handleMaterializeAiWorkflow() {
+    if (!generatedWorkflow) return;
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/ai/materialize-automation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workflow: generatedWorkflow, isEnabled: enableImmediately }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          router.push(`/dashboard/automation/${data.data.workflowId}`);
+        } else {
+          setError(data.error || 'Failed to create workflow');
+        }
+      } catch (err) {
+        setError('An error occurred while creating the workflow');
+      }
     });
   }
 
@@ -798,33 +850,158 @@ export default function NewWorkflowPage() {
           </p>
         </div>
 
-        {/* Flow nodes */}
-        <div className="space-y-0">
-          {steps.map((step, i) => (
-            <FlowNode
-              key={step.id}
-              step={step}
-              isFirst={i === 0}
-              products={products}
-              onUpdate={(config) => updateStep(step.id, config)}
-              onRemove={() => removeStep(step.id)}
-              onAddAfter={(type) => addAt(step.id, type)}
-              onAddToBranch={(branch, type) => addToBranch(step.id, branch, type)}
-              onUpdateBranchStep={(branch, stepId, config) => updateBranchStep(step.id, branch, stepId, config)}
-              onRemoveBranchStep={(branch, stepId) => removeBranchStep(step.id, branch, stepId)}
-            />
-          ))}
+        {/* Mode Switcher */}
+        <div className="mb-6 flex gap-4 border-b pb-4" style={{ borderColor: 'var(--sidebar-border)' }}>
+          <button
+            onClick={() => setBuildMode('ai')}
+            className={`text-sm font-medium pb-2 -mb-[17px] border-b-2 transition-colors ${buildMode === 'ai' ? 'border-[var(--brand)] text-[var(--brand)]' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+          >
+            ✨ Build with AI
+          </button>
+          <button
+            onClick={() => setBuildMode('manual')}
+            className={`text-sm font-medium pb-2 -mb-[17px] border-b-2 transition-colors ${buildMode === 'manual' ? 'border-[var(--brand)] text-[var(--brand)]' : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
+          >
+            Build manually
+          </button>
         </div>
 
-        {/* End cap */}
-        <div className="flex justify-center pt-2">
-          <div
-            className="rounded-full px-4 py-1.5 text-xs font-medium"
-            style={{ background: 'var(--surface-app)', color: 'var(--text-tertiary)', border: '1px solid var(--sidebar-border)' }}
-          >
-            Flow ends
+        {buildMode === 'ai' ? (
+          <div className="space-y-6">
+            {!generatedWorkflow ? (
+              <div className="rounded-xl p-6 space-y-4" style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}>
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                    Describe your automation in plain English...
+                  </label>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="When someone joins, wait 1 day, send a welcome email, then wait 4 days and send a tips email..."
+                    className="w-full rounded-lg p-3 text-sm min-h-[120px] resize-none focus:outline-none"
+                    style={{
+                      border: '1.5px solid var(--sidebar-border)',
+                      background: 'var(--surface-app)',
+                      color: 'var(--text-primary)',
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = 'var(--brand)')}
+                    onBlur={(e) => (e.target.style.borderColor = 'var(--sidebar-border)')}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleAiBuild}
+                    disabled={isAiBuilding || !aiPrompt.trim()}
+                    className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                    style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.22)' }}
+                  >
+                    {isAiBuilding ? 'Building...' : 'Build workflow (10 credits)'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="rounded-xl p-6 space-y-4" style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}>
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Generated Workflow</h3>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{generatedWorkflow.description}</p>
+                  
+                  {generatedWorkflow.unmappedResources.length > 0 && (
+                    <div className="rounded-lg p-3 bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm">
+                      <p className="font-semibold mb-1">Missing Resources:</p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {generatedWorkflow.unmappedResources.map((res: string, i: number) => (
+                          <li key={i}>{res}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 mt-4">
+                    <div className="flex items-center gap-3 p-3 rounded-lg border" style={{ borderColor: 'var(--sidebar-border)', background: 'var(--surface-app)' }}>
+                      <span className="text-xl">⚡</span>
+                      <div>
+                        <p className="text-sm font-medium">{generatedWorkflow.trigger.description}</p>
+                        <p className="text-xs text-muted-foreground">Trigger: {generatedWorkflow.trigger.config.event}</p>
+                      </div>
+                    </div>
+                    {generatedWorkflow.steps.map((step: any, i: number) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg border" style={{ borderColor: 'var(--sidebar-border)', background: 'var(--surface-app)' }}>
+                        <span className="text-xl">
+                          {step.type === 'DELAY' ? '⏱' : step.type === 'SEND_EMAIL' ? '📧' : step.type === 'ADD_TAG' ? '🏷' : '✨'}
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium">{step.description}</p>
+                          <p className="text-xs text-muted-foreground">Type: {step.type}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 pt-4 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
+                    <input
+                      type="checkbox"
+                      id="enableImmediately"
+                      checked={enableImmediately}
+                      onChange={(e) => setEnableImmediately(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <label htmlFor="enableImmediately" className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                      Enable immediately (start processing events)
+                    </label>
+                  </div>
+                  
+                  <div className="flex gap-3 justify-end pt-2">
+                    <button
+                      onClick={() => setGeneratedWorkflow(null)}
+                      className="rounded-lg px-4 py-2 text-sm transition-colors"
+                      style={{ color: 'var(--text-secondary)', background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
+                    >
+                      Discard
+                    </button>
+                    <button
+                      onClick={handleMaterializeAiWorkflow}
+                      disabled={isPending}
+                      className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                      style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.22)' }}
+                    >
+                      {isPending ? 'Creating...' : 'Create workflow'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Flow nodes */}
+            <div className="space-y-0">
+              {steps.map((step, i) => (
+                <FlowNode
+                  key={step.id}
+                  step={step}
+                  isFirst={i === 0}
+                  products={products}
+                  onUpdate={(config) => updateStep(step.id, config)}
+                  onRemove={() => removeStep(step.id)}
+                  onAddAfter={(type) => addAt(step.id, type)}
+                  onAddToBranch={(branch, type) => addToBranch(step.id, branch, type)}
+                  onUpdateBranchStep={(branch, stepId, config) => updateBranchStep(step.id, branch, stepId, config)}
+                  onRemoveBranchStep={(branch, stepId) => removeBranchStep(step.id, branch, stepId)}
+                />
+              ))}
+            </div>
+
+            {/* End cap */}
+            <div className="flex justify-center pt-2">
+              <div
+                className="rounded-full px-4 py-1.5 text-xs font-medium"
+                style={{ background: 'var(--surface-app)', color: 'var(--text-tertiary)', border: '1px solid var(--sidebar-border)' }}
+              >
+                Flow ends
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Right: Sidebar */}
@@ -853,32 +1030,36 @@ export default function NewWorkflowPage() {
           </div>
 
           {/* Step count summary */}
-          <div className="rounded-lg px-3 py-3 space-y-1.5" style={{ background: 'var(--surface-app)' }}>
-            <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Flow summary</p>
-            {steps.map((s) => {
-              const meta = STEP_META[s.type];
-              return (
-                <div key={s.id} className="flex items-center gap-2">
-                  <span style={{ fontSize: 12 }}>{meta.icon}</span>
-                  <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-                    {meta.label}: {stepSummary(s) || '—'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          {buildMode === 'manual' && (
+            <div className="rounded-lg px-3 py-3 space-y-1.5" style={{ background: 'var(--surface-app)' }}>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Flow summary</p>
+              {steps.map((s) => {
+                const meta = STEP_META[s.type];
+                return (
+                  <div key={s.id} className="flex items-center gap-2">
+                    <span style={{ fontSize: 12 }}>{meta.icon}</span>
+                    <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+                      {meta.label}: {stepSummary(s) || '—'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {upgradePayload && <UpgradeBanner payload={upgradePayload} />}
           {error && <p className="text-xs rounded-lg px-3 py-2 bg-red-50 text-red-600 border border-red-200">{error}</p>}
 
-          <button
-            onClick={handleSave}
-            disabled={isPending || steps.length < 2}
-            className="w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
-            style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.22)' }}
-          >
-            {isPending ? 'Saving…' : 'Save workflow'}
-          </button>
+          {buildMode === 'manual' && (
+            <button
+              onClick={handleSave}
+              disabled={isPending || steps.length < 2}
+              className="w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+              style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.22)' }}
+            >
+              {isPending ? 'Saving…' : 'Save workflow'}
+            </button>
+          )}
 
           <button
             onClick={() => router.push('/dashboard/automation')}

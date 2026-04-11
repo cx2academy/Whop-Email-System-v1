@@ -43,7 +43,7 @@ export function CampaignActions({ campaignId, status }: CampaignActionsProps) {
     if (r.success) {
       setDelivReport(r.data!);
     } else {
-      setResult({ type: "error", message: r.error ?? "Check failed" });
+      setResult({ type: "error", message: (r as any).error ?? "Check failed" });
     }
   }
 

@@ -18,12 +18,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Tag } from '@prisma/client';
 import { createCampaign, updateCampaign, sendCampaignNow } from '@/lib/campaigns/actions';
-import { createUserTemplate } from '@/lib/templates/actions';
+import { createUserTemplate, saveCampaignAsTemplate } from '@/lib/templates/actions';
+import { optimizeSubjectLine } from '@/lib/ai/actions';
 import { VisualEditor } from '@/components/email-editor/visual-editor';
 import { AiPanel } from '@/components/email-editor/ai-panel';
+import { SpamScorePanel } from '@/components/email-editor/spam-score-panel';
 import {
   ChevronLeftIcon, CheckIcon, SparklesIcon, ChevronDownIcon, PlusIcon,
-  MailIcon, MessageCircleIcon,
+  MailIcon, MessageCircleIcon, ClockIcon,
 } from 'lucide-react';
 
 interface CampaignBuilderProps {
@@ -57,6 +59,8 @@ export function CampaignBuilder({
   const [previewText, setPreviewText] = useState(initial?.previewText ?? templateInitial?.previewText ?? '');
   const [isAbTest, setIsAbTest] = useState(initial?.isAbTest ?? false);
   const [abSubjectB, setAbSubjectB] = useState(initial?.abSubjectB ?? '');
+  const [isGeneratingAb, setIsGeneratingAb] = useState(false);
+  const [abStrategy, setAbStrategy] = useState<string | null>(null);
 
   // ── Channel flags ─────────────────────────────────────────────────────────
   const [sendViaEmail, setSendViaEmail] = useState(initial?.sendViaEmail ?? true);
@@ -65,11 +69,56 @@ export function CampaignBuilder({
   // Step 2 — content
   const [htmlBody, setHtmlBody] = useState(initial?.htmlBody ?? templateInitial?.htmlBody ?? DEFAULT_HTML);
   const [showAi, setShowAi] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+
+  // AI Subject suggestions
+  const [aiSubjectPrompt, setAiSubjectPrompt] = useState('');
+  const [showAiSubject, setShowAiSubject] = useState(false);
+  const [aiSubjectOptions, setAiSubjectOptions] = useState<string[]>([]);
+  const [isGeneratingSubject, setIsGeneratingSubject] = useState(false);
 
   // Step 3 — audience + send
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(initial?.audienceTagIds ?? []);
   const [selectedSegmentIds, setSelectedSegmentIds] = useState<string[]>(initial?.audienceSegmentIds ?? []);
   const [sendResult, setSendResult] = useState<{ type: 'success' | 'partial' | 'error'; totalSent?: number; totalFailed?: number; message: string } | null>(null);
+  const [optimizeSendTime, setOptimizeSendTime] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [canSend, setCanSend] = useState(true);
+
+  async function handleAiSubject() {
+    if (!aiSubjectPrompt.trim()) return;
+    setIsGeneratingSubject(true);
+    setError(null);
+    try {
+      const res = await optimizeSubjectLine(aiSubjectPrompt, 'Email Marketing');
+      if (res.success) {
+        setAiSubjectOptions(res.data.suggestions.map((s: any) => s.subject));
+      } else {
+        setError(res.error || 'Failed to generate suggestions');
+      }
+    } catch (err) {
+      setError('AI generation failed');
+    } finally {
+      setIsGeneratingSubject(false);
+    }
+  }
+
+  async function handleSaveTemplate() {
+    if (!savedCampaignId) return;
+    setIsSavingTemplate(true);
+    try {
+      const res = await saveCampaignAsTemplate(savedCampaignId, `${subject} (Template)`);
+      if (res.success) {
+        toast.success('Campaign saved as a template!');
+      } else {
+        setError(res.error || 'Failed to save template');
+      }
+    } catch (err) {
+      setError('Failed to save template');
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  }
 
   function toggleTag(id: string) { setSelectedTagIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]); }
   function toggleSegment(id: string) { setSelectedSegmentIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]); }
@@ -102,6 +151,9 @@ export function CampaignBuilder({
           audienceSegmentIds: selectedSegmentIds,
           isAbTest,
           abSubjectB: isAbTest ? abSubjectB : undefined,
+          abTestVariantA: isAbTest ? subject : undefined,
+          abTestVariantB: isAbTest ? abSubjectB : undefined,
+          abTestSplitPercent: isAbTest ? 20 : undefined,
           sendViaEmail,
           sendViaWhopDm,
         };
@@ -121,6 +173,22 @@ export function CampaignBuilder({
     if (!id) return;
     setIsLoading(true);
     try {
+      if (optimizeSendTime) {
+        setIsOptimizing(true);
+        const res = await fetch('/api/ai/analyze-send-times', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaignId: id }),
+        });
+        const data = await res.json();
+        setIsOptimizing(false);
+        if (!res.ok || !data.success) {
+          setError(data.error || 'Failed to optimize send times');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const result = await sendCampaignNow(id);
       if (result.success && result.data) {
         setSendResult({ type: result.data.totalFailed > 0 ? 'partial' : 'success', totalSent: result.data.totalSent, totalFailed: result.data.totalFailed, message: `Sent to ${result.data.totalSent} contacts${result.data.totalFailed > 0 ? `, ${result.data.totalFailed} failed` : ''}` });
@@ -128,7 +196,7 @@ export function CampaignBuilder({
         setSendResult({ type: 'error', message: (!result.success && ((result as any).error || (result as any).message)) ? ((result as any).error ?? (result as any).message) : 'Send failed.' });
       }
     } catch { setSendResult({ type: 'error', message: 'An unexpected error occurred.' }); }
-    finally { setIsLoading(false); }
+    finally { setIsLoading(false); setIsOptimizing(false); }
   }
 
   // ── Success screen ─────────────────────────────────────────────────────
@@ -236,9 +304,60 @@ export function CampaignBuilder({
             <div className="space-y-5">
               {/* Subject */}
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-primary)' }}>
-                  Subject line
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    Subject line
+                  </label>
+                  <button
+                    onClick={() => setShowAiSubject(!showAiSubject)}
+                    className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                  >
+                    <SparklesIcon className="h-3 w-3" />
+                    AI Help
+                  </button>
+                </div>
+                
+                {showAiSubject && (
+                  <div className="mb-4 p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 space-y-3">
+                    <p className="text-xs font-medium text-indigo-900">What is this email about?</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={aiSubjectPrompt}
+                        onChange={(e) => setAiSubjectPrompt(e.target.value)}
+                        placeholder="e.g. 50% off summer sale, new course launch..."
+                        className="flex-1 rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <button
+                        onClick={handleAiSubject}
+                        disabled={isGeneratingSubject || !aiSubjectPrompt.trim()}
+                        className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {isGeneratingSubject ? '...' : 'Generate'}
+                      </button>
+                    </div>
+                    
+                    {aiSubjectOptions.length > 0 && (
+                      <div className="space-y-2 pt-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Suggestions</p>
+                        {aiSubjectOptions.map((opt, i) => (
+                          <button
+                            key={i}
+                            onClick={() => {
+                              setSubject(opt);
+                              setShowAiSubject(false);
+                              setAiSubjectOptions([]);
+                            }}
+                            className="w-full text-left p-2.5 rounded-lg bg-white border border-indigo-100 text-sm hover:border-indigo-400 transition-colors shadow-sm"
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <input
                   type="text"
                   value={subject}
@@ -455,6 +574,14 @@ export function CampaignBuilder({
                   AI assist
                 </button>
                 
+                <button
+                  onClick={handleSaveTemplate}
+                  disabled={isSavingTemplate || !savedCampaignId}
+                  className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 shadow-sm disabled:opacity-50"
+                >
+                  {isSavingTemplate ? 'Saving...' : 'Save as template'}
+                </button>
+
                 <div className="w-px h-6 bg-gray-200" />
                 
                 <button
@@ -480,7 +607,9 @@ export function CampaignBuilder({
                   <AiPanel
                     subject={subject}
                     htmlBody={htmlBody}
-                    onApply={(html) => { setHtmlBody(html); setShowAi(false); }}
+                    audienceSize={audienceSize}
+                    onApplySubject={(s) => { setSubject(s); setShowAi(false); }}
+                    onApplyBody={(html) => { setHtmlBody(html); setShowAi(false); }}
                   />
                 </div>
               )}
@@ -594,6 +723,11 @@ export function CampaignBuilder({
               )}
             </div>
 
+            {/* Spam Score Panel */}
+            <div className="mb-6">
+              <SpamScorePanel subject={subject} htmlBody={htmlBody} onScoreChange={setCanSend} />
+            </div>
+
             {/* Advanced options (A/B test) — hidden by default */}
             <div className="mb-6">
               <button
@@ -610,7 +744,7 @@ export function CampaignBuilder({
 
               {showAdvanced && (
                 <div
-                  className="mt-3 rounded-xl p-4 space-y-3"
+                  className="mt-3 rounded-xl p-4 space-y-4"
                   style={{ background: 'var(--surface-app)', border: '1px solid var(--sidebar-border)' }}
                 >
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -626,15 +760,93 @@ export function CampaignBuilder({
                     </div>
                   </label>
                   {isAbTest && (
-                    <input
-                      type="text"
-                      value={abSubjectB}
-                      onChange={(e) => setAbSubjectB(e.target.value)}
-                      placeholder="Subject line B"
-                      className="w-full rounded-lg px-3.5 py-2.5 text-sm focus:outline-none"
-                      style={{ border: '1.5px solid var(--sidebar-border)', background: 'var(--surface-card)', color: 'var(--text-primary)' }}
-                    />
+                    <div className="space-y-3 pl-7">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setIsGeneratingAb(true);
+                            try {
+                              const res = await fetch('/api/ai/ab-test', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ subject, htmlBody }),
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                setSubject(data.data.variantA);
+                                setAbSubjectB(data.data.variantB);
+                                setAbStrategy(data.data.strategy);
+                              } else {
+                                setError(data.error || 'Failed to generate variants');
+                              }
+                            } catch (err) {
+                              setError('Failed to generate variants');
+                            } finally {
+                              setIsGeneratingAb(false);
+                            }
+                          }}
+                          disabled={isGeneratingAb || !subject || !htmlBody}
+                          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 disabled:opacity-50"
+                        >
+                          <SparklesIcon className="h-3.5 w-3.5" />
+                          {isGeneratingAb ? 'Generating...' : 'Generate Variants with AI (2 credits)'}
+                        </button>
+                      </div>
+                      
+                      {abStrategy && (
+                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-800">
+                          <span className="font-semibold">AI Strategy:</span> {abStrategy}
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-600">Variant A</label>
+                        <input
+                          type="text"
+                          value={subject}
+                          onChange={(e) => setSubject(e.target.value)}
+                          placeholder="Subject line A"
+                          className="w-full rounded-lg px-3.5 py-2.5 text-sm focus:outline-none"
+                          style={{ border: '1.5px solid var(--sidebar-border)', background: 'var(--surface-card)', color: 'var(--text-primary)' }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-600">Variant B</label>
+                        <input
+                          type="text"
+                          value={abSubjectB}
+                          onChange={(e) => setAbSubjectB(e.target.value)}
+                          placeholder="Subject line B"
+                          className="w-full rounded-lg px-3.5 py-2.5 text-sm focus:outline-none"
+                          style={{ border: '1.5px solid var(--sidebar-border)', background: 'var(--surface-card)', color: 'var(--text-primary)' }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        We'll send Variant A to 20% of your list, and Variant B to another 20%. After 2 hours, the winner will be sent to the remaining 60%.
+                      </p>
+                    </div>
                   )}
+
+                  <div className="w-full h-px" style={{ background: 'var(--sidebar-border)' }} />
+
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={optimizeSendTime}
+                      onChange={(e) => setOptimizeSendTime(e.target.checked)}
+                      className="h-4 w-4 rounded accent-[#22C55E]"
+                    />
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+                        <ClockIcon className="h-4 w-4 text-blue-500" />
+                        Optimize send time per contact (3 credits)
+                      </p>
+                      <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                        Analyze historical opens to send when each person is most likely to engage.
+                      </p>
+                    </div>
+                  </label>
                 </div>
               )}
             </div>
@@ -651,11 +863,11 @@ export function CampaignBuilder({
               </button>
               <button
                 onClick={handleSend}
-                disabled={isLoading || !savedCampaignId}
+                disabled={isLoading || !savedCampaignId || !canSend}
                 className="flex items-center gap-2 rounded-lg px-8 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
                 style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.3)' }}
               >
-                {isLoading ? 'Sending...' : 'Send campaign'}
+                {isOptimizing ? 'Analyzing contacts...' : isLoading ? 'Sending...' : 'Send campaign'}
               </button>
             </div>
           </div>

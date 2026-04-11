@@ -16,7 +16,8 @@
  * the balance in local state.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { LOW_CREDIT_THRESHOLD } from '@/lib/ai/credits';
 import type { CreditPackageId } from '@/app/api/ai/purchase-credits/route';
 
@@ -89,12 +90,12 @@ function PurchaseModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ packageId: pkgId }),
       });
-      const data = await res.json() as { success?: boolean; newBalance?: number; error?: string };
-      if (!res.ok || !data.success) {
+      const data = await res.json() as { success?: boolean; checkoutUrl?: string; error?: string };
+      if (!res.ok || !data.success || !data.checkoutUrl) {
         setError(data.error ?? 'Purchase failed.');
         return;
       }
-      onPurchased(data.newBalance!);
+      window.location.href = data.checkoutUrl;
     } catch {
       setError('Network error. Try again.');
     } finally {
@@ -201,6 +202,20 @@ function PurchaseModal({
 export function AiCreditBadge({ initialBalance }: AiCreditsProps) {
   const [balance, setBalance] = useState(initialBalance);
   const [showModal, setShowModal] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams?.get('credit_success') === '1') {
+      setShowSuccess(true);
+      // Remove query param to avoid showing it again on refresh
+      const url = new URL(window.location.href);
+      url.searchParams.delete('credit_success');
+      window.history.replaceState(null, '', url.toString());
+      
+      setTimeout(() => setShowSuccess(false), 5000);
+    }
+  }, [searchParams]);
 
   const isLow  = balance > 0 && balance <= LOW_CREDIT_THRESHOLD;
   const isEmpty = balance === 0;
@@ -213,6 +228,11 @@ export function AiCreditBadge({ initialBalance }: AiCreditsProps) {
 
   return (
     <>
+      {showSuccess && (
+        <div className="fixed top-4 right-4 z-50 rounded-md bg-green-500 px-4 py-2 text-sm font-medium text-white shadow-lg animate-in fade-in slide-in-from-top-2">
+          Credits added!
+        </div>
+      )}
       <button
         onClick={() => setShowModal(true)}
         className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted ${badgeStyle}`}

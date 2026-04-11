@@ -16,6 +16,7 @@ import { formatNumber, formatDate } from '@/lib/utils';
 import {
   UsersIcon, MailIcon, BarChart2Icon,
   MousePointerClickIcon, TrendingUpIcon, UserMinusIcon,
+  AlertTriangleIcon, InfoIcon, ArrowUpRightIcon
 } from 'lucide-react';
 
 export const metadata: Metadata = { title: 'Analytics' };
@@ -35,6 +36,7 @@ export default async function AnalyticsPage() {
     newContacts60to30d,
     unsubscribed30d,
     totalSent30dForUnsub,
+    insights,
   ] = await Promise.all([
     db.emailCampaign.findMany({
       where:   { workspaceId, status: 'COMPLETED' },
@@ -55,6 +57,17 @@ export default async function AnalyticsPage() {
     // Unsubscribes
     db.contact.count({ where: { workspaceId, status: 'UNSUBSCRIBED', unsubscribedAt: { gte: thirtyDaysAgo } } }),
     db.emailSend.count({ where: { workspaceId, sentAt: { gte: thirtyDaysAgo } } }),
+    // Insights
+    db.campaignInsight.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: {
+        campaign: {
+          select: { name: true, sentAt: true }
+        }
+      }
+    }),
   ]);
 
   const hasData = campaigns.length > 0;
@@ -102,6 +115,61 @@ export default async function AnalyticsPage() {
           Campaign performance across all sends
         </p>
       </div>
+
+      {/* ── Insights Feed ───────────────────────────────────────────────── */}
+      {insights.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>AI Insights</h2>
+          <div className="grid gap-4">
+            {insights.map((insight) => (
+              <div
+                key={insight.id}
+                className="rounded-xl p-5 flex gap-4 items-start"
+                style={{
+                  background: 'var(--surface-card)',
+                  border: '1px solid var(--sidebar-border)'
+                }}
+              >
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{
+                    background: insight.type === 'unsubscribe_risk' ? '#FEF2F2' :
+                                insight.type === 'strong_performer' ? '#F0FDF4' : '#EFF6FF',
+                    color: insight.type === 'unsubscribe_risk' ? '#DC2626' :
+                           insight.type === 'strong_performer' ? '#16A34A' : '#3B82F6'
+                  }}
+                >
+                  {insight.type === 'unsubscribe_risk' && <AlertTriangleIcon className="h-5 w-5" />}
+                  {insight.type === 'strong_performer' && <ArrowUpRightIcon className="h-5 w-5" />}
+                  {insight.type === 'low_engagement' && <InfoIcon className="h-5 w-5" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-4 mb-1">
+                    <h3 className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>
+                      {insight.headline}
+                    </h3>
+                    <Link
+                      href={`/dashboard/campaigns/${insight.campaignId}`}
+                      className="text-xs font-medium hover:underline shrink-0"
+                      style={{ color: 'var(--brand)' }}
+                    >
+                      View campaign
+                    </Link>
+                  </div>
+                  <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    {insight.insight}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    <span className="font-medium truncate">{insight.campaign.name}</span>
+                    <span>•</span>
+                    <span>{insight.campaign.sentAt ? formatDate(insight.campaign.sentAt) : 'Unknown date'}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── 6 KPI cards ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

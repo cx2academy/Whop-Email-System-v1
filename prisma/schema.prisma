@@ -120,6 +120,7 @@ model Workspace {
   plan            WorkspacePlan @default(FREE)
   monthlyEmailCap Int           @default(1000)
   aiCredits       Int           @default(10)
+  aiCreditsLastReset DateTime   @default(now())
 
   // Whop billing fields
   whopMembershipId   String?
@@ -140,6 +141,10 @@ model Workspace {
   abuseFlagged        Boolean   @default(false)
   abuseFlaggedReason  String?
   abuseFlaggedAt      DateTime?
+
+  // AI Brand Voice
+  voiceProfile        String?   @db.Text
+  voiceProfileBuiltAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -162,6 +167,7 @@ model Workspace {
   domainSearchLogs    DomainSearchLog[]
   aiCreditLogs        AiCreditLog[]
   addons              WorkspaceAddon[]
+  campaignInsights    CampaignInsight[]
 
   @@index([slug])
   @@map("workspaces")
@@ -223,6 +229,10 @@ model Contact {
 
   unsubscribedAt DateTime?
   unsubscribeIp  String?
+
+  peakEngagementHour   Int?
+  peakEngagementDay    Int?
+  engagementAnalyzedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -304,10 +314,27 @@ model EmailCampaign {
   audienceTagIds     String[]
   audienceSegmentIds String[]
 
+  sendTimeOptimized Boolean @default(false)
+
   isAbTest        Boolean @default(false)
   templateId      String?
+  sequenceId      String?
+  isApproved      Boolean @default(false)
   abSubjectB      String?
   abWinnerVariant String?
+
+  abTestVariantA      String?
+  abTestVariantB      String?
+  abTestSplitPercent  Int @default(20)
+  abTestWinnerPicked  Boolean @default(false)
+  abTestWinnerSubject String?
+  abTestWinnerPickedAt DateTime?
+  abTestSentACount    Int @default(0)
+  abTestSentBCount    Int @default(0)
+  abTestOpenedACount  Int @default(0)
+  abTestOpenedBCount  Int @default(0)
+  abTestStatus        String @default("idle")
+  abTestRemainingContactIds String[]
 
   scheduledAt DateTime?
   sentAt      DateTime?
@@ -318,6 +345,7 @@ model EmailCampaign {
   totalClicked    Int @default(0)
   totalBounced    Int @default(0)
   totalFailed     Int @default(0)
+  totalUnsubscribed Int @default(0)
   totalRevenue    Int @default(0)
 
   createdAt DateTime @default(now())
@@ -328,11 +356,28 @@ model EmailCampaign {
   attributions         RevenueAttribution[]
   deliverabilityReport DeliverabilityReport?
   inboxTestResults     InboxTestResult[]
+  insight              CampaignInsight?
 
   @@index([workspaceId])
   @@index([workspaceId, status])
   @@index([scheduledAt])
   @@map("email_campaigns")
+}
+
+model CampaignInsight {
+  id          String @id @default(cuid())
+  workspaceId String
+  campaignId  String @unique
+  type        String  // 'unsubscribe_risk' | 'low_engagement' | 'strong_performer'
+  headline    String
+  insight     String  // 2-3 sentence analysis
+  riskFactors String  // JSON: string[]
+  confidence  String  // 'high' | 'medium' | 'low'
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign    EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  @@index([workspaceId])
+  @@map("campaign_insights")
 }
 
 enum CampaignType {

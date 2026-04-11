@@ -8,26 +8,46 @@
 
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { PlusIcon, SparklesIcon } from 'lucide-react';
+import { SparklesIcon } from 'lucide-react';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { getCampaigns } from '@/lib/campaigns/actions';
-import { formatDate, formatNumber } from '@/lib/utils';
-import type { CampaignStatus } from '@prisma/client';
+import { CampaignsTable } from './campaigns-table';
+import { db } from '@/lib/db/client';
+import crypto from 'crypto';
+import { CreationModal } from './creation-modal';
 
 export const metadata: Metadata = { title: 'Campaigns' };
 
-const STATUS_BADGE: Record<CampaignStatus, string> = {
-  DRAFT: 'badge-draft', SCHEDULED: 'badge-scheduled', SENDING: 'badge-sending',
-  COMPLETED: 'badge-completed', FAILED: 'badge-failed', PAUSED: 'badge-paused',
-};
-
-const STATUS_LABEL: Record<CampaignStatus, string> = {
-  DRAFT: 'Draft', SCHEDULED: 'Scheduled', SENDING: 'Sending',
-  COMPLETED: 'Sent', FAILED: 'Failed', PAUSED: 'Paused',
-};
-
 export default async function CampaignsPage() {
   const { workspaceRole } = await requireWorkspaceAccess();
+  
+  // Backfill sequenceId for existing campaigns
+  const campaignsWithoutSequence = await db.emailCampaign.findMany({
+    where: { sequenceId: null }
+  });
+
+  const sequenceMap = new Map<string, string>();
+  for (const campaign of campaignsWithoutSequence) {
+    let sequenceName: string | null = null;
+    
+    if (campaign.name.includes(' — Email ')) {
+      sequenceName = campaign.name.split(' — Email ')[0];
+    } else if (campaign.name.includes(' — Day ')) {
+      sequenceName = campaign.name.split(' — Day ')[0];
+    }
+
+    if (sequenceName) {
+      if (!sequenceMap.has(sequenceName)) {
+        sequenceMap.set(sequenceName, crypto.randomUUID());
+      }
+      const sequenceId = sequenceMap.get(sequenceName);
+      await db.emailCampaign.update({
+        where: { id: campaign.id },
+        data: { sequenceId }
+      });
+    }
+  }
+
   const campaigns = await getCampaigns();
   const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 
@@ -55,39 +75,7 @@ export default async function CampaignsPage() {
 
         {isAdmin && (
           <div className="flex items-center gap-2">
-            {/* Write with AI — promoted to a real button */}
-            <Link
-              href="/dashboard/campaigns/generate"
-              className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-semibold transition-all hover:opacity-90"
-              style={{
-                border:      '1px solid rgba(34,197,94,0.4)',
-                color:       'var(--brand)',
-                background:  'rgba(34,197,94,0.06)',
-              }}
-            >
-              <SparklesIcon className="h-3.5 w-3.5" />
-              Write with AI
-            </Link>
-
-            {/* AI Sequence */}
-            <Link
-              href="/dashboard/campaigns/sequence"
-              className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors"
-              style={{ border: '1px solid var(--sidebar-border)', color: 'var(--text-secondary)', background: 'none' }}
-            >
-              <SparklesIcon className="h-3.5 w-3.5" style={{ color: 'var(--text-tertiary)' }} />
-              AI sequence
-            </Link>
-
-            {/* Primary: New campaign */}
-            <Link
-              href="/dashboard/campaigns/new"
-              className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.25)' }}
-            >
-              <PlusIcon className="h-4 w-4" />
-              New campaign
-            </Link>
+            <CreationModal />
           </div>
         )}
       </div>
@@ -96,65 +84,7 @@ export default async function CampaignsPage() {
       {campaigns.length === 0 ? (
         <EmptyState isAdmin={isAdmin} />
       ) : (
-        <div className="rounded-xl overflow-hidden"
-          style={{ border: '1px solid var(--sidebar-border)', background: 'var(--surface-card)' }}>
-          <table className="w-full text-sm">
-            <thead style={{ borderBottom: '1px solid var(--sidebar-border)', background: 'var(--surface-app)' }}>
-              <tr>
-                {['Campaign', 'Status', 'Sent', 'Open rate', 'Click rate', 'Date'].map((h, i) => (
-                  <th key={h}
-                    className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-right'}`}
-                    style={{ color: 'var(--text-tertiary)' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {campaigns.map((c, i) => {
-                const openRate  = c.totalSent > 0 ? ((c.totalOpened  / c.totalSent) * 100).toFixed(1) : null;
-                const clickRate = c.totalSent > 0 ? ((c.totalClicked / c.totalSent) * 100).toFixed(1) : null;
-                const date      = c.sentAt ?? c.scheduledAt ?? c.createdAt;
-                const status    = c.status as CampaignStatus;
-                return (
-                  <tr key={c.id} className="group transition-colors hover:bg-[#F7F8FA]"
-                    style={{ borderTop: i > 0 ? '1px solid var(--sidebar-border)' : undefined }}>
-                    <td className="px-5 py-4">
-                      <Link href={`/dashboard/campaigns/${c.id}`}
-                        className="font-medium transition-colors group-hover:text-[#16A34A]"
-                        style={{ color: 'var(--text-primary)' }}>
-                        {c.name}
-                      </Link>
-                      <p className="text-xs mt-0.5 max-w-[220px] truncate" style={{ color: 'var(--text-tertiary)' }}>
-                        {c.subject}
-                      </p>
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_BADGE[status] ?? ''}`}>
-                        {STATUS_LABEL[status]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {c.totalSent > 0 ? formatNumber(c.totalSent) : '—'}
-                    </td>
-                    <td className="px-5 py-4 text-right">
-                      <span className="text-sm font-medium"
-                        style={{ color: openRate !== null && Number(openRate) >= 20 ? '#16A34A' : 'var(--text-secondary)' }}>
-                        {openRate !== null ? `${openRate}%` : '—'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {clickRate !== null ? `${clickRate}%` : '—'}
-                    </td>
-                    <td className="px-4 py-4 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                      {formatDate(date)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <CampaignsTable campaigns={campaigns} />
       )}
     </div>
   );
@@ -181,25 +111,7 @@ function EmptyState({ isAdmin }: { isAdmin: boolean }) {
 
       {isAdmin && (
         <div className="flex flex-col items-center gap-3">
-          {/* Write with AI — hero empty state CTA */}
-          <Link href="/dashboard/campaigns/generate"
-            className="flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-all hover:opacity-90"
-            style={{ background: 'var(--brand)', boxShadow: '0 2px 12px rgba(34,197,94,0.28)' }}>
-            <SparklesIcon className="h-4 w-4" />
-            Write with AI
-          </Link>
-
-          <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--text-tertiary)' }}>
-            <Link href="/dashboard/campaigns/new" className="hover:underline underline-offset-2"
-              style={{ color: 'var(--text-secondary)' }}>
-              Start from scratch
-            </Link>
-            <span>·</span>
-            <Link href="/dashboard/campaigns/sequence" className="hover:underline underline-offset-2"
-              style={{ color: 'var(--text-secondary)' }}>
-              AI sequence (5 emails)
-            </Link>
-          </div>
+          <CreationModal />
         </div>
       )}
     </div>

@@ -56,9 +56,9 @@ async function resolveContactId(workspaceId: string, email: string): Promise<str
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
-  const { workspaceId } = params;
+  const { workspaceId } = await params;
 
   const workspace = await db.workspace.findUnique({
     where: { id: workspaceId },
@@ -193,6 +193,22 @@ export async function POST(
         source:      'whop',
         externalId:  `whop_pay_${data.id}`,
       });
+
+      // Handle AI Credit Pack purchases
+      const productId = data.product_id as string | undefined;
+      if (productId) {
+        const aiCreditMap: Record<string, number> = {
+          [process.env.WHOP_ADDON_AI_STARTER_PRODUCT_ID || '']: 25,
+          [process.env.WHOP_ADDON_AI_PRO_PRODUCT_ID || '']: 100,
+          [process.env.WHOP_ADDON_AI_UNLIMITED_PRODUCT_ID || '']: 500,
+        };
+        const creditsToAdd = aiCreditMap[productId];
+        if (creditsToAdd) {
+          const { addCredits } = await import('@/lib/ai/credits');
+          await addCredits(workspaceId, creditsToAdd, 'purchase', `webhook_pay_${data.id}`);
+          console.log(`[webhook/${workspaceId}] Added ${creditsToAdd} AI credits from payment`);
+        }
+      }
 
       // Fire automation trigger
       const contactId = await resolveContactId(workspaceId, email);

@@ -22,20 +22,26 @@ export function RegisterForm() {
     setIsLoading(true);
 
     try {
+      console.log("Submitting registration form...");
       const formData = new FormData(e.currentTarget);
       const result = await registerUser(formData);
+
+      console.log("Registration result:", result);
 
       if (!result.success) {
         setError(result.error);
         return;
       }
 
+      console.log("Attempting auto sign-in...");
       // Auto sign-in after successful registration
       const signInResult = await signIn("credentials", {
         email: formData.get("email") as string,
         password: formData.get("password") as string,
         redirect: false,
       });
+
+      console.log("Sign-in result:", signInResult);
 
       if (signInResult?.error) {
         // Registration worked but auto-login failed — just send to login
@@ -44,7 +50,8 @@ export function RegisterForm() {
         router.push("/dashboard");
         router.refresh();
       }
-    } catch {
+    } catch (err) {
+      console.error("Registration error:", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);

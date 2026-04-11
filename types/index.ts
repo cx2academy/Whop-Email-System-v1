@@ -17,6 +17,7 @@ export type ApiResponse<T> =
   | { success: false; error: string; code?: string }
   | {
       success: false;
+      error: string;
       upgradeRequired: true;
       message: string;
       feature?: string;

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 interface ErrorPageProps {
-  searchParams: { error?: string };
+  searchParams: Promise<{ error?: string }>;
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -27,8 +27,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   Default: "An unexpected error occurred during sign in.",
 };
 
-export default function AuthErrorPage({ searchParams }: ErrorPageProps) {
-  const errorKey = searchParams.error ?? "Default";
+export default async function AuthErrorPage({ searchParams }: ErrorPageProps) {
+  const { error } = await searchParams;
+  const errorKey = error ?? "Default";
   const errorMessage = ERROR_MESSAGES[errorKey] ?? ERROR_MESSAGES.Default;
 
   return (

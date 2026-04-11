@@ -43,6 +43,8 @@ export interface SendEmailOptions {
    * Format: "{campaignId}:{contactId}" or "{campaignId}:{contactId}:B"
    */
   idempotencyKey?: string;
+  /** Optional scheduled time for the email (ISO 8601 string) */
+  scheduledAt?: string;
 }
 
 // ---------------------------------------------------------------------------

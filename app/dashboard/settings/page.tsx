@@ -18,6 +18,8 @@ import { getWorkspaceUsage } from '@/lib/plans/gates';
 import { getSendingSettings } from '@/lib/sending/actions';
 import { SettingsTabs } from './settings-tabs';
 
+import { VoiceProfileSettings } from './voice-profile-settings';
+
 export const metadata: Metadata = { title: 'Settings' };
 
 export default async function SettingsPage({
@@ -110,6 +112,12 @@ export default async function SettingsPage({
                   hasWhopApiKey: !!workspace.whopApiKey,
                 }}
                 isAdmin={isAdmin}
+              />
+            </SettingsCard>
+
+            <SettingsCard title="AI Brand Voice" description="Train the AI to write exactly like you based on your past successful campaigns.">
+              <VoiceProfileSettings 
+                builtAt={workspace.voiceProfileBuiltAt?.toISOString() || null} 
               />
             </SettingsCard>
 

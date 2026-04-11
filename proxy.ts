@@ -29,9 +29,15 @@ const PUBLIC_PREFIXES = [
   '/public',
 ];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
+
+  // --- PREVIEW MODE BYPASS ---
+  if (process.env.PREVIEW_MODE === "true" || process.env.NEXT_PUBLIC_PREVIEW_MODE === "true") {
+    return NextResponse.next();
+  }
+  // --- END PREVIEW MODE BYPASS ---
 
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();

@@ -118,7 +118,7 @@ export default function GenerateTemplatePage() {
           <div>
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Email body</p>
             <div className="overflow-hidden rounded-md border border-border bg-white p-4">
-              <div dangerouslySetInnerHTML={{ __html: result.htmlBody }} />
+              <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(result.htmlBody) }} />
             </div>
           </div>
 

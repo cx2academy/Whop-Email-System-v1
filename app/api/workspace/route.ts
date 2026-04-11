@@ -40,26 +40,26 @@ export async function GET() {
     });
 
     if (!workspace) {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json<ApiResponse<any>>(
         { success: false, error: "Workspace not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json<ApiResponse>({
+    return NextResponse.json<ApiResponse<any>>({
       success: true,
       data: { ...workspace, role: workspaceRole },
     });
   } catch (err) {
     if (err instanceof AuthError) {
-      return NextResponse.json<ApiResponse>(
+      return NextResponse.json<ApiResponse<any>>(
         { success: false, error: err.message, code: err.code },
         { status: err.code === "UNAUTHENTICATED" ? 401 : 403 }
       );
     }
 
     console.error("[GET /api/workspace]", err);
-    return NextResponse.json<ApiResponse>(
+    return NextResponse.json<ApiResponse<any>>(
       { success: false, error: "Internal server error" },
       { status: 500 }
     );

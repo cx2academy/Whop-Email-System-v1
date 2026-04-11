@@ -294,3 +294,54 @@ export async function getTemplateStats() {
 
   return { userTemplates };
 }
+
+// ---------------------------------------------------------------------------
+// Instantiate Template Sequence
+// ---------------------------------------------------------------------------
+
+export async function instantiateTemplateSequence(sequenceId: string) {
+  const { workspaceId } = await requireAdminAccess();
+  
+  // Dynamic import to avoid circular dependencies if any
+  const { SYSTEM_SEQUENCES } = await import('./sequences');
+  const { getTemplateById } = await import('./library');
+
+  const sequence = SYSTEM_SEQUENCES.find((s) => s.id === sequenceId);
+  if (!sequence) {
+    return { success: false as const, error: 'Sequence not found' };
+  }
+
+  // Base scheduling date (tomorrow 9am)
+  const baseDate = new Date();
+  baseDate.setDate(baseDate.getDate() + 1);
+  baseDate.setHours(9, 0, 0, 0);
+
+  const sequenceIdInstance = crypto.randomUUID();
+
+  const campaignDataToCreate = sequence.steps.map((step, index) => {
+    const tpl = getTemplateById(step.templateId);
+    if (!tpl) throw new Error(`Template ${step.templateId} not found`);
+
+    const scheduledAt = new Date(baseDate);
+    scheduledAt.setDate(scheduledAt.getDate() + step.delayDays);
+
+    return {
+      workspaceId,
+      name: `${sequence.name} — Email ${index + 1}: ${tpl.name}`,
+      subject: tpl.subject,
+      htmlBody: tpl.htmlBody,
+      previewText: tpl.previewText,
+      status: 'DRAFT' as const,
+      type: 'BROADCAST' as const,
+      scheduledAt,
+      sequenceId: sequenceIdInstance,
+    };
+  });
+
+  await db.$transaction(
+    campaignDataToCreate.map(data => db.emailCampaign.create({ data }))
+  );
+
+  revalidatePath('/dashboard/campaigns');
+  return { success: true as const };
+}

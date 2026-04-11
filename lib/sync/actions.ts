@@ -61,8 +61,15 @@ export async function triggerSync(): Promise<
 
   revalidatePath("/dashboard/contacts");
 
+  if (result.status === "FAILED") {
+    return {
+      success: false,
+      error: "Sync failed",
+    };
+  }
+
   return {
-    success: result.status !== "FAILED",
+    success: true,
     data: {
       syncLogId: result.syncLogId,
       status: result.status,

@@ -1,17 +1,10 @@
 'use client';
 
-/**
- * app/dashboard/templates/template-card.tsx
- *
- * Redesigned template card with:
- *  - Inline scaled HTML preview (live render)
- *  - Category colour accent
- *  - Preview modal on click
- *  - One-click "Use template" straight to campaign builder
- */
-
-import { useState, useTransition, useRef, useEffect } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Lock, Monitor, Smartphone, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { SystemTemplate } from '@/lib/templates/library';
 import { CATEGORY_LABELS } from '@/lib/templates/library';
 import { cloneSystemTemplate } from '@/lib/templates/actions';
@@ -20,65 +13,63 @@ import { parseVariables, PREVIEW_VARIABLES } from '@/lib/templates/variable-pars
 // ── Category colours ────────────────────────────────────────────────────────
 
 const CATEGORY_META: Record<string, { color: string; bg: string }> = {
-  course_launch: { color: '#7C3AED', bg: '#F5F3FF' },
-  announcement:  { color: '#2563EB', bg: '#EFF6FF' },
-  promotion:     { color: '#D97706', bg: '#FFFBEB' },
-  scarcity:      { color: '#DC2626', bg: '#FEF2F2' },
-  webinar:       { color: '#059669', bg: '#F0FDF4' },
-  community:     { color: '#7C3AED', bg: '#F5F3FF' },
-  reengagement:  { color: '#0284C7', bg: '#F0F9FF' },
-  upsell:        { color: '#0891B2', bg: '#ECFEFF' },
+  course_launch: { color: '#6D28D9', bg: '#F5F3FF' }, // Purple-700
+  announcement:  { color: '#1D4ED8', bg: '#EFF6FF' }, // Blue-700
+  promotion:     { color: '#B45309', bg: '#FFFBEB' }, // Amber-700
+  scarcity:      { color: '#B91C1C', bg: '#FEF2F2' }, // Red-700
+  webinar:       { color: '#047857', bg: '#F0FDF4' }, // Emerald-700
+  community:     { color: '#6D28D9', bg: '#F5F3FF' }, // Purple-700
+  reengagement:  { color: '#0369A1', bg: '#F0F9FF' }, // Sky-700
+  upsell:        { color: '#0E7490', bg: '#ECFEFF' }, // Cyan-700
 };
 
 // ── Inline HTML preview ─────────────────────────────────────────────────────
 
 function HtmlPreview({ html, scale = 0.28 }: { html: string; scale?: number }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
   return (
     <div
-      ref={containerRef}
-      className="relative overflow-hidden rounded-t-lg"
-      style={{ height: 160, background: '#fff' }}
+      className="relative overflow-hidden rounded-t-xl bg-white border-b border-gray-100"
+      style={{ height: 180 }}
     >
       {/* Scrim to block interaction */}
-      <div className="absolute inset-0 z-10" style={{ cursor: 'default' }} />
-      <div
+      <div className="absolute inset-0 z-10" style={{ cursor: 'pointer' }} />
+      <iframe
+        srcDoc={html}
+        className="absolute top-0 left-0 border-none pointer-events-none bg-white"
         style={{
-          position:        'absolute',
-          top:             0,
-          left:            0,
-          width:           `${100 / scale}%`,
+          width: `${100 / scale}%`,
+          height: `${100 / scale}%`,
           transformOrigin: 'top left',
-          transform:       `scale(${scale})`,
-          pointerEvents:   'none',
-          userSelect:      'none',
+          transform: `scale(${scale})`,
         }}
-        dangerouslySetInnerHTML={{ __html: html }}
+        sandbox="allow-same-origin"
+        tabIndex={-1}
+        loading="lazy"
       />
     </div>
   );
 }
 
-// ── Preview Modal ───────────────────────────────────────────────────────────
+// ── Preview Side Panel ──────────────────────────────────────────────────────
 
-function PreviewModal({
+function PreviewSidePanel({
   template,
   previewHtml,
   previewSubject,
   isAdmin,
   onClose,
 }: {
-  template:      SystemTemplate;
-  previewHtml:   string;
+  template: SystemTemplate;
+  previewHtml: string;
   previewSubject: string;
-  isAdmin:        boolean;
-  onClose:        () => void;
+  isAdmin: boolean;
+  onClose: () => void;
 }) {
-  const router        = useRouter();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [saved, setSaved]            = useState(false);
-  const meta          = CATEGORY_META[template.category] ?? { color: '#22C55E', bg: '#F0FDF4' };
+  const [saved, setSaved] = useState(false);
+  const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
+  const meta = CATEGORY_META[template.category] ?? { color: '#15803D', bg: '#F0FDF4' }; // Green-700
 
   // Close on Escape
   useEffect(() => {
@@ -100,122 +91,148 @@ function PreviewModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.5)' }}
-      onClick={onClose}
-    >
-      <div
-        className="flex w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl"
-        style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)', maxHeight: '90vh' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Left: HTML preview */}
-        <div
-          className="flex-1 overflow-auto"
-          style={{ background: '#f8f8f8', minWidth: 0 }}
-        >
-          <div
-            style={{ padding: '24px', fontSize: 14 }}
-            dangerouslySetInnerHTML={{ __html: previewHtml }}
-          />
-        </div>
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex justify-end">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        />
 
-        {/* Right: Info panel */}
-        <div
-          className="flex w-72 shrink-0 flex-col"
-          style={{ borderLeft: '1px solid var(--sidebar-border)' }}
+        {/* Panel */}
+        <motion.div
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="relative w-full max-w-3xl h-full bg-white shadow-2xl flex flex-col z-10"
         >
           {/* Header */}
-          <div className="p-5" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <span
-                className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                style={{ background: meta.bg, color: meta.color }}
-              >
-                {CATEGORY_LABELS[template.category]}
-              </span>
+          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+            <div>
+              <div className="flex items-center gap-3 mb-1.5">
+                <span
+                  className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                  style={{ background: meta.bg, color: meta.color }}
+                >
+                  {CATEGORY_LABELS[template.category]}
+                </span>
+                {template.isPro && (
+                  <span className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wider bg-amber-100 text-amber-900">
+                    PRO
+                  </span>
+                )}
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">{template.name}</h2>
+              <p className="text-sm text-gray-500 mt-1 font-mono" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewSubject) }} />
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-100">
+            <div className="flex bg-gray-200/50 p-1 rounded-lg">
               <button
-                onClick={onClose}
-                className="rounded-lg p-1 text-lg leading-none transition-colors"
-                style={{ color: 'var(--text-tertiary)' }}
+                onClick={() => setViewMode('desktop')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'desktop' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
-                ×
+                <Monitor size={16} /> Desktop
+              </button>
+              <button
+                onClick={() => setViewMode('mobile')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'mobile' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Smartphone size={16} /> Mobile
               </button>
             </div>
-            <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {template.name}
-            </h2>
+            
+            <div className="flex gap-3">
+              {isAdmin && (
+                <button
+                  onClick={handleSave}
+                  disabled={isPending || saved}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                    saved 
+                      ? 'border-green-200 bg-green-50 text-green-700' 
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50 bg-white'
+                  }`}
+                >
+                  {saved ? '✓ Saved to your templates' : isPending ? 'Saving…' : 'Save Copy'}
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  onClick={handleUse}
+                  className="px-6 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Use Template
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Subject */}
-          <div className="p-5" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-tertiary)' }}>
-              Subject line
-            </p>
-            <p className="text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.5 }}>
-              {previewSubject}
-            </p>
+          {/* Iframe Container */}
+          <div className="flex-1 overflow-auto bg-gray-100 flex justify-center py-8 px-4">
+            <div 
+              className="bg-white shadow-sm border border-gray-200 transition-all duration-300 ease-in-out overflow-hidden"
+              style={{ 
+                width: viewMode === 'desktop' ? '100%' : '375px',
+                maxWidth: viewMode === 'desktop' ? '800px' : '375px',
+                height: '100%',
+                minHeight: '600px',
+                borderRadius: viewMode === 'mobile' ? '36px' : '8px',
+                borderWidth: viewMode === 'mobile' ? '12px' : '1px',
+                borderColor: viewMode === 'mobile' ? '#1f2937' : '#e5e7eb'
+              }}
+            >
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-full border-none"
+                sandbox="allow-same-origin"
+                loading="lazy"
+              />
+            </div>
           </div>
-
-          {/* Tags */}
-          <div className="p-5 flex flex-wrap gap-1.5" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
-            {template.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full px-2 py-0.5 text-xs"
-                style={{ background: 'var(--surface-app)', color: 'var(--text-secondary)', border: '1px solid var(--sidebar-border)' }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="p-5 mt-auto space-y-2">
-            {isAdmin && (
-              <button
-                onClick={handleUse}
-                className="w-full rounded-lg py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
-                style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.22)' }}
-              >
-                Use template
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                onClick={handleSave}
-                disabled={isPending || saved}
-                className="w-full rounded-lg py-2 text-xs font-medium transition-colors disabled:opacity-50"
-                style={{
-                  border:      '1px solid var(--sidebar-border)',
-                  color:       saved ? '#16A34A' : 'var(--text-secondary)',
-                  background:  saved ? 'rgba(34,197,94,0.07)' : 'none',
-                }}
-              >
-                {saved ? '✓ Saved to your templates' : isPending ? 'Saving…' : 'Save as personal copy'}
-              </button>
-            )}
-          </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }
 
 // ── Main card ───────────────────────────────────────────────────────────────
 
-export function TemplateCard({ template, isAdmin }: { template: SystemTemplate; isAdmin: boolean }) {
-  const router      = useRouter();
+export function TemplateCard({ template, isAdmin, isProUser = false }: { template: SystemTemplate; isAdmin: boolean; isProUser?: boolean }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const meta        = CATEGORY_META[template.category] ?? { color: '#22C55E', bg: '#F0FDF4' };
-  const previewHtml = parseVariables(template.htmlBody, PREVIEW_VARIABLES);
-  const previewSubj = parseVariables(template.subject,  PREVIEW_VARIABLES);
+  const meta = CATEGORY_META[template.category] ?? { color: '#15803D', bg: '#F0FDF4' }; // Green-700
+  
+  const thumbnailHtml = parseVariables(template.htmlBody, PREVIEW_VARIABLES, false);
+  const previewHtml = parseVariables(template.htmlBody, PREVIEW_VARIABLES, true);
+  const previewSubj = parseVariables(template.subject, PREVIEW_VARIABLES, true);
+
+  const isLocked = template.isPro && !isProUser;
+
+  function handleCardClick() {
+    if (isLocked) return;
+    setOpen(true);
+  }
 
   return (
     <>
       {open && (
-        <PreviewModal
+        <PreviewSidePanel
           template={template}
           previewHtml={previewHtml}
           previewSubject={previewSubj}
@@ -224,82 +241,84 @@ export function TemplateCard({ template, isAdmin }: { template: SystemTemplate; 
         />
       )}
 
-      <div
-        className="group flex flex-col rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-lg"
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        whileHover={!isLocked ? { scale: 1.02, y: -4 } : {}}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className="group flex flex-col rounded-xl overflow-hidden relative bg-white border border-gray-200 shadow-sm"
         style={{
-          background:  'var(--surface-card)',
-          border:      '1px solid var(--sidebar-border)',
-          transition:  'box-shadow 0.15s, border-color 0.15s',
+          cursor: isLocked ? 'not-allowed' : 'pointer',
         }}
-        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = meta.color + '66')}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = 'var(--sidebar-border)')}
-        onClick={() => setOpen(true)}
+        onClick={handleCardClick}
       >
         {/* Colour accent bar */}
-        <div style={{ height: 3, background: meta.color, flexShrink: 0 }} />
+        <div style={{ height: 4, background: meta.color, flexShrink: 0 }} />
 
         {/* HTML thumbnail */}
-        <HtmlPreview html={previewHtml} scale={0.3} />
+        <HtmlPreview html={thumbnailHtml} scale={0.3} />
 
         {/* Card body */}
-        <div className="flex flex-col gap-2 p-4">
+        <div className="flex flex-col gap-3 p-5 flex-1 relative">
           <div className="flex items-center justify-between gap-2">
             <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
               style={{ background: meta.bg, color: meta.color }}
             >
               {CATEGORY_LABELS[template.category]}
             </span>
-            <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
-              ~{Math.ceil(template.estimatedReadingSeconds / 60)} min
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 font-medium">
+                ~{Math.ceil(template.estimatedReadingSeconds / 60)} min
+              </span>
+            </div>
           </div>
 
-          <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
+          <h3 className="text-base font-bold text-gray-900 leading-tight">
             {template.name}
-          </p>
+          </h3>
 
-          <p
-            className="text-xs truncate rounded px-2 py-1"
-            style={{ color: 'var(--text-tertiary)', background: 'var(--surface-app)', fontFamily: 'monospace' }}
-          >
-            {previewSubj}
-          </p>
+          <p className="text-xs text-gray-500 truncate font-mono bg-gray-50 px-2 py-1.5 rounded-md border border-gray-100" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewSubj) }} />
 
-          {/* CTA row — only visible on hover */}
-          <div
-            className="flex gap-2 pt-1"
-            style={{ opacity: 0, transition: 'opacity 0.15s' }}
-            ref={(el) => {
-              if (!el) return;
-              const parent = el.closest('.group') as HTMLElement | null;
-              if (!parent) return;
-              parent.addEventListener('mouseenter', () => { el.style.opacity = '1'; });
-              parent.addEventListener('mouseleave', () => { el.style.opacity = '0'; });
-            }}
-          >
-            <button
-              onClick={(e) => { e.stopPropagation(); setOpen(true); }}
-              className="flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors"
-              style={{ border: '1px solid var(--sidebar-border)', color: 'var(--text-secondary)', background: 'none' }}
-            >
-              Preview
-            </button>
-            {isAdmin && (
+          {isLocked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] z-10">
+              <div className="bg-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold text-gray-800 border border-gray-100">
+                <Lock size={16} className="text-amber-600" />
+                PRO
+              </div>
+            </div>
+          )}
+
+          {/* Spacer for hover buttons */}
+          {!isLocked && <div className="h-10" />}
+          
+          {/* CTA row — animated on hover */}
+          {!isLocked && (
+            <div className="absolute bottom-5 left-5 right-5 flex gap-2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out bg-white pt-2">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/dashboard/campaigns/new?templateId=${template.id}`);
-                }}
-                className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-white transition-all hover:opacity-90"
-                style={{ background: 'var(--brand)' }}
+                onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+                className="flex-1 rounded-lg py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                Use →
+                Preview
               </button>
-            )}
-          </div>
+              {isAdmin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/dashboard/campaigns/new?templateId=${template.id}`);
+                  }}
+                  className="flex-1 rounded-lg py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Use →
+                </button>
+              )}
+            </div>
+          )}
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }
+

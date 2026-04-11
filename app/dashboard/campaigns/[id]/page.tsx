@@ -4,6 +4,7 @@
  * Campaign detail page — shows full analytics, status, and actions.
  */
 
+import DOMPurify from 'isomorphic-dompurify';
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,16 +16,18 @@ import { CAMPAIGN_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 interface CampaignPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({
-  params,
-}: CampaignPageProps): Promise<Metadata> {
+export async function generateMetadata(
+  props: CampaignPageProps
+): Promise<Metadata> {
+  const params = await props.params;
   return { title: `Campaign · ${params.id.slice(0, 8)}` };
 }
 
-export default async function CampaignPage({ params }: CampaignPageProps) {
+export default async function CampaignPage(props: CampaignPageProps) {
+  const params = await props.params;
   const { workspaceRole } = await requireWorkspaceAccess();
 
   const [campaign, analytics] = await Promise.all([
@@ -179,7 +182,7 @@ export default async function CampaignPage({ params }: CampaignPageProps) {
         <div className="p-5">
           <div
             className="prose prose-sm max-w-none text-foreground"
-            dangerouslySetInnerHTML={{ __html: campaign.htmlBody }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.htmlBody) }}
           />
         </div>
       </div>

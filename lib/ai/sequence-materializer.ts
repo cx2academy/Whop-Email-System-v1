@@ -134,66 +134,86 @@ export async function materializeSequence(
     return tomorrow;
   })();
 
+  const sequenceId = crypto.randomUUID();
+
   // ── Generate drafts + create campaigns ─────────────────────────────────
   const createdCampaigns: MaterializeSequenceResult['campaigns'] = [];
   let creditsUsed = 0;
   let skippedDrafts = 0;
 
-  for (const email of sequence.emails) {
-    const scheduledAt = parseSendTiming(email.sendTiming, base);
-    const campaignName = buildCampaignName(sequence.sequenceName, email.emailNumber, email.type);
+  // 1. Build an array of { email, scheduledAt, campaignName } objects first (no async)
+  const emailTasks = sequence.emails.map(email => ({
+    email,
+    scheduledAt: parseSendTiming(email.sendTiming, base),
+    campaignName: buildCampaignName(sequence.sequenceName, email.emailNumber, email.type),
+  }));
 
-    // Generate full HTML draft for this email
-    let subject = email.subject;
-    let htmlBody = buildFallbackHtml(email.subject, email.purpose, email.keyElements);
+  // 2. Run all generateEmailDraft calls with Promise.allSettled() simultaneously
+  const draftPromises = emailTasks.map(task => 
+    generateEmailDraft(
+      brief,
+      task.email.type,
+      task.email.purpose,
+      task.email.subject,
+      task.email.keyElements
+    )
+  );
 
-    try {
-      const draftResult = await generateEmailDraft(
-        brief,
-        email.type,
-        email.purpose,
-        email.subject,
-        email.keyElements
-      );
+  const settledDrafts = await Promise.allSettled(draftPromises);
 
-      if (draftResult.success) {
-        subject  = draftResult.data.subject;
-        htmlBody = draftResult.data.htmlBody;
-        creditsUsed += 5;
-      } else {
-        // Draft generation failed — use fallback HTML, don't block the rest
-        skippedDrafts++;
-      }
-    } catch {
+  // 3. Map settled results: fulfilled → use the draft, rejected → use buildFallbackHtml
+  const campaignDataToCreate = await Promise.all(emailTasks.map(async (task, index) => {
+    const result = settledDrafts[index];
+    let subject = task.email.subject;
+    let htmlBody = await buildFallbackHtml(task.email.subject, task.email.purpose, task.email.keyElements);
+
+    if (result.status === 'fulfilled' && result.value.success) {
+      subject = result.value.data.subject;
+      htmlBody = result.value.data.htmlBody;
+      creditsUsed += 5;
+    } else {
       skippedDrafts++;
+      htmlBody = `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:40px auto;padding:32px;background:#fef2f2;border:1px solid #f87171;border-radius:12px;text-align:center;">
+          <h2 style="color:#b91c1c;margin:0 0 16px;font-size:24px;">⚠️ AI Generation Failed</h2>
+          <p style="color:#991b1b;margin:0 0 16px;font-size:16px;line-height:1.5;">We couldn't generate the draft for this email due to an AI timeout or error.</p>
+          <p style="color:#991b1b;margin:0;font-size:16px;line-height:1.5;"><strong>Please delete this campaign and recreate it, or write the copy manually.</strong></p>
+        </div>
+      `;
     }
 
-    // Create the campaign row
-    const campaign = await db.emailCampaign.create({
-      data: {
-        workspaceId,
-        name:               campaignName,
-        subject,
-        htmlBody,
-        status:             'DRAFT',
-        type:               'BROADCAST',
-        scheduledAt,
-        audienceTagIds,
-        audienceSegmentIds,
-        // Store sequence metadata for reference
-        previewText:        `Email ${email.emailNumber} of ${emailCount} — ${email.type}`,
-      },
+    return {
+      workspaceId,
+      name:               task.campaignName,
+      subject,
+      htmlBody,
+      status:             'DRAFT' as const,
+      type:               'BROADCAST' as const,
+      scheduledAt:        task.scheduledAt,
+      audienceTagIds,
+      audienceSegmentIds,
+      sequenceId,
+      previewText:        `Email ${task.email.emailNumber} of ${emailCount} — ${task.email.type}`,
+    };
+  }));
+
+  // 4. Then run all db.emailCampaign.create() calls in a single db.$transaction([...])
+  const createdCampaignsRaw = await db.$transaction(
+    campaignDataToCreate.map(data => db.emailCampaign.create({
+      data,
       select: {
         id:          true,
         name:        true,
         subject:     true,
         scheduledAt: true,
       },
-    });
+    }))
+  );
 
+  for (let i = 0; i < createdCampaignsRaw.length; i++) {
     createdCampaigns.push({
-      ...campaign,
-      emailNumber: email.emailNumber,
+      ...createdCampaignsRaw[i],
+      emailNumber: emailTasks[i].email.emailNumber,
     });
   }
 
@@ -215,11 +235,11 @@ export async function materializeSequence(
 // Gives the user a structured blank template to fill in manually
 // ---------------------------------------------------------------------------
 
-function buildFallbackHtml(
+export async function buildFallbackHtml(
   subject: string,
   purpose: string,
   keyElements: string[]
-): string {
+): Promise<string> {
   const elementsHtml = keyElements
     .map((el) => `<li style="font-size:15px;line-height:1.8;color:#374151;">${el}</li>`)
     .join('\n      ');

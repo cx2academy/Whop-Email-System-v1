@@ -31,7 +31,7 @@ const OP_OPTIONS: Record<string, { value: string; label: string }[]> = {
   emailsSent:  [{ value: 'gt', label: 'more than' }, { value: 'lt', label: 'less than' }],
 };
 
-export default function SegmentDetailPage({ params }: { params: { id: string } }) {
+export default function SegmentDetailPage(props: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState('');
@@ -41,47 +41,54 @@ export default function SegmentDetailPage({ params }: { params: { id: string } }
   const [preview, setPreview] = useState<{ count: number; sample: { email: string; firstName?: string | null }[] } | null>(null);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
+  const [segmentId, setSegmentId] = useState<string | null>(null);
 
   useEffect(() => {
-    getSegment(params.id).then((seg) => {
-      if (!seg) { router.push('/dashboard/segments'); return; }
-      setName(seg.name);
-      setDescription(seg.description ?? '');
-      try {
-        const rules = JSON.parse(seg.rules) as SegmentRules;
-        setOperator(rules.operator ?? 'AND');
-        setConditions(rules.conditions ?? []);
-      } catch { /* empty */ }
+    props.params.then(p => {
+      setSegmentId(p.id);
+      getSegment(p.id).then((seg) => {
+        if (!seg) { router.push('/dashboard/segments'); return; }
+        setName(seg.name);
+        setDescription(seg.description ?? '');
+        try {
+          const rules = JSON.parse(seg.rules) as SegmentRules;
+          setOperator(rules.operator ?? 'AND');
+          setConditions(rules.conditions ?? []);
+        } catch { /* empty */ }
+      });
     });
-  }, [params.id]);
+  }, [props.params, router]);
 
   function updateCondition(i: number, patch: Partial<SegmentCondition>) {
     setConditions((prev) => prev.map((c, idx) => idx === i ? { ...c, ...patch } : c));
   }
 
   function handlePreview() {
+    if (!segmentId) return;
     startTransition(async () => {
       setError(''); setMsg('');
-      const r = await previewSavedSegment(params.id);
+      const r = await previewSavedSegment(segmentId);
       if (r.success) setPreview(r.data);
       else setError(r.error ?? 'Preview failed');
     });
   }
 
   function handleSave() {
+    if (!segmentId) return;
     startTransition(async () => {
       setError(''); setMsg('');
       const rules: SegmentRules = { operator, conditions };
-      const r = await updateSegment(params.id, { name, description: description || undefined, rules });
+      const r = await updateSegment(segmentId, { name, description: description || undefined, rules });
       if (r.success) setMsg('Saved');
       else setError('Save failed');
     });
   }
 
   function handleDelete() {
+    if (!segmentId) return;
     if (!confirm('Delete this segment?')) return;
     startTransition(async () => {
-      await deleteSegment(params.id);
+      await deleteSegment(segmentId);
       router.push('/dashboard/segments');
     });
   }

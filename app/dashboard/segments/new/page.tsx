@@ -8,9 +8,10 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeftIcon } from 'lucide-react';
+import { ChevronLeftIcon, SparklesIcon, AlertTriangleIcon } from 'lucide-react';
 import { createSegment, previewSegment } from '@/lib/segmentation/actions';
 import type { SegmentCondition, SegmentRules } from '@/lib/segmentation/segment-engine';
+import type { NLSegmentResult } from '@/lib/ai/segment-builder';
 
 const FIELD_OPTIONS = [
   { value: 'tag',         label: 'Has tag' },
@@ -46,6 +47,48 @@ export default function NewSegmentPage() {
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<{ count: number; sample: { email: string; firstName?: string | null }[] } | null>(null);
 
+  // NL Builder State
+  const [nlDescription, setNlDescription] = useState('');
+  const [nlResult, setNlResult] = useState<NLSegmentResult | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [nlError, setNlError] = useState('');
+
+  async function handleGenerateRules() {
+    if (!nlDescription.trim()) return;
+    setIsGenerating(true);
+    setNlError('');
+    setNlResult(null);
+    try {
+      const res = await fetch('/api/ai/build-segment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: nlDescription }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setNlResult(data.data);
+      } else {
+        setNlError(data.error || 'Failed to generate rules');
+      }
+    } catch (err) {
+      setNlError('Network error');
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  function handleUseRules() {
+    if (!nlResult) return;
+    setOperator(nlResult.rules.operator);
+    setConditions(nlResult.rules.conditions.map(c => ({
+      field: c.field as any,
+      op: c.op as any,
+      value: c.value
+    })));
+    setNlResult(null);
+    setNlDescription('');
+  }
+
   function updateCondition(i: number, patch: Partial<SegmentCondition>) {
     setConditions((prev) => prev.map((c, idx) => idx === i ? { ...c, ...patch } : c));
   }
@@ -60,7 +103,7 @@ export default function NewSegmentPage() {
       setError('');
       const r = await previewSegment(rules);
       if (r.success) setPreview(r.data);
-      else setError(r.error ?? 'Preview failed');
+      else setError((r as any).error ?? 'Preview failed');
     });
   }
 
@@ -89,6 +132,85 @@ export default function NewSegmentPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">New Segment</h1>
         <p className="mt-1 text-sm text-muted-foreground">Build a dynamic filter to target specific contacts</p>
+      </div>
+
+      {/* AI Segment Builder */}
+      <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <div className="flex items-center gap-2">
+          <SparklesIcon className="h-5 w-5 text-primary" />
+          <h2 className="text-base font-semibold text-foreground">AI Segment Builder</h2>
+        </div>
+        
+        {!nlResult ? (
+          <div className="space-y-3">
+            <textarea
+              value={nlDescription}
+              onChange={(e) => setNlDescription(e.target.value)}
+              placeholder="Describe your audience in plain English... (e.g., 'People who joined last month but haven't opened anything')"
+              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Costs 3 AI credits</p>
+              <button
+                onClick={handleGenerateRules}
+                disabled={isGenerating || !nlDescription.trim()}
+                className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {isGenerating ? 'Generating...' : 'Generate rules'}
+              </button>
+            </div>
+            {nlError && <p className="text-sm text-destructive">{nlError}</p>}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-md bg-background p-4 border border-border">
+              <p className="text-sm font-medium text-foreground mb-3">
+                <span className="text-primary font-semibold">I understood:</span> {nlResult.understood}
+              </p>
+              
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Generated Rules (Match {nlResult.rules.operator})</p>
+                <ul className="space-y-1.5">
+                  {nlResult.rules.conditions.map((c, i) => (
+                    <li key={i} className="text-sm flex items-start gap-2">
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                      <span className="text-foreground">{c.humanReadable}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {nlResult.warnings.length > 0 && (
+                <div className="mt-4 rounded-md bg-yellow-500/10 p-3 border border-yellow-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangleIcon className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-400">Warnings</p>
+                  </div>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {nlResult.warnings.map((w, i) => (
+                      <li key={i} className="text-xs text-yellow-700 dark:text-yellow-500">{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleUseRules}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+              >
+                Use these rules
+              </button>
+              <button
+                onClick={() => setNlResult(null)}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground underline underline-offset-4"
+              >
+                Edit manually
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Name */}

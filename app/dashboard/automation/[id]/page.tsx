@@ -13,7 +13,8 @@ import { WorkflowControls } from './workflow-controls';
 
 export const metadata: Metadata = { title: 'Workflow' };
 
-export default async function WorkflowDetailPage({ params }: { params: { id: string } }) {
+export default async function WorkflowDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { workspaceRole } = await requireWorkspaceAccess();
   const workflow = await getWorkflow(params.id);
   if (!workflow) notFound();

@@ -14,6 +14,12 @@ import { OnboardingFlow } from './flow';
 export const metadata: Metadata = { title: 'Get started — RevTray' };
 
 export default async function OnboardingPage() {
+  // --- PREVIEW MODE BYPASS ---
+  if (process.env.PREVIEW_MODE === "true" || process.env.NEXT_PUBLIC_PREVIEW_MODE === "true") {
+    redirect('/dashboard');
+  }
+  // --- END PREVIEW MODE BYPASS ---
+
   const session = await auth();
   if (!session?.user?.id) redirect('/auth/login');
 

@@ -70,16 +70,33 @@ function resolveKey(rawKey: string, vars: TemplateVariables): string | undefined
  *  - If the variable has a value → use it
  *  - If no value but has fallback → use the fallback (strips surrounding quotes)
  *  - If no value and no fallback → replace with empty string
+ *  - If highlight is true, wraps the replaced text in a styled span (only for text nodes, not attributes)
  */
-export function parseVariables(template: string, vars: TemplateVariables): string {
+export function parseVariables(template: string, vars: TemplateVariables, highlight = false): string {
   // Match: {{key}} or {{key | fallback: 'value'}} or {{key | fallback: "value"}}
   return template.replace(
     /\{\{\s*([a-zA-Z0-9_]+)\s*(?:\|\s*fallback\s*:\s*['"]([^'"]*)['"]\s*)?\}\}/g,
-    (_match, rawKey: string, fallback?: string) => {
+    (match, rawKey: string, fallback?: string, offset?: number, string?: string) => {
       const value = resolveKey(rawKey.trim(), vars);
-      if (value !== undefined && value !== '') return value;
-      if (fallback !== undefined) return fallback;
-      return '';
+      let finalValue = '';
+      if (value !== undefined && value !== '') finalValue = value;
+      else if (fallback !== undefined) finalValue = fallback;
+
+      if (!highlight) return finalValue;
+
+      // Check if we are inside an HTML tag (e.g. href="{{url}}")
+      // We look ahead: if we see a '>' before a '<', we are likely inside a tag.
+      const textAfter = string?.substring((offset || 0) + match.length) || '';
+      const nextClose = textAfter.indexOf('>');
+      const nextOpen = textAfter.indexOf('<');
+      
+      const isInsideTag = nextClose !== -1 && (nextOpen === -1 || nextClose < nextOpen);
+      
+      if (isInsideTag) {
+        return finalValue;
+      } else {
+        return `<span style="background-color: #FEF08A; color: #854D0E; padding: 0 4px; border-radius: 4px; font-weight: 600; border: 1px dashed #EAB308;" title="Variable: {{${rawKey}}}">${finalValue || match}</span>`;
+      }
     }
   );
 }

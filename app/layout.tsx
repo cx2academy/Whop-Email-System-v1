@@ -5,6 +5,7 @@
 
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, DM_Sans } from 'next/font/google';
+import { Toaster } from 'react-hot-toast';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -40,6 +41,7 @@ export default function RootLayout({
         className={`${bricolage.variable} ${dmSans.variable} font-sans antialiased min-h-screen`}
       >
         {children}
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );

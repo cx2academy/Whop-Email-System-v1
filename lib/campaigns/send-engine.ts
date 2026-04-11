@@ -34,6 +34,9 @@ import { checkAbuseSignals } from "@/lib/sending/abuse-detector";
 import { createRateLimiter } from "@/lib/sending/rate-queue";
 import { checkUsageLimit } from "@/lib/plans/gates";
 import { sendWhopDm, htmlToPlainText } from "@/lib/whop/dm";
+import { clearCache } from "@/lib/ai/cache";
+import { getOptimalSendTime } from "@/lib/ai/send-time";
+import { analyzeCampaignPerformance } from "@/lib/ai/campaign-analysis";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,10 +45,11 @@ import { sendWhopDm, htmlToPlainText } from "@/lib/whop/dm";
 export interface SendCampaignOptions {
   campaignId: string;
   workspaceId: string;
+  isAbTestRemainder?: boolean;
 }
 
 export interface SendCampaignResult {
-  status: "COMPLETED" | "FAILED" | "PARTIAL";
+  status: "COMPLETED" | "FAILED" | "PARTIAL" | "RUNNING";
   totalSent: number;
   totalFailed: number;
   totalSkipped: number;
@@ -222,9 +226,15 @@ export async function sendCampaign(
     return { status: "FAILED", totalSent: 0, totalFailed: 0, totalSkipped: 0 };
   }
 
-  // Guard: only SCHEDULED or DRAFT campaigns can be sent
-  if (!["SCHEDULED", "DRAFT"].includes(campaign.status)) {
+  // Guard: only SCHEDULED or DRAFT campaigns can be sent (or COMPLETED if it's an A/B test remainder)
+  if (!["SCHEDULED", "DRAFT"].includes(campaign.status) && !(options.isAbTestRemainder && campaign.status === "COMPLETED")) {
     console.warn(`[send-engine] Campaign ${campaignId} is already ${campaign.status} — skipping`);
+    return { status: "FAILED", totalSent: 0, totalFailed: 0, totalSkipped: 0 };
+  }
+
+  // Guard: Check if it's part of a sequence/calendar and needs approval
+  if (campaign.sequenceId && !campaign.isApproved) {
+    console.warn(`[send-engine] Campaign ${campaignId} is part of a sequence/calendar but is NOT approved — skipping`);
     return { status: "FAILED", totalSent: 0, totalFailed: 0, totalSkipped: 0 };
   }
 
@@ -247,7 +257,33 @@ export async function sendCampaign(
     // -----------------------------------------------------------------------
     // Resolve audience
     // -----------------------------------------------------------------------
-    const rawAudience = await resolveAudience(campaign, workspaceId);
+    let rawAudience: Contact[] = [];
+    
+    if (options.isAbTestRemainder) {
+      // Fetch the remainder contacts
+      const remainingIds = (campaign as any).abTestRemainingContactIds || [];
+      if (remainingIds.length > 0) {
+        rawAudience = await db.contact.findMany({
+          where: { id: { in: remainingIds } },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            workspaceId: true,
+            whopMemberId: true,
+            whopMetadata: true,
+            status: true,
+            unsubscribedAt: true,
+            unsubscribeIp: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+      }
+    } else {
+      rawAudience = await resolveAudience(campaign, workspaceId);
+    }
 
     if (rawAudience.length === 0) {
       await db.emailCampaign.update({
@@ -258,6 +294,7 @@ export async function sendCampaign(
           totalRecipients: 0,
         },
       });
+      clearCache(`strategy:${workspaceId}`);
       return { status: "COMPLETED", totalSent: 0, totalFailed: 0, totalSkipped: 0 };
     }
 
@@ -317,6 +354,7 @@ export async function sendCampaign(
         where: { id: campaignId },
         data: { status: "COMPLETED", sentAt: new Date(), totalRecipients: 0 },
       });
+      clearCache(`strategy:${workspaceId}`);
       return { status: "COMPLETED", totalSent: 0, totalFailed: 0, totalSkipped };
     }
 
@@ -340,15 +378,37 @@ export async function sendCampaign(
 
     // -----------------------------------------------------------------------
     // A/B subject assignment
-    // For A/B campaigns: odd-indexed contacts get subject A, even get subject B
     // -----------------------------------------------------------------------
-    const isAbTest = campaign.isAbTest && !!campaign.abSubjectB;
+    const isAbTestInitial = campaign.isAbTest && !options.isAbTestRemainder && (campaign as any).abTestVariantA && (campaign as any).abTestVariantB;
+    
+    let activeAudience = audience;
+    let remainingContactIds: string[] = [];
+    
+    if (isAbTestInitial) {
+      const splitPercent = (campaign as any).abTestSplitPercent || 20;
+      const splitSize = Math.floor((audience.length * splitPercent) / 100);
+      
+      // If list is too small to split meaningfully, just send to everyone as A
+      if (splitSize < 1) {
+        activeAudience = audience;
+      } else {
+        // We need 2 * splitSize for the test (A and B)
+        const testAudienceSize = splitSize * 2;
+        activeAudience = audience.slice(0, testAudienceSize);
+        remainingContactIds = audience.slice(testAudienceSize).map(c => c.id);
+      }
+    }
 
-    // Record total recipients upfront
-    await db.emailCampaign.update({
-      where: { id: campaignId },
-      data: { totalRecipients: audience.length },
-    });
+    // Record total recipients upfront (only if not remainder)
+    if (!options.isAbTestRemainder) {
+      await db.emailCampaign.update({
+        where: { id: campaignId },
+        data: { 
+          totalRecipients: audience.length,
+          ...(isAbTestInitial ? { abTestRemainingContactIds: remainingContactIds } : {})
+        },
+      });
+    }
 
     // -----------------------------------------------------------------------
     // Rate limiter — optional per-minute cap
@@ -360,7 +420,10 @@ export async function sendCampaign(
     // -----------------------------------------------------------------------
     // Send in batches
     // -----------------------------------------------------------------------
-    const batches = chunkArray(audience, SEND_BATCH_SIZE);
+    const batches = chunkArray(activeAudience, SEND_BATCH_SIZE);
+    
+    let sentA = 0;
+    let sentB = 0;
 
     for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
       const batch = batches[batchIdx];
@@ -373,12 +436,30 @@ export async function sendCampaign(
       await Promise.all(
         batch.map(async (contact, contactIdx) => {
           const absoluteIdx = batchIdx * SEND_BATCH_SIZE + contactIdx;
-          const isVariantB = isAbTest && absoluteIdx % 2 === 1;
-          const subject = isVariantB && campaign.abSubjectB
-            ? campaign.abSubjectB
-            : campaign.subject;
-          const variantSuffix = isVariantB ? ":B" : ":A";
-          const idempotencyKey = `${campaignId}:${contact.id}${isAbTest ? variantSuffix : ""}`;
+          
+          let subject = campaign.subject;
+          let variantSuffix = "";
+          let isVariantA = false;
+          let isVariantB = false;
+
+          if (isAbTestInitial) {
+            // Half gets A, half gets B
+            const isB = absoluteIdx % 2 === 1;
+            if (isB) {
+              subject = (campaign as any).abTestVariantB;
+              variantSuffix = ":B";
+              isVariantB = true;
+            } else {
+              subject = (campaign as any).abTestVariantA;
+              variantSuffix = ":A";
+              isVariantA = true;
+            }
+          } else if (options.isAbTestRemainder) {
+            // Remainder gets the winning subject
+            subject = campaign.subject; // already updated to winner
+          }
+
+          const idempotencyKey = `${campaignId}:${contact.id}${variantSuffix}`;
 
           // -----------------------------------------------------------------
           // Idempotency check: skip if already sent
@@ -410,6 +491,15 @@ export async function sendCampaign(
           // -----------------------------------------------------------------
           const unsubscribeUrl = buildUnsubscribeUrl(appUrl, campaignId, contact.id);
           const trackingPixelUrl = buildTrackingPixelUrl(appUrl, campaignId, contact.id);
+
+          let scheduledAt: string | undefined;
+          if (campaign.sendTimeOptimized) {
+            const optimalTime = await getOptimalSendTime(workspaceId, contact.id, new Date());
+            // Only schedule if it's in the future
+            if (optimalTime > new Date()) {
+              scheduledAt = optimalTime.toISOString();
+            }
+          }
 
           // -----------------------------------------------------------------
           // Personalization — replace {{variables}} with real contact data
@@ -449,6 +539,7 @@ export async function sendCampaign(
             text: plainText,
             from,
             idempotencyKey,
+            scheduledAt,
           });
 
           // -----------------------------------------------------------------
@@ -456,6 +547,8 @@ export async function sendCampaign(
           // -----------------------------------------------------------------
           if (result.success) {
             totalSent++;
+            if (isVariantA) sentA++;
+            if (isVariantB) sentB++;
             await db.emailSend.update({
               where: { id: emailSend.id },
               data: {
@@ -482,26 +575,47 @@ export async function sendCampaign(
       // Update campaign stats after each batch
       await db.emailCampaign.update({
         where: { id: campaignId },
-        data: { totalSent, totalFailed },
+        data: { 
+          totalSent: { increment: totalSent }, 
+          totalFailed: { increment: totalFailed },
+          ...(isAbTestInitial ? {
+            abTestSentACount: { increment: sentA },
+            abTestSentBCount: { increment: sentB },
+          } : {})
+        },
       });
+      
+      // Reset counters for next batch
+      totalSent = 0;
+      totalFailed = 0;
+      sentA = 0;
+      sentB = 0;
     }
 
     // -----------------------------------------------------------------------
-    // Mark complete
+    // Mark complete or running
     // -----------------------------------------------------------------------
-    const finalStatus = totalFailed === 0 ? "COMPLETED" : "COMPLETED";
+    let finalStatus = "COMPLETED";
+
     await db.emailCampaign.update({
       where: { id: campaignId },
       data: {
-        status: finalStatus,
-        sentAt: new Date(),
-        totalSent,
-        totalFailed,
+        status: finalStatus as any,
+        sentAt: options.isAbTestRemainder ? undefined : new Date(), // only set sentAt on initial send
+        ...(isAbTestInitial && remainingContactIds.length > 0 ? { abTestStatus: 'running' } : {}),
+        ...(options.isAbTestRemainder ? { abTestStatus: 'completed' } : {})
       },
     });
 
+    clearCache(`strategy:${workspaceId}`);
+
+    // Fire and forget — never await this
+    if (finalStatus === "COMPLETED") {
+      analyzeCampaignPerformance(campaignId).catch(err => console.error('[CampaignAnalysis]', err));
+    }
+
     return {
-      status: totalFailed === 0 ? "COMPLETED" : "PARTIAL",
+      status: finalStatus as any,
       totalSent,
       totalFailed,
       totalSkipped,
@@ -512,7 +626,7 @@ export async function sendCampaign(
     await db.emailCampaign
       .update({
         where: { id: campaignId },
-        data: { status: "FAILED", totalSent, totalFailed },
+        data: { status: "FAILED" },
       })
       .catch(() => null);
 

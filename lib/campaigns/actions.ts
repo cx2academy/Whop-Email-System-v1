@@ -34,6 +34,9 @@ const createCampaignSchema = z.object({
   audienceSegmentIds: z.array(z.string()).default([]),
   isAbTest: z.boolean().default(false),
   abSubjectB: z.string().max(255).optional(),
+  abTestVariantA: z.string().optional(),
+  abTestVariantB: z.string().optional(),
+  abTestSplitPercent: z.number().optional(),
   scheduledAt: z.string().datetime().optional().nullable(),
   sendViaEmail:  z.boolean().default(true),
   sendViaWhopDm: z.boolean().default(false),
@@ -136,6 +139,9 @@ export async function createCampaign(
       audienceSegmentIds: data.audienceSegmentIds,
       isAbTest: data.isAbTest,
       abSubjectB: data.abSubjectB,
+      abTestVariantA: data.abTestVariantA,
+      abTestVariantB: data.abTestVariantB,
+      abTestSplitPercent: data.abTestSplitPercent,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
     },
   });
@@ -241,6 +247,7 @@ export interface CampaignListItem {
   sentAt: Date | null;
   scheduledAt: Date | null;
   createdAt: Date;
+  sequenceId: string | null;
 }
 
 /**
@@ -265,6 +272,7 @@ export async function getCampaigns(): Promise<CampaignListItem[]> {
       sentAt: true,
       scheduledAt: true,
       createdAt: true,
+      sequenceId: true,
     },
   });
 }
@@ -279,6 +287,18 @@ export async function getCampaign(
 
   return db.emailCampaign.findUnique({
     where: { id: campaignId, workspaceId },
+  });
+}
+
+/**
+ * Get campaign details specifically for preview (htmlBody, subject, previewText).
+ */
+export async function getCampaignDetail(campaignId: string) {
+  const { workspaceId } = await requireWorkspaceAccess();
+
+  return db.emailCampaign.findUnique({
+    where: { id: campaignId, workspaceId },
+    select: { id: true, subject: true, previewText: true, htmlBody: true },
   });
 }
 
@@ -499,8 +519,8 @@ export async function duplicateCampaign(
       type: source.type,
       status: "DRAFT",
       subject: source.subject,
-      sendViaEmail:  data.sendViaEmail  ?? true,
-      sendViaWhopDm: data.sendViaWhopDm ?? false,
+      sendViaEmail:  (source as any).sendViaEmail  ?? true,
+      sendViaWhopDm: (source as any).sendViaWhopDm ?? false,
       previewText: source.previewText,
       htmlBody: source.htmlBody,
       textBody: source.textBody,

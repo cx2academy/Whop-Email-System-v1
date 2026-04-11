@@ -25,27 +25,37 @@ export async function GET(req: NextRequest) {
 
   // Fire-and-forget tracking update — non-blocking
   if (campaignId && contactId) {
-    db.emailSend
-      .updateMany({
-        where: {
-          campaignId,
-          contactId,
-          openedAt: null, // Only record first open
-        },
+    db.emailSend.findFirst({
+      where: {
+        campaignId,
+        contactId,
+        openedAt: null, // Only record first open
+      }
+    }).then(async (send) => {
+      if (!send) return;
+
+      await db.emailSend.update({
+        where: { id: send.id },
         data: {
           status: "OPENED",
           openedAt: new Date(),
         },
-      })
-      .then(() =>
-        db.emailCampaign.update({
-          where: { id: campaignId },
-          data: { totalOpened: { increment: 1 } },
-        })
-      )
-      .catch((err) =>
-        console.warn("[track/open] Non-fatal tracking error:", err)
-      );
+      });
+
+      const isVariantA = send.idempotencyKey.endsWith(":A");
+      const isVariantB = send.idempotencyKey.endsWith(":B");
+
+      await db.emailCampaign.update({
+        where: { id: campaignId },
+        data: { 
+          totalOpened: { increment: 1 },
+          ...(isVariantA ? { abTestOpenedACount: { increment: 1 } } : {}),
+          ...(isVariantB ? { abTestOpenedBCount: { increment: 1 } } : {})
+        },
+      });
+    }).catch((err) =>
+      console.warn("[track/open] Non-fatal tracking error:", err)
+    );
   }
 
   // Always return the pixel immediately — don't block on DB

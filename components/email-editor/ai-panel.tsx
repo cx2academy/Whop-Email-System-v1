@@ -19,13 +19,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  optimizeSubjectLine,
-  improveEmailCopy,
-  predictEngagement,
   type SubjectSuggestion,
   type CopyIssue,
   type EngagementPrediction,
 } from '@/lib/ai/actions';
+import { applyAllSuggestions } from '@/lib/ai/apply-suggestions';
+import { toast } from 'react-hot-toast';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -36,6 +35,7 @@ interface Props {
   htmlBody: string;
   audienceSize: number;
   onApplySubject: (subject: string) => void;
+  onApplyBody: (htmlBody: string) => void;
   productContext?: string;
 }
 
@@ -44,6 +44,10 @@ type Tab = 'subject' | 'copy' | 'predict';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function htmlToPlainText(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 const ANGLE_COLORS: Record<string, string> = {
   curiosity: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -76,7 +80,7 @@ function VerdictBadge({ verdict }: { verdict: string }) {
 // Component
 // ---------------------------------------------------------------------------
 
-export function AiPanel({ subject, htmlBody, audienceSize, onApplySubject, productContext = '' }: Props) {
+export function AiPanel({ subject, htmlBody, audienceSize, onApplySubject, onApplyBody, productContext = '' }: Props) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('subject');
   const [isPending, startTransition] = useTransition();
@@ -92,10 +96,43 @@ export function AiPanel({ subject, htmlBody, audienceSize, onApplySubject, produ
   const [predictResult, setPredictResult] = useState<EngagementPrediction | null>(null);
 
   const [error, setError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   function run(fn: () => void) {
     setError(null);
     startTransition(fn);
+  }
+
+  async function runStream(feature: string, payload: any, onComplete: (data: any) => void) {
+    setError(null);
+    setIsStreaming(true);
+    try {
+      const res = await fetch('/api/ai/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feature, payload })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.error || 'Request failed');
+        return;
+      }
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let resultText = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        resultText += decoder.decode(value, { stream: true });
+      }
+      resultText = resultText.replace(/```json|```/g, '').trim();
+      onComplete(JSON.parse(resultText));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Stream failed');
+    } finally {
+      setIsStreaming(false);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -115,20 +152,22 @@ export function AiPanel({ subject, htmlBody, audienceSize, onApplySubject, produ
             className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <button
-            onClick={() => run(async () => {
-              const r = await optimizeSubjectLine(subject, subjectCtx);
-              if (r.success) setSubjectResult(r.data);
-              else setError(r.error);
-            })}
-            disabled={isPending || !subject.trim()}
+            onClick={() => runStream('optimizeSubjectLine', { subject, productContext: subjectCtx }, setSubjectResult)}
+            disabled={isPending || isStreaming || !subject.trim()}
             className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
-            {isPending && tab === 'subject' ? 'Analyzing…' : 'Optimize'}
+            {isStreaming && tab === 'subject' ? 'Analyzing…' : 'Optimize'}
           </button>
         </div>
       </div>
 
-      {subjectResult && (
+      {isStreaming && tab === 'subject' && (
+        <div className="flex items-center justify-center py-4">
+          <span className="animate-pulse text-xl font-bold text-primary">...</span>
+        </div>
+      )}
+
+      {subjectResult && !isStreaming && (
         <div className="space-y-3">
           <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
             <ScoreBadge score={subjectResult.score} />
@@ -171,19 +210,21 @@ export function AiPanel({ subject, htmlBody, audienceSize, onApplySubject, produ
           AI reviews your copy for clarity, benefits, and CTA strength.
         </p>
         <button
-          onClick={() => run(async () => {
-            const r = await improveEmailCopy(subject, htmlBody);
-            if (r.success) setCopyResult(r.data);
-            else setError(r.error);
-          })}
-          disabled={isPending || !htmlBody.trim()}
+          onClick={() => runStream('improveEmailCopy', { subject, htmlBody: htmlToPlainText(htmlBody) }, setCopyResult)}
+          disabled={isPending || isStreaming || !htmlBody.trim()}
           className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          {isPending && tab === 'copy' ? 'Reviewing…' : 'Review copy'}
+          {isStreaming && tab === 'copy' ? 'Reviewing…' : 'Review copy'}
         </button>
       </div>
 
-      {copyResult && (
+      {isStreaming && tab === 'copy' && (
+        <div className="flex items-center justify-center py-4">
+          <span className="animate-pulse text-xl font-bold text-primary">...</span>
+        </div>
+      )}
+
+      {copyResult && !isStreaming && (
         <div className="space-y-3">
           {/* Summary */}
           <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
@@ -224,6 +265,33 @@ export function AiPanel({ subject, htmlBody, audienceSize, onApplySubject, produ
               </div>
             ))}
           </div>
+
+          {/* Apply All Button */}
+          {copyResult.issues.length >= 2 && (
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  run(async () => {
+                    const res = await applyAllSuggestions({
+                      htmlBody,
+                      issues: copyResult.issues,
+                      ctaSuggestion: copyResult.ctaStrength !== 'strong' ? copyResult.ctaSuggestion : undefined,
+                    });
+                    if (res.success) {
+                      onApplyBody(res.data.updatedHtml);
+                      toast.success(`${res.data.appliedCount} improvements applied to your email.`);
+                    } else {
+                      setError(res.error);
+                    }
+                  });
+                }}
+                disabled={isPending}
+                className="w-full rounded-md bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
+              >
+                Apply {copyResult.issues.length + (copyResult.ctaStrength !== 'strong' && copyResult.ctaSuggestion ? 1 : 0)} fixes
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -239,19 +307,21 @@ export function AiPanel({ subject, htmlBody, audienceSize, onApplySubject, produ
           Estimates performance based on subject + copy quality vs. industry benchmarks.
         </p>
         <button
-          onClick={() => run(async () => {
-            const r = await predictEngagement(subject, htmlBody, audienceSize);
-            if (r.success) setPredictResult(r.data);
-            else setError(r.error);
-          })}
-          disabled={isPending || !subject.trim() || !htmlBody.trim()}
+          onClick={() => runStream('predictEngagement', { subject, htmlBody: htmlToPlainText(htmlBody), audienceSize }, setPredictResult)}
+          disabled={isPending || isStreaming || !subject.trim() || !htmlBody.trim()}
           className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >
-          {isPending && tab === 'predict' ? 'Predicting…' : 'Predict'}
+          {isStreaming && tab === 'predict' ? 'Predicting…' : 'Predict'}
         </button>
       </div>
 
-      {predictResult && (
+      {isStreaming && tab === 'predict' && (
+        <div className="flex items-center justify-center py-4">
+          <span className="animate-pulse text-xl font-bold text-primary">...</span>
+        </div>
+      )}
+
+      {predictResult && !isStreaming && (
         <div className="space-y-3">
           {/* Verdict */}
           <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2.5">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { 
   LineChart, Zap, Users, Sparkles, Check, ArrowRight, 
   LayoutDashboard, Mail, PieChart, Plus, MessageSquare 
@@ -43,12 +44,20 @@ const Logo = ({ className = "" }: { className?: string }) => (
 
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
+    // --- PREVIEW MODE BYPASS ---
+    if (process.env.NEXT_PUBLIC_PREVIEW_MODE === "true") {
+      router.push('/dashboard');
+      return;
+    }
+    // --- END PREVIEW MODE BYPASS ---
+
     const handleScroll = () => setIsScrolled(window.scrollY > 32);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[#09090B] text-zinc-300 font-body selection:bg-green-500/30">

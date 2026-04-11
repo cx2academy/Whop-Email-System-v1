@@ -10,10 +10,12 @@ import { LoginForm } from './login-form';
 export const metadata: Metadata = { title: 'Sign in to RevTray' };
 
 interface LoginPageProps {
-  searchParams: { callbackUrl?: string; error?: string };
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }
 
-export default function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { callbackUrl, error } = await searchParams;
+
   return (
     <main
       className="flex min-h-screen items-center justify-center px-4 py-12"
@@ -61,20 +63,20 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           {/* Error */}
-          {searchParams.error && (
+          {error && (
             <div
               className="mb-5 rounded-lg px-4 py-3 text-sm"
               style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626' }}
             >
-              {searchParams.error === 'OAuthAccountNotLinked'
+              {error === 'OAuthAccountNotLinked'
                 ? 'An account with this email already exists. Sign in with email instead.'
-                : searchParams.error === 'CredentialsSignin'
+                : error === 'CredentialsSignin'
                 ? 'Incorrect email or password.'
                 : 'Something went wrong. Please try again.'}
             </div>
           )}
 
-          <LoginForm callbackUrl={searchParams.callbackUrl} />
+          <LoginForm callbackUrl={callbackUrl} />
         </div>
 
         {/* Register */}

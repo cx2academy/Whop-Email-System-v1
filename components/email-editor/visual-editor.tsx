@@ -1,5 +1,6 @@
 'use client';
 
+import DOMPurify from 'isomorphic-dompurify';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -17,8 +18,8 @@ import {
 
 type BlockType = 'heading' | 'text' | 'button' | 'image' | 'divider' | 'spacer' | 'columns';
 
-interface HeadingBlock { id: string; type: 'heading'; content: string; level: 1|2|3; padding?: number }
-interface TextBlock    { id: string; type: 'text';    content: string; padding?: number } 
+interface HeadingBlock { id: string; type: 'heading'; content: string; level: 1|2|3; align?: 'left'|'center'|'right'; padding?: number }
+interface TextBlock    { id: string; type: 'text';    content: string; align?: 'left'|'center'|'right'; padding?: number } 
 interface ButtonBlock  { id: string; type: 'button';  text: string; url: string; color: string; align: 'left'|'center'|'right'; padding?: number }
 interface ImageBlock   { id: string; type: 'image';   src: string; alt: string; url?: string; padding?: number }
 interface DividerBlock { id: string; type: 'divider'; padding?: number }
@@ -46,21 +47,24 @@ function makeBlock(type: BlockType): Block {
 
 const FONT = `-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
 
-function blocksToHtml(blocks: Block[]): string {
-  return blocks.map(b => {
+function blocksToHtml(blocks: Block[], globalStyles: any): string {
+  const innerHtml = blocks.map(b => {
     switch (b.type) {
       case 'heading': {
         const sz = ({1:'28px',2:'22px',3:'18px'} as Record<number,string>)[b.level];
-        return `<h${b.level} style="font-family:${FONT};font-size:${sz};font-weight:700;color:#111827;margin:0 0 14px;line-height:1.2">${b.content}</h${b.level}>`;
+        const al = b.align ? `text-align:${b.align};` : '';
+        return `<h${b.level} style="${al}font-family:${globalStyles.fontFamily};font-size:${sz};font-weight:700;color:${globalStyles.textColor};margin:0 0 14px;line-height:1.2">${b.content}</h${b.level}>`;
       }
-      case 'text':
-        return `<div style="font-family:${FONT};font-size:15px;line-height:1.75;color:#374151;margin:0 0 14px">${b.content}</div>`;
+      case 'text': {
+        const al = b.align ? `text-align:${b.align};` : '';
+        return `<div style="${al}font-family:${globalStyles.fontFamily};font-size:15px;line-height:1.75;color:${globalStyles.textColor};margin:0 0 14px">${b.content}</div>`;
+      }
       case 'button': {
         const al = b.align==='center'?'text-align:center':b.align==='right'?'text-align:right':'text-align:left';
-        return `<div style="${al};margin:24px 0"><a href="${ea(b.url)}" style="display:inline-block;background:${ea(b.color)};color:#fff;font-family:${FONT};font-weight:600;font-size:15px;padding:12px 28px;border-radius:8px;text-decoration:none">${b.text}</a></div>`;
+        return `<div style="${al};margin:24px 0"><a href="${ea(b.url)}" style="display:inline-block;background:${ea(b.color)};color:#fff;font-family:${globalStyles.fontFamily};font-weight:600;font-size:15px;padding:12px 28px;border-radius:8px;text-decoration:none">${b.text}</a></div>`;
       }
       case 'image':
-        const imgTag = `<img src="${ea(b.src)}" alt="${ea(b.alt)}" style="max-width:100%;height:auto;border-radius:8px;display:block;margin:0 auto"/>`;
+        const imgTag = `<img src="${ea(b.src)}" alt="${ea(b.alt)}" style="max-width:100%;height:auto;border-radius:${globalStyles.borderRadius}px;display:block;margin:0 auto"/>`;
         return b.src ? `<div style="text-align:center;margin:20px 0">${b.url ? `<a href="${ea(b.url)}" target="_blank">${imgTag}</a>` : imgTag}</div>` : '';
       case 'divider':
         return `<hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0"/>`;
@@ -68,12 +72,21 @@ function blocksToHtml(blocks: Block[]): string {
         return `<div style="height:${b.height}px;line-height:${b.height}px">&nbsp;</div>`;
       case 'columns':
         return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0"><tr>` +
-          `<td width="48%" valign="top" style="font-family:${FONT};font-size:15px;line-height:1.75;color:#374151;padding-right:16px">${b.left}</td>` +
+          `<td width="48%" valign="top" style="font-family:${globalStyles.fontFamily};font-size:15px;line-height:1.75;color:${globalStyles.textColor};padding-right:16px">${b.left}</td>` +
           `<td width="4%" style="font-size:0;line-height:0">&nbsp;</td>` +
-          `<td width="48%" valign="top" style="font-family:${FONT};font-size:15px;line-height:1.75;color:#374151">${b.right}</td>` +
+          `<td width="48%" valign="top" style="font-family:${globalStyles.fontFamily};font-size:15px;line-height:1.75;color:${globalStyles.textColor}">${b.right}</td>` +
           `</tr></table>`;
     }
   }).filter(Boolean).join('\n');
+
+  return `<div style="font-family: ${globalStyles.fontFamily}; max-width: 600px; margin: 0 auto; padding: 32px 20px; color: ${globalStyles.textColor}; background-color: ${globalStyles.contentBackgroundColor}; border-radius: ${globalStyles.borderRadius}px; line-height: 1.6; font-size: 16px;">
+  ${innerHtml}
+  <div style="margin-top: 32px; padding-top: 24px; text-align: center;">
+    <p style="font-size: 12px; color: #888888;">
+      <a href="{{unsubscribe_url}}" style="color: #888888; text-decoration: underline;">Unsubscribe</a>
+    </p>
+  </div>
+</div>`;
 }
 
 function ea(s:string){ return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -81,60 +94,128 @@ function ea(s:string){ return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function htmlToBlocks(html: string): Block[] {
   if (!html?.trim()) return [];
   try {
-    const doc = new DOMParser().parseFromString(html,'text/html');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
     const out: Block[] = [];
-    function walk(el: Element) {
+
+    function isBlockElement(el: Element) {
+      return ['div', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'section', 'header', 'footer', 'ul', 'ol'].includes(el.tagName.toLowerCase());
+    }
+
+    function walk(el: Element, inheritedAlign?: 'left'|'center'|'right') {
       const tag = el.tagName?.toLowerCase();
       if (!tag) return;
-      if (['h1','h2','h3'].includes(tag)) {
+
+      const elAlign = (el as HTMLElement).style?.textAlign as 'left'|'center'|'right' || inheritedAlign;
+
+      if (['h1', 'h2', 'h3'].includes(tag)) {
         const t = el.textContent?.trim();
-        if (t) out.push({ id:uid(), type:'heading', content:t, level:+tag[1] as 1|2|3 });
+        if (t) out.push({ id: uid(), type: 'heading', content: t, level: +tag[1] as 1 | 2 | 3, align: elAlign });
         return;
       }
-      if (tag === 'hr') { out.push({ id:uid(), type:'divider' }); return; }
+
+      if (tag === 'hr') {
+        out.push({ id: uid(), type: 'divider' });
+        return;
+      }
+
       if (tag === 'table') {
         const tds = el.querySelectorAll('td');
         if (tds.length >= 2) {
-          out.push({ id:uid(), type:'columns', left:tds[0].innerHTML.trim(), right:tds[tds.length-1].innerHTML.trim() });
+          out.push({ id: uid(), type: 'columns', left: tds[0].innerHTML.trim(), right: tds[tds.length - 1].innerHTML.trim() });
+          return;
         }
-        return;
       }
+
       if (tag === 'div' || tag === 'p') {
-        const a = el.querySelector('a') as HTMLAnchorElement|null;
-        if (a) {
+        // Check if it's a Button block (must be a relatively "pure" container for the link)
+        const a = el.querySelector('a') as HTMLAnchorElement | null;
+        if (a && el.querySelectorAll('a').length === 1) {
           const bg = a.style.background || a.style.backgroundColor;
           if (bg && bg !== 'none' && bg !== 'transparent') {
-            const pa = (el as HTMLElement).style.textAlign;
-            out.push({ id:uid(), type:'button', text:a.textContent?.trim()||'Click', url:a.getAttribute('href')||'#', color:bg, align:pa==='right'?'right':pa==='left'?'left':'center' });
+            const textWithoutA = el.textContent?.replace(a.textContent || '', '').trim();
+            const hasOtherBlocks = Array.from(el.children).some(c => c !== a && isBlockElement(c));
+            
+            if (!textWithoutA && !hasOtherBlocks) {
+              const pa = (el as HTMLElement).style?.textAlign || inheritedAlign;
+              out.push({ 
+                id: uid(), 
+                type: 'button', 
+                text: a.textContent?.trim() || 'Click', 
+                url: a.getAttribute('href') || '#', 
+                color: bg, 
+                align: pa === 'right' ? 'right' : pa === 'left' ? 'left' : 'center' 
+              });
+              return;
+            }
+          }
+        }
+
+        // Check if it's an Image block
+        const img = el.querySelector('img') as HTMLImageElement | null;
+        if (img && el.querySelectorAll('img').length === 1) {
+          const textWithoutImg = el.textContent?.trim();
+          const hasOtherBlocks = Array.from(el.children).some(c => c !== img && c.tagName !== 'A' && isBlockElement(c));
+          
+          if (!textWithoutImg && !hasOtherBlocks) {
+            const aWrapper = img.closest('a');
+            out.push({ 
+              id: uid(), 
+              type: 'image', 
+              src: img.getAttribute('src') || '', 
+              alt: img.getAttribute('alt') || '', 
+              url: aWrapper?.getAttribute('href') || '' 
+            });
             return;
           }
         }
-        const img = el.querySelector('img') as HTMLImageElement|null;
-        if (img) { 
-          out.push({ id:uid(), type:'image', src:img.getAttribute('src')||'', alt:img.getAttribute('alt')||'', url: a?.getAttribute('href') || '' }); 
-          return; 
+
+        // Check if it's a styled container (like a callout box)
+        const hasBackground = (el as HTMLElement).style?.background || (el as HTMLElement).style?.backgroundColor;
+        const hasBorder = (el as HTMLElement).style?.border || (el as HTMLElement).style?.borderLeft || (el as HTMLElement).style?.borderTop;
+        if (tag === 'div' && (hasBackground || hasBorder)) {
+           const inner = el.outerHTML;
+           if (inner && !inner.includes('{{unsubscribe_url}}')) {
+             out.push({ id: uid(), type: 'text', content: inner, align: elAlign });
+             return;
+           }
         }
-        const s = (el as HTMLElement).getAttribute('style') || '';
-        if (s.includes('height:') && !el.textContent?.trim().replace('\u00a0','')) {
-          const m = s.match(/height:(\d+)/);
-          out.push({ id:uid(), type:'spacer', height:m?+m[1]:24 });
+
+        // If it has block-level children, RECURSE
+        const hasBlockChildren = Array.from(el.children).some(isBlockElement);
+        if (hasBlockChildren) {
+          Array.from(el.children).forEach(child => walk(child, elAlign));
           return;
         }
+
+        // Otherwise, treat as a text block
         const inner = el.innerHTML?.trim();
-        if (inner) out.push({ id:uid(), type:'text', content:inner });
+        if (inner) {
+          if (inner.includes('{{unsubscribe_url}}')) return;
+          out.push({ id: uid(), type: 'text', content: inner, align: elAlign });
+        }
         return;
       }
+
       if (tag === 'img') {
-        out.push({ id:uid(), type:'image', src:(el as HTMLImageElement).getAttribute('src')||'', alt:(el as HTMLImageElement).getAttribute('alt')||'' });
+        out.push({ id: uid(), type: 'image', src: (el as HTMLImageElement).getAttribute('src') || '', alt: (el as HTMLImageElement).getAttribute('alt') || '' });
         return;
       }
-      if (el.children.length) { Array.from(el.children).forEach(walk); return; }
+
+      if (el.children.length) {
+        Array.from(el.children).forEach(child => walk(child, elAlign));
+        return;
+      }
+
       const t = el.textContent?.trim();
-      if (t) out.push({ id:uid(), type:'text', content:t });
+      if (t) out.push({ id: uid(), type: 'text', content: t, align: elAlign });
     }
-    Array.from(doc.body.children).forEach(walk);
+
+    Array.from(doc.body.children).forEach(child => walk(child));
     return out;
-  } catch { return []; }
+  } catch (e) {
+    console.error('[htmlToBlocks] Parse error:', e);
+    return [];
+  }
 }
 
 // --- Helper: Convert Tags to Pills for contentEditable ---
@@ -144,7 +225,11 @@ function tagsToPills(html: string) {
   return html.replace(/\{\{([^}]+)\}\}/g, (match, content) => {
     const [tag, fallbackPart] = content.split('|').map((s:string) => s.trim());
     const fallback = fallbackPart?.startsWith('fallback:') ? fallbackPart.split(':')[1].trim().replace(/^['"]|['"]$/g, '') : '';
-    return `<span class="variable-pill" data-tag="${tag}" data-fallback="${fallback}" data-vid="${i++}" contenteditable="false">${tag}</span>`;
+    const isKnown = KNOWN_VARIABLES.includes(tag);
+    const classes = isKnown 
+      ? 'variable-pill bg-emerald-50 text-emerald-700' 
+      : 'variable-pill bg-amber-50 text-amber-700 border border-amber-200/50';
+    return `<span class="${classes}" data-tag="${tag}" data-fallback="${fallback}" data-vid="${i++}" contenteditable="false">${tag}</span>`;
   });
 }
 
@@ -171,6 +256,21 @@ function updateTagInHtml(html: string, vid: number, newTag: string, newFallback:
   });
 }
 
+function replaceTagWithText(html: string, vid: number, text: string) {
+  let i = 0;
+  return html.replace(/\{\{([^}]+)\}\}/g, (match) => {
+    if (i++ === vid) {
+      return text;
+    }
+    return match;
+  });
+}
+
+const KNOWN_VARIABLES = [
+  'first_name', 'last_name', 'email', 'sender_name', 
+  'product_name', 'community_name', 'unsubscribe_url', 'cta_url'
+];
+
 // --- Helper: Render Merge Tags as Visual Pills (React) ---
 const renderContentWithTags = (text: string, isPreview = false, onSelectVariable?: (v: { tag: string; fallback: string; vid: number } | null) => void) => {
   if (!text) return null;
@@ -183,10 +283,11 @@ const renderContentWithTags = (text: string, isPreview = false, onSelectVariable
       const content = part.slice(2, -2).trim();
       const [tag, fallbackPart] = content.split('|').map(s => s.trim());
       const fallback = fallbackPart?.startsWith('fallback:') ? fallbackPart.split(':')[1].trim().replace(/^['"]|['"]$/g, '') : '';
+      const isKnown = KNOWN_VARIABLES.includes(tag);
       
       if (isPreview) {
         return (
-          <span key={i} className="text-emerald-600 font-semibold">
+          <span key={i} className={isKnown ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
             {fallback || tag}
           </span>
         );
@@ -195,7 +296,7 @@ const renderContentWithTags = (text: string, isPreview = false, onSelectVariable
       return (
         <span 
           key={i} 
-          className="variable-pill cursor-pointer hover:bg-emerald-100 transition-colors"
+          className={`variable-pill cursor-pointer transition-colors ${isKnown ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/50'}`}
           onClick={(e) => {
             if (onSelectVariable) {
               e.stopPropagation();
@@ -207,7 +308,7 @@ const renderContentWithTags = (text: string, isPreview = false, onSelectVariable
         </span>
       );
     }
-    return <span key={i} dangerouslySetInnerHTML={{ __html: part }} />;
+    return <span key={i} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(part) }} />;
   });
 };
 
@@ -330,10 +431,10 @@ export function VisualEditor({ value, onChange }: Props) {
   const [globalStyles, setGlobalStyles] = useState({
     backgroundColor: '#F9FAFB',
     contentBackgroundColor: '#FFFFFF',
-    fontFamily: 'Inter, sans-serif',
-    textColor: '#374151',
-    linkColor: '#10B981',
-    borderRadius: 12,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    textColor: '#333333',
+    linkColor: '#6366f1',
+    borderRadius: 8,
   });
   const inited = useRef(false);
 
@@ -352,10 +453,10 @@ export function VisualEditor({ value, onChange }: Props) {
 
   useEffect(() => {
     if (!inited.current) return;
-    const html = blocksToHtml(blocks);
+    const html = blocksToHtml(blocks, globalStyles);
     onChange(html);
     setPreviewHtml(html);
-  }, [blocks, onChange]);
+  }, [blocks, globalStyles, onChange]);
 
   const push = useCallback((fn: (p:Block[])=>Block[]) => {
     setBlocks(prev => fn(prev));
@@ -473,10 +574,10 @@ export function VisualEditor({ value, onChange }: Props) {
                       const pad = b.padding !== undefined ? `${b.padding}px` : '16px';
                       if (b.type === 'heading') {
                         const sz = ({1:'28px',2:'22px',3:'18px'} as Record<number,string>)[b.level];
-                        return <h2 key={b.id} style={{fontFamily:globalStyles.fontFamily,fontSize:sz,fontWeight:700,color:globalStyles.textColor,margin:0,padding:pad,lineHeight:1.2}}>{renderContentWithTags(b.content, true)}</h2>;
+                        return <h2 key={b.id} style={{textAlign:b.align,fontFamily:globalStyles.fontFamily,fontSize:sz,fontWeight:700,color:globalStyles.textColor,margin:0,padding:pad,lineHeight:1.2}}>{renderContentWithTags(b.content, true)}</h2>;
                       }
                       if (b.type === 'text') {
-                        return <div key={b.id} style={{fontFamily:globalStyles.fontFamily,fontSize:'15px',lineHeight:1.75,color:globalStyles.textColor,margin:0,padding:pad}}>{renderContentWithTags(b.content, true)}</div>;
+                        return <div key={b.id} style={{textAlign:b.align,fontFamily:globalStyles.fontFamily,fontSize:'15px',lineHeight:1.75,color:globalStyles.textColor,margin:0,padding:pad}}>{renderContentWithTags(b.content, true)}</div>;
                       }
                       if (b.type === 'button') {
                         const al = b.align==='center'?'center':b.align==='right'?'right':'left';
@@ -490,7 +591,7 @@ export function VisualEditor({ value, onChange }: Props) {
                       if (b.type === 'spacer') return <div key={b.id} style={{height:`${b.height}px`}}>&nbsp;</div>;
                       if (b.type === 'columns') {
                         return (
-                          <table key={b.id} width="100%" cellpadding="0" cellspacing="0" border={0} style={{padding:pad}}>
+                          <table key={b.id} width="100%" cellPadding="0" cellSpacing="0" border={0} style={{padding:pad}}>
                             <tr>
                               <td width="48%" valign="top" style={{fontFamily:globalStyles.fontFamily,fontSize:'15px',lineHeight:1.75,color:globalStyles.textColor,paddingRight:'16px'}}>{renderContentWithTags(b.left, true)}</td>
                               <td width="4%" style={{fontSize:0,lineHeight:0}}>&nbsp;</td>
@@ -501,6 +602,11 @@ export function VisualEditor({ value, onChange }: Props) {
                       }
                       return null;
                     })}
+                    <div style={{ marginTop: '32px', paddingTop: '24px', textAlign: 'center' }}>
+                      <p style={{ fontSize: '12px', color: '#888888' }}>
+                        <a href="#" style={{ color: '#888888', textDecoration: 'underline' }}>Unsubscribe</a>
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -537,6 +643,13 @@ export function VisualEditor({ value, onChange }: Props) {
                 <div className="mt-12 max-w-[600px] mx-auto">
                   <AddBlockButton onSelect={t => addBlock(t)} className="w-full flex items-center justify-center gap-2 px-5 py-6 rounded-xl text-sm font-medium bg-transparent border border-dashed border-gray-200 text-gray-400 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all" />
                 </div>
+
+                {/* Fixed Unsubscribe Footer in Edit Mode */}
+                <div className="mt-8 pt-6 pb-8 text-center opacity-50 pointer-events-none select-none">
+                  <p className="text-[12px] text-[#888888] m-0">
+                    <span className="underline">Unsubscribe</span>
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -567,14 +680,23 @@ export function VisualEditor({ value, onChange }: Props) {
                     setSelVar({ ...selVar, tag, fallback });
                     const block = blocks.find(b => b.id === selVar.blockId);
                     if (block) {
-                      // We need to find which field contains the tag.
-                      // Since we don't know for sure, we check 'content', 'left', 'right'.
                       const updates: any = {};
                       if ((block as any).content) updates.content = updateTagInHtml((block as any).content, selVar.vid, tag, fallback);
                       if ((block as any).left) updates.left = updateTagInHtml((block as any).left, selVar.vid, tag, fallback);
                       if ((block as any).right) updates.right = updateTagInHtml((block as any).right, selVar.vid, tag, fallback);
                       updateBlock(selVar.blockId, updates);
                     }
+                  }}
+                  onReplace={(text) => {
+                    const block = blocks.find(b => b.id === selVar.blockId);
+                    if (block) {
+                      const updates: any = {};
+                      if ((block as any).content) updates.content = replaceTagWithText((block as any).content, selVar.vid, text);
+                      if ((block as any).left) updates.left = replaceTagWithText((block as any).left, selVar.vid, text);
+                      if ((block as any).right) updates.right = replaceTagWithText((block as any).right, selVar.vid, text);
+                      updateBlock(selVar.blockId, updates);
+                    }
+                    setSelVar(null);
                   }}
                   onClose={() => setSelVar(null)}
                 />
@@ -711,23 +833,23 @@ function BlockCanvasRender({ block, selected, globalStyles, onUpdate, onSelectVa
       if (selected) {
         const sz = ({1:'text-3xl',2:'text-2xl',3:'text-xl'} as Record<number,string>)[block.level];
         return (
-          <div style={{ padding: pad }}>
-            <RichTextEdit value={block.content} onChange={v=>onUpdate({content:v})} onSelectVariable={onSelectVariable} className={`w-full font-bold ${sz}`} style={{ color: globalStyles.textColor, fontFamily: globalStyles.fontFamily }} placeholder="Heading..." />
+          <div style={{ padding: pad, textAlign: block.align }}>
+            <RichTextEdit value={block.content} onChange={v=>onUpdate({content:v})} onSelectVariable={onSelectVariable} className={`w-full font-bold ${sz}`} style={{ color: globalStyles.textColor, fontFamily: globalStyles.fontFamily, textAlign: block.align }} placeholder="Heading..." />
           </div>
         );
       }
       const sz = ({1:'text-3xl',2:'text-2xl',3:'text-xl'} as Record<number,string>)[block.level];
-      return <div className={`font-bold leading-tight ${sz}`} style={{ ...textStyle, padding: pad }}>{renderContentWithTags(block.content, false, onSelectVariable) || <span className="text-gray-300">Heading…</span>}</div>;
+      return <div className={`font-bold leading-tight ${sz}`} style={{ ...textStyle, padding: pad, textAlign: block.align }}>{renderContentWithTags(block.content, false, onSelectVariable) || <span className="text-gray-300">Heading…</span>}</div>;
     
     case 'text':    
       if (selected) {
         return (
-          <div style={{ padding: pad }}>
-            <RichTextEdit value={block.content} onChange={v=>onUpdate({content:v})} onSelectVariable={onSelectVariable} className="border-none bg-transparent p-0 min-h-[40px]" style={textStyle} />
+          <div style={{ padding: pad, textAlign: block.align }}>
+            <RichTextEdit value={block.content} onChange={v=>onUpdate({content:v})} onSelectVariable={onSelectVariable} className="border-none bg-transparent p-0 min-h-[40px]" style={{ ...textStyle, textAlign: block.align }} />
           </div>
         );
       }
-      return <div className="text-[15px] leading-relaxed" style={{ ...textStyle, padding: pad }}>{renderContentWithTags(block.content, false, onSelectVariable) || <span className="text-gray-300">Type something…</span>}</div>;
+      return <div className="text-[15px] leading-relaxed" style={{ ...textStyle, padding: pad, textAlign: block.align }}>{renderContentWithTags(block.content, false, onSelectVariable) || <span className="text-gray-300">Type something…</span>}</div>;
     
     case 'button':  
       return <div className={`text-${block.align}`} style={{ padding: pad }}><span style={{ background:block.color, fontFamily: globalStyles.fontFamily }} className="inline-block text-white px-7 py-3 rounded-lg text-[15px] font-semibold shadow-sm">{block.text||'Button'}</span></div>;
@@ -758,13 +880,48 @@ function BlockCanvasRender({ block, selected, globalStyles, onUpdate, onSelectVa
 
 // ── Right Sidebar Variable Properties ─────────────────────────────────────────
 
-function VariableProperties({ selVar, onUpdate, onClose }: { 
+function VariableProperties({ selVar, onUpdate, onReplace, onClose }: { 
   selVar: { tag: string; fallback: string; vid: number }; 
   onUpdate: (tag: string, fallback: string) => void;
+  onReplace: (text: string) => void;
   onClose: () => void;
 }) {
   const Label = ({ children }: { children: React.ReactNode }) => <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">{children}</label>;
   
+  const isKnown = VAR_CATEGORIES.some(cat => cat.vars.some(v => v.value === selVar.tag));
+  const [replaceText, setReplaceText] = useState('');
+
+  if (!isKnown) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <Label>Fill Placeholder</Label>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            This is a template placeholder. Enter the actual text you want to use to replace it.
+          </p>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <span className="text-xs font-mono text-amber-800">{selVar.tag}</span>
+          </div>
+          <input 
+            type="text" 
+            value={replaceText} 
+            onChange={e => setReplaceText(e.target.value)} 
+            placeholder={`e.g. ${selVar.tag.replace(/_/g, ' ')}`}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-white shadow-sm"
+            autoFocus
+          />
+          <button 
+            onClick={() => onReplace(replaceText)}
+            disabled={!replaceText.trim()}
+            className="w-full py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          >
+            Replace Placeholder
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const currentCategory = VAR_CATEGORIES.find(cat => cat.vars.some(v => v.value === selVar.tag)) || VAR_CATEGORIES[0];
 
   return (
@@ -884,6 +1041,16 @@ function PropertiesPanel({ block, onUpdate, onClose }: { block:Block; onUpdate:(
                 ))}
               </div>
             </div>
+            <div>
+              <Label>Alignment</Label>
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                {(['left','center','right'] as const).map(a=>(
+                  <button key={a} onClick={()=>onUpdate({align:a})} className={`flex-1 py-1.5 flex justify-center rounded-md transition-all ${block.align===a || (!block.align && a==='left') ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                    {a==='left'?<AlignLeftIcon size={14}/>:a==='center'?<AlignCenterIcon size={14}/>:<AlignRightIcon size={14}/>}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-3">
               <Label>Content</Label>
               <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-gray-100">Edit the text directly on the canvas.</p>
@@ -895,6 +1062,16 @@ function PropertiesPanel({ block, onUpdate, onClose }: { block:Block; onUpdate:(
       case 'text':
         return (
           <div className="space-y-4">
+            <div>
+              <Label>Alignment</Label>
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                {(['left','center','right'] as const).map(a=>(
+                  <button key={a} onClick={()=>onUpdate({align:a})} className={`flex-1 py-1.5 flex justify-center rounded-md transition-all ${block.align===a || (!block.align && a==='left') ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                    {a==='left'?<AlignLeftIcon size={14}/>:a==='center'?<AlignCenterIcon size={14}/>:<AlignRightIcon size={14}/>}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Label>Content</Label>
             <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg border border-gray-100">Edit the text content directly on the canvas. Highlight text to see formatting options.</p>
             <VarPicker onInsert={insertIntoCanvas} />
@@ -1093,24 +1270,29 @@ const VAR_CATEGORIES = [
   {
     name: 'Recipient',
     vars: [
-      { label: 'First Name', value: 'firstName' },
-      { label: 'Last Name', value: 'lastName' },
-      { label: 'Full Name', value: 'fullName' },
+      { label: 'First Name', value: 'first_name' },
+      { label: 'Last Name', value: 'last_name' },
       { label: 'Email Address', value: 'email' },
     ]
   },
   {
     name: 'Sender',
     vars: [
-      { label: 'Sender Name', value: 'senderName' },
-      { label: 'Sender Email', value: 'senderEmail' },
+      { label: 'Sender Name', value: 'sender_name' },
     ]
   },
   {
-    name: 'Company',
+    name: 'Product/Community',
     vars: [
-      { label: 'Company Name', value: 'companyName' },
-      { label: 'Address', value: 'companyAddress' },
+      { label: 'Product Name', value: 'product_name' },
+      { label: 'Community Name', value: 'community_name' },
+    ]
+  },
+  {
+    name: 'Links',
+    vars: [
+      { label: 'CTA URL', value: 'cta_url' },
+      { label: 'Unsubscribe URL', value: 'unsubscribe_url' },
     ]
   }
 ];
@@ -1124,11 +1306,10 @@ const FALLBACK_OPTIONS = [
 ];
 
 const VARS = [
-  { label:'First name',  value:"firstName | fallback: 'there'" },
-  { label:'Full name',   value:'fullName' },
+  { label:'First name',  value:"first_name | fallback: 'there'" },
   { label:'Email',       value:'email' },
-  { label:'Sender name', value:'senderName' },
-  { label:'Company',     value:'companyName' },
+  { label:'Sender name', value:'sender_name' },
+  { label:'Product name',value:'product_name' },
 ];
 
 function VarPicker({ onInsert }: { onInsert:(v:string)=>void }) {
