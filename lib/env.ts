@@ -122,6 +122,15 @@ function formatZodErrors(
  * Called once at module load — fails fast on missing/invalid config.
  */
 function validateServerEnv(): ServerEnv {
+  // Skip environment variable validation during Next.js build phase
+  if (
+    process.env.SKIP_ENV_VALIDATION === "true" ||
+    process.env.npm_lifecycle_event === "build" ||
+    process.env.NEXT_PHASE === "phase-production-build"
+  ) {
+    return process.env as unknown as ServerEnv;
+  }
+
   const parsed = serverEnvSchema.safeParse(process.env);
 
   if (!parsed.success) {
@@ -164,3 +173,23 @@ export const env = validateServerEnv();
  * Safe to use in client components.
  */
 export const clientEnv = validateClientEnv();
+
+/**
+ * Helper to reliably get the application's base URL, falling back through
+ * available environment variables in Vercel and local environments, avoiding "undefined" string.
+ */
+export function getAppUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL !== "undefined") {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (process.env.APP_URL && process.env.APP_URL !== "undefined") {
+    return process.env.APP_URL.replace(/\/$/, "");
+  }
+  if (process.env.NEXTAUTH_URL && process.env.NEXTAUTH_URL !== "undefined") {
+    return process.env.NEXTAUTH_URL.replace(/\/$/, "");
+  }
+  if (process.env.VERCEL_URL && process.env.VERCEL_URL !== "undefined") {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}

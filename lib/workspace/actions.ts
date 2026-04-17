@@ -16,16 +16,22 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { hash } from "bcryptjs";
+import { render } from "@react-email/render";
 
 import { db } from "@/lib/db/client";
 import { auth } from "@/auth";
+import { headers } from "next/headers";
+import { getAppUrl } from "@/lib/env";
 import {
   requireWorkspaceAccess,
   requireAdminAccess,
 } from "@/lib/auth/session";
+import { logAudit } from "@/lib/audit/logger";
 import { slugify } from "@/lib/utils";
 import { encrypt } from "@/lib/encryption";
 import { authLimiter } from "@/lib/rate-limit";
+import { sendEmail } from "@/lib/email";
+import { VerificationEmail } from "@/emails/verification";
 import type { ApiResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -45,20 +51,37 @@ const updateWorkspaceSchema = z.object({
   fromEmail: z.string().email("Must be a valid email").optional().nullable(),
   fromName: z.string().max(64).optional().nullable(),
   whopApiKey: z.string().optional().nullable(),
+  niche: z.string().optional().nullable(),
 });
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").trim(),
+  firstName: z.string().min(1, "First name is required").trim(),
+  lastName: z.string().min(1, "Last name is required").trim(),
   email: z.string().email("Invalid email address").toLowerCase().trim(),
+  dob: z.string().optional().nullable(),
+  phoneNumber: z.string().optional().nullable(),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
-    .max(100),
+    .max(100)
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+      "Password must contain at least one uppercase letter, one lowercase letter, one number and one special character"
+    ),
   workspaceName: z
     .string()
     .min(2, "Workspace name must be at least 2 characters")
     .max(64)
     .trim(),
+  termsAccepted: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the Terms of Service and Privacy Policy.",
+  }),
+  marketingConsent: z.boolean().optional().default(false),
+  persona: z.string().optional().nullable(),
+  heardAboutUs: z.string().optional().nullable(),
+  utmSource: z.string().optional().nullable(),
+  utmMedium: z.string().optional().nullable(),
+  utmCampaign: z.string().optional().nullable(),
 });
 
 // ---------------------------------------------------------------------------
@@ -71,23 +94,45 @@ const registerSchema = z.object({
 export async function registerUser(
   formData: FormData
 ): Promise<ApiResponse<{ redirectTo: string }>> {
-  // Rate-limit registration by email to prevent account-creation spam.
-  // Server Actions don't have easy IP access, so we use the submitted email
-  // as the key — this stops the same address from spamming registrations.
+  const headerList = await headers();
+  const ip = headerList.get("x-forwarded-for")?.split(",")[0] || "127.0.0.1";
+
+  // Rate-limit registration by email AND IP to prevent account-creation spam.
   const emailValue = (formData.get("email") as string | null)?.toLowerCase().trim() ?? "unknown";
-  const rl = authLimiter.check(`register:${emailValue}`);
-  if (!rl.success) {
+
+  const emailRl = authLimiter.check(`register:email:${emailValue}`);
+  const ipRl = authLimiter.check(`register:ip:${ip}`);
+
+  if (!emailRl.success || !ipRl.success) {
     return {
       success: false,
       error: "Too many registration attempts. Please wait a minute and try again.",
     };
   }
 
+    const personaValue = formData.get("persona") === "other" 
+      ? formData.get("personaOther") 
+      : formData.get("persona");
+      
+    const heardValue = formData.get("heardAboutUs") === "other" 
+      ? formData.get("heardAboutUsOther") 
+      : formData.get("heardAboutUs");
+
   const raw = {
-    name: formData.get("name"),
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
     email: formData.get("email"),
+    dob: formData.get("dob"),
+    phoneNumber: formData.get("phoneNumber"),
     password: formData.get("password"),
     workspaceName: formData.get("workspaceName"),
+    termsAccepted: formData.get("termsAccepted") === "on",
+    marketingConsent: formData.get("marketingConsent") === "on",
+    persona: (personaValue as string) || null,
+    heardAboutUs: (heardValue as string) || null,
+    utmSource: formData.get("utmSource") || null,
+    utmMedium: formData.get("utmMedium") || null,
+    utmCampaign: formData.get("utmCampaign") || null,
   };
 
   const parsed = registerSchema.safeParse(raw);
@@ -98,17 +143,21 @@ export async function registerUser(
     };
   }
 
-  const { name, email, password, workspaceName } = parsed.data;
+  const { 
+    firstName, lastName, email, password, workspaceName, 
+    dob, phoneNumber,
+    termsAccepted, marketingConsent, persona, heardAboutUs,
+    utmSource, utmMedium, utmCampaign
+  } = parsed.data;
 
   console.log(`[registerUser] Starting registration for ${email}`);
 
   // Check if email already in use
-  const existing = await db.user.findUnique({
+  const existingEmail = await db.user.findUnique({
     where: { email },
     select: { id: true },
   });
-  if (existing) {
-    console.log(`[registerUser] Email ${email} already in use`);
+  if (existingEmail) {
     return {
       success: false,
       error: "An account with this email already exists",
@@ -116,10 +165,27 @@ export async function registerUser(
     };
   }
 
+  // Check if phone number already in use
+  if (phoneNumber) {
+    const existingPhone = await db.user.findUnique({
+      where: { phoneNumber },
+      select: { id: true },
+    });
+    if (existingPhone) {
+      return {
+        success: false,
+        error: "An account with this phone number already exists",
+        code: "PHONE_IN_USE",
+      };
+    }
+  }
+
   console.log(`[registerUser] Hashing password...`);
   // Hash password
   const passwordHash = await hash(password, 12);
   console.log(`[registerUser] Password hashed`);
+
+  const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
   console.log(`[registerUser] Starting database transaction...`);
   // Create user + workspace + membership in a transaction
@@ -127,9 +193,29 @@ export async function registerUser(
     console.log(`[registerUser] Creating user...`);
     const user = await tx.user.create({
       data: {
-        name,
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`.trim(),
         email,
         passwordHash,
+        dob: dob ? new Date(dob) : null,
+        phoneNumber,
+        termsAccepted,
+        marketingConsent,
+        persona: persona || undefined,
+        heardAboutUs: heardAboutUs || undefined,
+        utmSource: utmSource || undefined,
+        utmMedium: utmMedium || undefined,
+        utmCampaign: utmCampaign || undefined,
+      },
+    });
+
+    // Create verification token
+    await tx.verificationToken.create({
+      data: {
+        identifier: email,
+        token: verificationToken,
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
       },
     });
 
@@ -159,6 +245,37 @@ export async function registerUser(
     });
   });
   console.log(`[registerUser] Transaction complete`);
+
+  // Send verification email
+  try {
+    const appUrl = getAppUrl();
+    const verificationUrl = `${appUrl}/auth/verify?token=${verificationToken}`;
+    const emailHtml = await render(
+      VerificationEmail({
+        name: firstName,
+        url: verificationUrl,
+      })
+    );
+
+    await sendEmail({
+      to: email,
+      subject: "Verify your email - RevTray",
+      html: emailHtml,
+    });
+  } catch (error) {
+    console.error("[registerUser] Failed to send verification email:", error);
+    // We don't fail registration if email fails, but maybe we should log it.
+  }
+
+  // Log registration (need to get the user ID)
+  try {
+    const newlyCreatedUser = await db.user.findUnique({ where: { email }, select: { id: true } });
+    if (newlyCreatedUser) {
+      await logAudit(newlyCreatedUser.id, "REGISTER");
+    }
+  } catch (e) {
+    console.error("[registerUser] Audit log failed:", e);
+  }
 
   return { success: true, data: { redirectTo: "/auth/login" } };
 }

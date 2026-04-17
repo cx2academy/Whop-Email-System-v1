@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { CheckIcon, AlertCircleIcon, LoaderIcon } from 'lucide-react';
+import { Logo } from '@/components/ui/logo';
 
 // ── Tokens ───────────────────────────────────────────────────────────────────
 export const C = {
@@ -64,12 +65,7 @@ export function Shell({
         borderBottom: `1px solid ${C.border}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, background: C.brand, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="12" height="12" viewBox="0 0 100 100" fill="none">
-              <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="white" strokeWidth="9" fill="none" strokeLinecap="round"/>
-              <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="white"/>
-            </svg>
-          </div>
+          <Logo size={26} />
           <span style={{ fontFamily: "'Bricolage Grotesque',system-ui,sans-serif", fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: '-0.03em' }}>
             RevTray
           </span>

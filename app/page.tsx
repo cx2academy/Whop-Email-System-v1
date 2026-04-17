@@ -3,44 +3,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { Logo } from '@/components/ui/logo';
 import { 
   LineChart, Zap, Users, Sparkles, Check, ArrowRight, 
   LayoutDashboard, Mail, PieChart, Plus, MessageSquare 
 } from 'lucide-react';
-
-const Logo = ({ className = "" }: { className?: string }) => (
-  <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={`shrink-0 ${className}`}>
-    <defs>
-      <linearGradient id="top-flap-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#4ADE80" />
-        <stop offset="100%" stopColor="#15803D" />
-      </linearGradient>
-      <linearGradient id="bot-flap-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#4ADE80" />
-        <stop offset="100%" stopColor="#22C55E" />
-      </linearGradient>
-    </defs>
-    <g transform="rotate(-12 50 50)">
-      {/* Top Flap */}
-      <path d="M 5 36 L 50 6 L 95 36 Z" fill="url(#top-flap-grad)" stroke="url(#top-flap-grad)" strokeWidth="2" strokeLinejoin="round" />
-      
-      {/* Inside Pocket */}
-      <path d="M 5 40 L 95 40 L 95 86 L 5 86 Z" fill="#064E3B" stroke="#064E3B" strokeWidth="2" strokeLinejoin="round" />
-      
-      {/* Left Flap */}
-      <path d="M 5 40 L 50 66 L 5 86 Z" fill="#16A34A" stroke="#16A34A" strokeWidth="2" strokeLinejoin="round" />
-      
-      {/* Right Flap */}
-      <path d="M 95 40 L 50 66 L 95 86 Z" fill="#15803D" stroke="#15803D" strokeWidth="2" strokeLinejoin="round" />
-      
-      {/* Bottom Flap */}
-      <path d="M 5 86 L 50 56 L 95 86 Z" fill="url(#bot-flap-grad)" stroke="url(#bot-flap-grad)" strokeWidth="2" strokeLinejoin="round" />
-      
-      {/* Gap Lines */}
-      <path d="M 5 86 L 50 56 L 95 86" fill="none" stroke="#09090B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-    </g>
-  </svg>
-);
 
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -48,7 +15,10 @@ export default function HomePage() {
 
   useEffect(() => {
     // --- PREVIEW MODE BYPASS ---
-    if (process.env.NEXT_PUBLIC_PREVIEW_MODE === "true") {
+    // Check if we have the staging bypass cookie
+    const hasStagingCookie = document.cookie.includes('staging_bypass=');
+    
+    if (process.env.NEXT_PUBLIC_PREVIEW_MODE === "true" || hasStagingCookie) {
       router.push('/dashboard');
       return;
     }
@@ -64,7 +34,7 @@ export default function HomePage() {
       {/* Navbar */}
       <nav className={`fixed top-0 left-0 right-0 z-50 h-[60px] flex items-center justify-between px-6 transition-all duration-300 ${isScrolled ? 'bg-[#09090B]/80 backdrop-blur-xl border-b border-white/10' : 'bg-transparent'}`}>
         <a href="/" className="flex items-center gap-2 font-display text-lg font-extrabold text-white hover:opacity-80 transition-opacity">
-          <Logo /> RevTray
+          <Logo size={28} /> RevTray
         </a>
         <ul className="hidden md:flex gap-8 text-sm font-medium">
           <li><a href="#features" className="text-zinc-400 hover:text-white transition-colors">Features</a></li>
@@ -128,7 +98,7 @@ export default function HomePage() {
           <div className="border border-white/10 border-t-0 rounded-b-xl overflow-hidden grid grid-cols-1 md:grid-cols-[180px_1fr] min-h-[420px] bg-[#090F1C]">
             <div className="hidden md:flex flex-col bg-[#090F1C] border-r border-white/5">
               <div className="p-4 border-b border-white/5 flex items-center gap-2">
-                <Logo className="w-5 h-5" />
+                <Logo size={20} />
                 <span className="font-display text-sm font-extrabold text-white">RevTray</span>
               </div>
               <div className="p-2 flex-1 space-y-1">
@@ -523,19 +493,19 @@ export default function HomePage() {
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-6">Resources</h4>
             <ul className="space-y-4 text-sm text-zinc-500">
-              <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">API Reference</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Changelog</a></li>
+              <li><a href="/support" className="hover:text-white transition-colors">Documentation</a></li>
+              <li><a href="/support" className="hover:text-white transition-colors">API Reference</a></li>
+              <li><a href="/support" className="hover:text-white transition-colors">Blog</a></li>
+              <li><a href="/support" className="hover:text-white transition-colors">Changelog</a></li>
             </ul>
           </div>
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-6">Company</h4>
             <ul className="space-y-4 text-sm text-zinc-500">
-              <li><a href="#" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="/support" className="hover:text-white transition-colors">About</a></li>
               <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
+              <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+              <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
             </ul>
           </div>
         </div>

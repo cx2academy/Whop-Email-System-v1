@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/ui/logo";
 
 /**
  * Top navigation bar component.
@@ -9,8 +10,9 @@ export function Navbar() {
     <nav className="border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
+          <Logo size={24} />
           <span className="text-xl font-bold text-foreground">
-            ⚡ Whop Email Engine
+            RevTray
           </span>
         </Link>
 

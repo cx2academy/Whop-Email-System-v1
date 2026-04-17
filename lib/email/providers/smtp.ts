@@ -44,8 +44,8 @@ export class SmtpProvider implements EmailProvider {
         options.from ??
         process.env.SMTP_FROM_EMAIL ??
         process.env.RESEND_FROM_EMAIL ??
-        "noreply@whopemailengine.com";
-      const fromName = process.env.RESEND_FROM_NAME ?? "Whop Email Engine";
+        "noreply@revtray.com";
+      const fromName = process.env.RESEND_FROM_NAME ?? "RevTray";
       const from = fromEmail.includes("<")
         ? fromEmail
         : `${fromName} <${fromEmail}>`;
@@ -59,7 +59,7 @@ export class SmtpProvider implements EmailProvider {
         replyTo: options.replyTo,
         // Idempotency via message-id header
         messageId: options.idempotencyKey
-          ? `<${options.idempotencyKey}@whopemailengine.com>`
+          ? `<${options.idempotencyKey}@revtray.com>`
           : undefined,
       });
 

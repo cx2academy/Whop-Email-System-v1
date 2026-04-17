@@ -56,7 +56,11 @@ export function OnboardingFlow({ userEmail, userName, startStep, initialData }: 
     case 2: return (
       <StepBrand
         companyName={companyName}
-        onNext={(name, color) => { setCompanyName(name); setBrandColor(color); advance(); }}
+        onNext={(name, color, niche, address) => { 
+          setCompanyName(name); 
+          setBrandColor(color); 
+          advance(); 
+        }}
       />
     );
     case 3: return (

@@ -14,6 +14,7 @@ const TABS = [
   { id: 'billing',      label: 'Billing' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'api',          label: 'API' },
+  { id: 'security',     label: 'Security' },
 ];
 
 export function SettingsTabs({ activeTab }: { activeTab: string }) {

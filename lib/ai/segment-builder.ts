@@ -50,11 +50,15 @@ CONTEXT:
   lastClicked: last time they clicked any email (use relative days like '7', '30')
   opensCount: total number of emails opened (integer)
   emailsSent: total emails sent to this contact (integer)
+  whopStatus: Whop membership status (active, canceled, past_due, trialing, completed)
+  whopPasses: Whop product/pass ID (string ID like 'prod_xxxx' or 'pass_xxxx')
 - Available operators for each field:
   dates (createdAt, lastOpened, lastClicked): within_days, older_than_days, never
   numbers (opensCount, emailsSent): gt, lt
   tags (tag): has, not_has
   status (status): eq, not_eq
+  whopStatus (whopStatus): eq, not_eq
+  whopPasses (whopPasses): has, not_has
 - Available tags in this workspace: ${JSON.stringify(tagContext)}
 
 RULES:
@@ -62,6 +66,9 @@ RULES:
 - "New" contacts = joined in last 14 days
 - "Cold" or "inactive" = no open in last 60+ days
 - "VIP" or "customers" = likely a tag — if the tag exists in the workspace, use it; if not, add a warning
+- "Active members" = whopStatus is 'active'
+- "Canceled members" = whopStatus is 'canceled'
+- "People with the Gold Pass" = whopPasses has 'Gold Pass' (if you don't know the ID, use the name and add a warning)
 - When description mentions multiple criteria connected by "and", use operator: 'AND'
 - When description uses "or", "either", use operator: 'OR'
 - Provide humanReadable for each condition (what the user will see before confirming)
@@ -84,14 +91,14 @@ Output: {
   "warnings": []
 }
 
-Input: "highly engaged subscribers who clicked something in the last week"
+Input: "active members who haven't clicked in 2 weeks"
 Output: {
-  "understood": "Subscribers who clicked a link in the last 7 days and have opened more than 3 emails.",
+  "understood": "Active Whop members who have not clicked a link in the last 14 days.",
   "rules": {
     "operator": "AND",
     "conditions": [
-      { "field": "lastClicked", "op": "within_days", "value": "7", "humanReadable": "Clicked a link in the last 7 days" },
-      { "field": "opensCount", "op": "gt", "value": "3", "humanReadable": "Have opened more than 3 emails" }
+      { "field": "whopStatus", "op": "eq", "value": "active", "humanReadable": "Whop status is active" },
+      { "field": "lastClicked", "op": "older_than_days", "value": "14", "humanReadable": "Last clicked more than 14 days ago" }
     ]
   },
   "confidence": "high",
@@ -114,7 +121,7 @@ INPUT TO TRANSLATE: "${description}"
               items: {
                 type: 'object',
                 properties: {
-                  field: { type: 'string', enum: ['tag', 'status', 'createdAt', 'lastOpened', 'lastClicked', 'opensCount', 'emailsSent'] },
+                  field: { type: 'string', enum: ['tag', 'status', 'createdAt', 'lastOpened', 'lastClicked', 'opensCount', 'emailsSent', 'whopStatus', 'whopPasses'] },
                   op: { type: 'string', enum: ['eq', 'not_eq', 'has', 'not_has', 'gt', 'lt', 'within_days', 'older_than_days', 'never'] },
                   value: { type: 'string' },
                   humanReadable: { type: 'string' },

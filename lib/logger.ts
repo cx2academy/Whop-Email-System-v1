@@ -1,75 +1,43 @@
+import pino from 'pino';
+
 /**
  * lib/logger.ts
- *
- * Structured logger with error monitoring hook.
- *
- * In production, replace `reportToMonitoring()` with your provider:
- *   - Sentry: Sentry.captureException(err, { extra: context })
- *   - Datadog: datadogRum.addError(err, context)
- *   - LogRocket: LogRocket.captureException(err)
- *
- * All server errors flow through here — a single integration point.
+ * 
+ * Structured logging for RevTray.
+ * In development, it prints pretty logs to the console.
+ * In production, it can be connected to BetterStack (Logtail) via the hosting provider
+ * or by adding a transport.
  */
 
-type LogLevel = "debug" | "info" | "warn" | "error";
+const isDev = process.env.NODE_ENV === 'development';
 
-interface LogContext {
-  workspaceId?: string;
-  userId?: string;
-  campaignId?: string;
-  contactId?: string;
-  route?: string;
-  [key: string]: unknown;
-}
+export const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: isDev
+    ? {
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          ignore: 'pid,hostname',
+          translateTime: 'HH:MM:ss Z',
+        },
+      }
+    : undefined,
+});
 
-function formatMessage(level: LogLevel, message: string, context?: LogContext): string {
-  const ts = new Date().toISOString();
-  const ctx = context ? ` ${JSON.stringify(context)}` : "";
-  return `[${ts}] [${level.toUpperCase()}] ${message}${ctx}`;
-}
+// Helper for logging errors to both console/BetterStack AND Sentry
+import * as Sentry from "@sentry/nextjs";
 
-/**
- * Send error to external monitoring service.
- * Replace this body with your actual monitoring SDK in production.
- */
-function reportToMonitoring(err: unknown, context?: LogContext): void {
-  // TODO: Sentry.captureException(err, { extra: context });
-  // For now: structured console.error (captured by Vercel log drain)
-  if (process.env.NODE_ENV === "production") {
-    console.error(
-      JSON.stringify({
-        level: "error",
-        timestamp: new Date().toISOString(),
-        error:
-          err instanceof Error
-            ? { name: err.name, message: err.message, stack: err.stack }
-            : String(err),
-        context,
-      })
-    );
-  }
-}
+export const logError = (error: Error | string, context?: Record<string, any>) => {
+  const message = error instanceof Error ? error.message : error;
+  
+  logger.error({ err: error, ...context }, message);
+  
+  Sentry.captureException(error, {
+    extra: context,
+  });
+};
 
-export const logger = {
-  debug(message: string, context?: LogContext): void {
-    if (process.env.NODE_ENV === "development") {
-      console.debug(formatMessage("debug", message, context));
-    }
-  },
-
-  info(message: string, context?: LogContext): void {
-    console.info(formatMessage("info", message, context));
-  },
-
-  warn(message: string, context?: LogContext): void {
-    console.warn(formatMessage("warn", message, context));
-  },
-
-  error(message: string, err?: unknown, context?: LogContext): void {
-    console.error(formatMessage("error", message, context));
-    if (err) {
-      console.error(err);
-      reportToMonitoring(err, { message, ...context });
-    }
-  },
+export const logInfo = (message: string, context?: Record<string, any>) => {
+  logger.info(context, message);
 };

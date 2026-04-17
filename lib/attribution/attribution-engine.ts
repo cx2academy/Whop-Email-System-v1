@@ -49,11 +49,11 @@ export async function attributePurchase(
   const windowStart = new Date(Date.now() - ATTRIBUTION_WINDOW_DAYS * 86400000);
 
   // Find most recent campaign click within the window (last-click model)
-  const lastCampaignClick = await db.emailSend.findFirst({
+  const lastCampaignClick = await db.clickEvent.findFirst({
     where: {
       contactId: resolvedContactId,
       workspaceId,
-      clickedAt: { gte: windowStart, not: null },
+      clickedAt: { gte: windowStart },
     },
     orderBy: { clickedAt: 'desc' },
     select: { campaignId: true, clickedAt: true },

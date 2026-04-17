@@ -33,8 +33,8 @@ export class ResendProvider implements EmailProvider {
 
     // Build a safe default from address for when options.from is omitted.
     const fromEmail =
-      process.env.RESEND_FROM_EMAIL ?? 'noreply@whopemailengine.com';
-    const fromName = process.env.RESEND_FROM_NAME ?? 'Whop Email Engine';
+      process.env.RESEND_FROM_EMAIL ?? 'noreply@revtray.com';
+    const fromName = process.env.RESEND_FROM_NAME ?? 'RevTray';
     this.defaultFrom = fromEmail.includes('<')
       ? fromEmail
       : `${fromName} <${fromEmail}>`;
@@ -52,9 +52,10 @@ export class ResendProvider implements EmailProvider {
         text: options.text,
         ...(options.replyTo && { reply_to: options.replyTo }),
         ...(options.scheduledAt && { scheduled_at: options.scheduledAt }),
-        headers: options.idempotencyKey
-          ? { 'X-Idempotency-Key': options.idempotencyKey }
-          : undefined,
+        headers: {
+          ...(options.idempotencyKey && { 'X-Idempotency-Key': options.idempotencyKey }),
+          ...options.headers,
+        },
       });
 
       if (error || !data) {

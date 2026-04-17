@@ -21,6 +21,8 @@ const FIELD_OPTIONS = [
   { value: 'lastClicked', label: 'Last clicked email' },
   { value: 'opensCount',  label: 'Total opens count' },
   { value: 'emailsSent',  label: 'Total emails received' },
+  { value: 'whopStatus',  label: 'Whop Membership Status' },
+  { value: 'whopPasses',  label: 'Whop Product/Pass' },
 ];
 
 const OP_OPTIONS: Record<string, { value: string; label: string }[]> = {
@@ -31,6 +33,8 @@ const OP_OPTIONS: Record<string, { value: string; label: string }[]> = {
   lastClicked: [{ value: 'within_days', label: 'within last N days' }, { value: 'older_than_days', label: 'more than N days ago' }, { value: 'never', label: 'never clicked' }],
   opensCount:  [{ value: 'gt', label: 'more than' }, { value: 'lt', label: 'less than' }],
   emailsSent:  [{ value: 'gt', label: 'more than' }, { value: 'lt', label: 'less than' }],
+  whopStatus:  [{ value: 'eq', label: 'is' }, { value: 'not_eq', label: 'is not' }],
+  whopPasses:  [{ value: 'has', label: 'has product ID' }, { value: 'not_has', label: 'does not have product ID' }],
 };
 
 function defaultCondition(): SegmentCondition {
@@ -328,11 +332,20 @@ function ConditionEditor({
             <option value="UNSUBSCRIBED">Unsubscribed</option>
             <option value="BOUNCED">Bounced</option>
           </select>
+        ) : condition.field === 'whopStatus' ? (
+          <select value={String(condition.value ?? 'active')} onChange={(e) => onChange({ value: e.target.value })}
+            className="rounded border border-input bg-background px-2 py-1 text-xs">
+            <option value="active">Active</option>
+            <option value="canceled">Canceled</option>
+            <option value="past_due">Past Due</option>
+            <option value="trialing">Trialing</option>
+            <option value="completed">Completed</option>
+          </select>
         ) : (
           <input
             value={String(condition.value ?? '')}
             onChange={(e) => onChange({ value: e.target.value })}
-            placeholder={condition.field === 'tag' ? 'tag name' : 'number'}
+            placeholder={condition.field === 'tag' ? 'tag name' : condition.field === 'whopPasses' ? 'product ID' : 'number'}
             className="w-28 rounded border border-input bg-background px-2 py-1 text-xs"
           />
         )

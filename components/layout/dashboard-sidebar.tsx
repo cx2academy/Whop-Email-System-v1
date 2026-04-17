@@ -13,10 +13,11 @@ import {
   BarChart2Icon, SettingsIcon, ShieldCheckIcon,
   FormInputIcon, LayoutTemplateIcon,
   ChevronLeft, ChevronRight, ZapIcon, XIcon,
-  FilterIcon, CircleDollarSignIcon
+  FilterIcon, CircleDollarSignIcon, Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar-context';
+import { Logo } from '@/components/ui/logo';
 
 const NAV_GROUPS = [
   {
@@ -33,7 +34,7 @@ const NAV_GROUPS = [
     items: [
       { href: '/dashboard/templates',      label: 'Templates',    icon: LayoutTemplateIcon },
       { href: '/dashboard/forms',          label: 'Forms',        icon: FormInputIcon },
-      { href: '/dashboard/automation',     label: 'Auto-send',    icon: Workflow },
+      { href: '/dashboard/automations',    label: 'Automations',  icon: Workflow },
     ]
   },
   {
@@ -47,13 +48,24 @@ const NAV_GROUPS = [
 ];
 
 const BOTTOM_NAV = [
-  { href: '/dashboard/settings',       label: 'Settings',     icon: SettingsIcon,        exact: true },
+  { href: '/dashboard/settings/domains', label: 'Domains',      icon: Globe,               exact: true },
+  { href: '/dashboard/settings',         label: 'Settings',     icon: SettingsIcon,        exact: true },
 ];
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ isAdmin: isAdminProp }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const [isPlanDismissed, setIsPlanDismissed] = useState(true); // Default true to prevent hydration mismatch, then set false
+
+  const groups = [...NAV_GROUPS];
+  if (isAdminProp) {
+    groups.push({
+      label: 'System',
+      items: [
+        { href: '/dashboard/admin', label: 'Admin View', icon: ShieldCheckIcon },
+      ]
+    });
+  }
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('planDismissed') === 'true';
@@ -91,26 +103,7 @@ export function DashboardSidebar() {
       >
         <div className="flex items-center gap-2.5 flex-1 min-w-0 overflow-hidden">
           <div className="flex h-8 w-8 items-center justify-center flex-shrink-0">
-            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="sidebar-top-flap-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#4ADE80"></stop>
-                  <stop offset="100%" stopColor="#15803D"></stop>
-                </linearGradient>
-                <linearGradient id="sidebar-bot-flap-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#4ADE80"></stop>
-                  <stop offset="100%" stopColor="#22C55E"></stop>
-                </linearGradient>
-              </defs>
-              <g transform="rotate(-12 50 50)">
-                <path d="M 5 36 L 50 6 L 95 36 Z" fill="url(#sidebar-top-flap-grad)" stroke="url(#sidebar-top-flap-grad)" strokeWidth="2" strokeLinejoin="round"></path>
-                <path d="M 5 40 L 95 40 L 95 86 L 5 86 Z" fill="#064E3B" stroke="#064E3B" strokeWidth="2" strokeLinejoin="round"></path>
-                <path d="M 5 40 L 50 66 L 5 86 Z" fill="#16A34A" stroke="#16A34A" strokeWidth="2" strokeLinejoin="round"></path>
-                <path d="M 95 40 L 50 66 L 95 86 Z" fill="#15803D" stroke="#15803D" strokeWidth="2" strokeLinejoin="round"></path>
-                <path d="M 5 86 L 50 56 L 95 86 Z" fill="url(#sidebar-bot-flap-grad)" stroke="url(#sidebar-bot-flap-grad)" strokeWidth="2" strokeLinejoin="round"></path>
-                <path d="M 5 86 L 50 56 L 95 86" fill="none" stroke="#09090B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"></path>
-              </g>
-            </svg>
+            <Logo size={28} />
           </div>
           {!isCollapsed && (
             <span
@@ -141,7 +134,7 @@ export function DashboardSidebar() {
         "flex-1 overflow-y-auto py-6 space-y-8",
         isCollapsed ? "px-2" : "px-4"
       )}>
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.label}>
             {!isCollapsed && (
               <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70" style={{ color: 'var(--text-tertiary)' }}>

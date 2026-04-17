@@ -45,6 +45,16 @@ const brandingSchema = z.object({
     .max(128)
     .optional()
     .nullable(),
+  niche: z
+    .string()
+    .max(128)
+    .optional()
+    .nullable(),
+  physicalAddress: z
+    .string()
+    .max(256, 'Physical address must be under 256 characters')
+    .optional()
+    .nullable(),
 });
 
 export type BrandingInput = z.infer<typeof brandingSchema>;
@@ -54,6 +64,8 @@ export interface WorkspaceBranding {
   brandColor:      string;
   fromName:        string | null;
   whopCompanyName: string | null;
+  niche:           string | null;
+  physicalAddress: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +91,8 @@ export async function saveBranding(
   if (parsed.data.brandColor  !== undefined) updateData.brandColor  = parsed.data.brandColor;
   if (parsed.data.fromName    !== undefined) updateData.fromName    = parsed.data.fromName;
   if (parsed.data.whopCompanyName !== undefined) updateData.whopCompanyName = parsed.data.whopCompanyName;
+  if (parsed.data.niche       !== undefined) updateData.niche       = parsed.data.niche;
+  if (parsed.data.physicalAddress !== undefined) updateData.physicalAddress = parsed.data.physicalAddress;
 
   const updated = await db.workspace.update({
     where: { id: workspaceId },
@@ -88,6 +102,8 @@ export async function saveBranding(
       brandColor:      true,
       fromName:        true,
       whopCompanyName: true,
+      niche:           true,
+      physicalAddress: true,
     },
   });
 
@@ -101,6 +117,8 @@ export async function saveBranding(
       brandColor:      updated.brandColor ?? '#22C55E',
       fromName:        updated.fromName,
       whopCompanyName: updated.whopCompanyName,
+      niche:           updated.niche,
+      physicalAddress: updated.physicalAddress,
     },
   };
 }

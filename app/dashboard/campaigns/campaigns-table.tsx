@@ -72,7 +72,7 @@ export function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
         <table className="w-full text-sm">
           <thead style={{ borderBottom: '1px solid var(--sidebar-border)', background: 'var(--surface-app)' }}>
             <tr>
-              {['Campaign', 'Status', 'Sent', 'Open rate', 'Click rate', 'Date'].map((h, i) => (
+              {['Campaign', 'Status', 'Sent', 'Open rate', 'Click rate', 'Revenue', 'Date'].map((h, i) => (
                 <th key={h}
                   className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-right'}`}
                   style={{ color: 'var(--text-tertiary)' }}>
@@ -87,6 +87,7 @@ export function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
                 const c = item.data;
                 const openRate  = c.totalSent > 0 ? ((c.totalOpened  / c.totalSent) * 100).toFixed(1) : null;
                 const clickRate = c.totalSent > 0 ? ((c.totalClicked / c.totalSent) * 100).toFixed(1) : null;
+                const revenue   = c.totalRevenue > 0 ? `$${(c.totalRevenue / 100).toLocaleString()}` : '—';
                 const date      = c.sentAt ?? c.scheduledAt ?? c.createdAt;
                 const status    = c.status as CampaignStatus;
                 return (
@@ -119,6 +120,9 @@ export function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
                     <td className="px-5 py-4 text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
                       {clickRate !== null ? `${clickRate}%` : '—'}
                     </td>
+                    <td className="px-5 py-4 text-right text-sm font-medium" style={{ color: c.totalRevenue > 0 ? '#16A34A' : 'var(--text-secondary)' }}>
+                      {revenue}
+                    </td>
                     <td className="px-4 py-4 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
                       {formatDate(date)}
                     </td>
@@ -130,9 +134,11 @@ export function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
                 const totalSent = s.items.reduce((acc: number, c: any) => acc + c.totalSent, 0);
                 const totalOpened = s.items.reduce((acc: number, c: any) => acc + c.totalOpened, 0);
                 const totalClicked = s.items.reduce((acc: number, c: any) => acc + c.totalClicked, 0);
+                const totalRevenue = s.items.reduce((acc: number, c: any) => acc + (c.totalRevenue || 0), 0);
                 
                 const openRate  = totalSent > 0 ? ((totalOpened  / totalSent) * 100).toFixed(1) : null;
                 const clickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : null;
+                const revenue   = totalRevenue > 0 ? `$${(totalRevenue / 100).toLocaleString()}` : '—';
                 const date = s.createdAt;
 
                 return (
@@ -184,6 +190,9 @@ export function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
                       <td className="px-5 py-4 text-right text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {clickRate !== null ? `${clickRate}%` : '—'}
                       </td>
+                      <td className="px-5 py-4 text-right text-sm font-medium" style={{ color: totalRevenue > 0 ? '#16A34A' : 'var(--text-secondary)' }}>
+                        {revenue}
+                      </td>
                       <td className="px-4 py-4 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
                         {formatDate(date)}
                       </td>
@@ -191,6 +200,7 @@ export function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
                     {isExpanded && !s.isCalendar && s.items.map((c: any, j: number) => {
                       const cOpenRate  = c.totalSent > 0 ? ((c.totalOpened  / c.totalSent) * 100).toFixed(1) : null;
                       const cClickRate = c.totalSent > 0 ? ((c.totalClicked / c.totalSent) * 100).toFixed(1) : null;
+                      const cRevenue   = c.totalRevenue > 0 ? `$${(c.totalRevenue / 100).toLocaleString()}` : '—';
                       const cDate      = c.sentAt ?? c.scheduledAt ?? c.createdAt;
                       const status    = c.status as CampaignStatus;
                       return (
@@ -221,6 +231,9 @@ export function CampaignsTable({ campaigns }: { campaigns: Campaign[] }) {
                           </td>
                           <td className="px-5 py-3 text-right text-xs" style={{ color: 'var(--text-secondary)' }}>
                             {cClickRate !== null ? `${cClickRate}%` : '—'}
+                          </td>
+                          <td className="px-5 py-3 text-right text-xs font-medium" style={{ color: c.totalRevenue > 0 ? '#16A34A' : 'var(--text-secondary)' }}>
+                            {cRevenue}
                           </td>
                           <td className="px-4 py-3 text-right text-xs" style={{ color: 'var(--text-tertiary)' }}>
                             {formatDate(cDate)}

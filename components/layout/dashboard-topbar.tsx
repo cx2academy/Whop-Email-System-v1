@@ -7,12 +7,20 @@ import { auth } from '@/auth';
 import { CommandPaletteTrigger } from '@/components/ui/command-palette-trigger';
 import { UserMenu } from './user-menu';
 import { Breadcrumbs } from './breadcrumbs';
-import { BellIcon, HelpCircleIcon, PlusIcon } from 'lucide-react';
+import { HelpCircleIcon, PlusIcon } from 'lucide-react';
 import Link from 'next/link';
+import { NotificationBell } from './notification-bell';
+import { requireWorkspaceAccess } from '@/lib/auth/session';
 
 export async function DashboardTopbar() {
-  const user = { name: "Preview User", email: "preview@example.com" };
-  const initials = "PU";
+  const session = await auth();
+  const { workspaceId, userId } = await requireWorkspaceAccess();
+  
+  const user = { 
+    name: session?.user?.name || "User", 
+    email: session?.user?.email || "" 
+  };
+  const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
   return (
     <header
@@ -47,9 +55,7 @@ export async function DashboardTopbar() {
         <div className="h-4 w-px bg-zinc-100 mx-2" />
 
         {/* Notifications */}
-        <button className="rounded-full p-2 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-zinc-900">
-          <BellIcon className="h-4 w-4" />
-        </button>
+        <NotificationBell workspaceId={workspaceId} userId={userId} />
 
         {/* Help */}
         <button className="rounded-full p-2 text-zinc-400 transition-all hover:bg-zinc-100 hover:text-zinc-900">

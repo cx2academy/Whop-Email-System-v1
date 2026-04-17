@@ -30,6 +30,8 @@ import {
 } from "@/lib/whop/client";
 import { SEND_BATCH_SIZE } from "@/lib/constants";
 import { checkUsageLimit } from "@/lib/plans/gates";
+import { createNotification } from "@/lib/notifications/actions";
+import { NotificationType } from "@prisma/client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -87,6 +89,15 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
 
   try {
     const client = createWhopClient(apiKey);
+    const membersByEmail = new Map<string, {
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      whopMemberId: string;
+      whopStatus: string;
+      whopPasses: string[];
+      rawMetadata: Record<string, unknown>;
+    }>();
 
     // Stream all memberships page by page
     for await (const batch of client.fetchAllMemberships(pageSize)) {
@@ -119,27 +130,28 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
         );
       }
 
-      // Upsert valid contacts in sub-batches to avoid huge transactions
-      const subBatches = chunk(valid, SEND_BATCH_SIZE);
-      for (const subBatch of subBatches) {
-        // Contact cap check — skip upsert if plan limit would be exceeded
-        const contactGate = await checkUsageLimit({
-          workspaceId,
-          type: 'contacts',
-          requested: subBatch.length,
-        });
-        if (!contactGate.allowed) {
-          totalSkipped += subBatch.length;
-          errorDetails.push(
-            `Contact limit reached (plan: ${contactGate.payload.currentPlan}, limit: ${contactGate.payload.limit ?? 'unknown'}). ${subBatch.length} contacts skipped.`
-          );
-          continue;
+      for (const m of valid) {
+        const existing = membersByEmail.get(m.email);
+        if (existing) {
+          if (!existing.whopPasses.includes(m.productId)) {
+            existing.whopPasses.push(m.productId);
+          }
+          if (m.isActive) {
+            existing.whopStatus = m.membershipStatus;
+            existing.whopMemberId = m.whopMemberId;
+            existing.rawMetadata = m.rawMetadata;
+          }
+        } else {
+          membersByEmail.set(m.email, {
+            email: m.email,
+            firstName: m.firstName,
+            lastName: m.lastName,
+            whopMemberId: m.whopMemberId,
+            whopStatus: m.membershipStatus,
+            whopPasses: [m.productId],
+            rawMetadata: m.rawMetadata,
+          });
         }
-
-        const result = await upsertContactBatch(workspaceId, subBatch);
-        totalUpserted += result.upserted;
-        totalErrors += result.errors;
-        errorDetails.push(...result.errorDetails);
       }
 
       // Update progress on the sync log periodically
@@ -147,11 +159,35 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
         where: { id: syncLog.id },
         data: {
           totalFetched,
-          totalUpserted,
           totalSkipped,
           totalErrors,
         },
       });
+    }
+
+    // Upsert valid contacts in sub-batches to avoid huge transactions
+    const aggregatedMembers = Array.from(membersByEmail.values());
+    const subBatches = chunk(aggregatedMembers, SEND_BATCH_SIZE);
+    
+    for (const subBatch of subBatches) {
+      // Contact cap check — skip upsert if plan limit would be exceeded
+      const contactGate = await checkUsageLimit({
+        workspaceId,
+        type: 'contacts',
+        requested: subBatch.length,
+      });
+      if (!contactGate.allowed) {
+        totalSkipped += subBatch.length;
+        errorDetails.push(
+          `Contact limit reached (plan: ${contactGate.payload.currentPlan}, limit: ${contactGate.payload.limit ?? 'unknown'}). ${subBatch.length} contacts skipped.`
+        );
+        continue;
+      }
+
+      const result = await upsertContactBatch(workspaceId, subBatch as any);
+      totalUpserted += result.upserted;
+      totalErrors += result.errors;
+      errorDetails.push(...result.errorDetails);
     }
 
     // Mark complete
@@ -179,6 +215,18 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
       durationMs: Date.now() - startedAt,
       errorDetails,
     };
+
+    // Notify user of sync completion
+    await createNotification({
+      workspaceId,
+      userId: triggeredBy === 'system' ? undefined : triggeredBy,
+      type: NotificationType.IMPORT,
+      title: 'Member Sync Complete',
+      message: `Successfully synced ${totalUpserted} members from Whop. ${totalErrors} errors encountered.`,
+      actionUrl: '/dashboard/contacts',
+    });
+
+    return result;
   } catch (err) {
     // Top-level failure — update sync log to FAILED
     const errorMessage =
@@ -234,7 +282,15 @@ interface UpsertBatchResult {
  */
 async function upsertContactBatch(
   workspaceId: string,
-  members: NormalisedWhopMember[]
+  members: Array<{
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    whopMemberId: string;
+    whopStatus: string;
+    whopPasses: string[];
+    rawMetadata: Record<string, unknown>;
+  }>
 ): Promise<UpsertBatchResult> {
   let upserted = 0;
   let errors = 0;
@@ -257,6 +313,8 @@ async function upsertContactBatch(
             firstName: member.firstName,
             lastName: member.lastName,
             whopMemberId: member.whopMemberId,
+            whopStatus: member.whopStatus,
+            whopPasses: member.whopPasses,
             whopMetadata: member.rawMetadata,
             // New contacts default to SUBSCRIBED
             status: "SUBSCRIBED",
@@ -268,6 +326,8 @@ async function upsertContactBatch(
             firstName: member.firstName,
             lastName: member.lastName,
             whopMemberId: member.whopMemberId,
+            whopStatus: member.whopStatus,
+            whopPasses: member.whopPasses,
             whopMetadata: member.rawMetadata,
           },
         })
@@ -289,6 +349,8 @@ async function upsertContactBatch(
             firstName: member.firstName,
             lastName: member.lastName,
             whopMemberId: member.whopMemberId,
+            whopStatus: member.whopStatus,
+            whopPasses: member.whopPasses,
             whopMetadata: member.rawMetadata,
             status: "SUBSCRIBED",
           },
@@ -296,6 +358,8 @@ async function upsertContactBatch(
             firstName: member.firstName,
             lastName: member.lastName,
             whopMemberId: member.whopMemberId,
+            whopStatus: member.whopStatus,
+            whopPasses: member.whopPasses,
             whopMetadata: member.rawMetadata,
           },
         });

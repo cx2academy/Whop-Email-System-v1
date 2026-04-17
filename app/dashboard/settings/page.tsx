@@ -14,9 +14,11 @@ import { BillingSuccessBanner } from './billing-success-banner';
 import { EmailProviderSettings } from './email-provider';
 import { BrandingSettings } from './branding-settings';
 import { SmartSendingSettings } from './smart-sending';
+import { SecuritySettings } from './security-settings';
 import { getWorkspaceUsage } from '@/lib/plans/gates';
 import { getSendingSettings } from '@/lib/sending/actions';
 import { SettingsTabs } from './settings-tabs';
+import { getAppUrl } from '@/lib/env';
 
 import { VoiceProfileSettings } from './voice-profile-settings';
 
@@ -28,10 +30,10 @@ export default async function SettingsPage({
   searchParams: Promise<{ tab?: string; billing_success?: string }>;
 }) {
   const params = await searchParams;
-  const { workspaceId, workspaceRole } = await requireWorkspaceAccess();
+  const { workspaceId, workspaceRole, userId } = await requireWorkspaceAccess();
   const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 
-  const [workspace, apiKeys, usage, emailProviderConfig, sendingSettings] = await Promise.all([
+  const [workspace, apiKeys, usage, emailProviderConfig, sendingSettings, currentUser] = await Promise.all([
     db.workspace.findUnique({
       where: { id: workspaceId },
       select: {
@@ -39,7 +41,7 @@ export default async function SettingsPage({
         fromEmail: true, fromName: true,
         plan: true, whopApiKey: true, webhookSecret: true,
         // Branding fields
-        logoUrl: true, brandColor: true,
+        logoUrl: true, brandColor: true, niche: true,
       },
     }),
     db.apiKey.findMany({
@@ -53,6 +55,10 @@ export default async function SettingsPage({
       select: { provider: true, isVerified: true, createdAt: true },
     }),
     getSendingSettings().catch(() => null),
+    db.user.findUnique({
+      where: { id: userId },
+      select: { twoFactorEnabled: true },
+    }),
   ]);
 
   if (!workspace) return null;
@@ -110,6 +116,7 @@ export default async function SettingsPage({
                   fromEmail: workspace.fromEmail,
                   fromName: workspace.fromName,
                   hasWhopApiKey: !!workspace.whopApiKey,
+                  niche: workspace.niche,
                 }}
                 isAdmin={isAdmin}
               />
@@ -208,7 +215,7 @@ export default async function SettingsPage({
               <WhopWebhookSettings
                 workspaceId={workspace.id}
                 hasSecret={!!workspace.webhookSecret}
-                appUrl={process.env.NEXTAUTH_URL ?? 'https://app.revtray.com'}
+                appUrl={getAppUrl()}
               />
             </SettingsCard>
 
@@ -236,6 +243,16 @@ export default async function SettingsPage({
             ) : (
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Only admins can manage API keys.</p>
             )}
+          </SettingsCard>
+        )}
+
+        {/* ── Security ───────────────────────────────────────────────── */}
+        {activeTab === 'security' && (
+          <SettingsCard
+            title="Account security"
+            description="Manage your password and security settings to keep your account safe."
+          >
+            <SecuritySettings twoFactorEnabled={!!currentUser?.twoFactorEnabled} />
           </SettingsCard>
         )}
 

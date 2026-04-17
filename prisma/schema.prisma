@@ -16,21 +16,58 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------------------------
 // AUTH — NextAuth v5 / Auth.js adapter tables
 // ---------------------------------------------------------------------------
 
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String   // LOGIN_SUCCESS, LOGIN_FAILURE, PASSWORD_CHANGE, MFA_ENABLE, etc.
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?    // Optional extra context (e.g. { provider: 'credentials' })
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   emailVerified DateTime?
   name          String?
+  firstName     String?
+  lastName      String?
+  phoneNumber   String?   @unique
+  dob           DateTime?
   image         String?
   passwordHash  String?   // null for OAuth-only users
+  
+  // Security
+  failedLoginAttempts  Int       @default(0)
+  lockoutUntil         DateTime?
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorSecret      String?   @db.Text
+  twoFactorBackupCodes String?   @db.Text // JSON string of backup codes
+
+  // Marketing & Compliance
+  termsAccepted      Boolean   @default(false)
+  marketingConsent   Boolean   @default(false)
+  persona            String?
+  heardAboutUs       String?
+  utmSource          String?
+  utmMedium          String?
+  utmCampaign        String?
+  
   hasAchievedFirstSend Boolean @default(false)
   onboardingDismissedAt DateTime?
 
@@ -40,6 +77,8 @@ model User {
   accounts    Account[]
   sessions    Session[]
   memberships WorkspaceMembership[]
+  notifications Notification[]
+  auditLogs   AuditLog[]
 
   @@index([email])
   @@map("users")
@@ -111,10 +150,13 @@ model Workspace {
   // Branding — used in email templates and onboarding UI
   logoUrl    String?                   // ← NEW: workspace logo URL
   brandColor String @default("#22C55E") // ← NEW: hex color for email CTAs
+  niche      String?                   // ← NEW: community niche for AI context
 
   // Sending identity defaults
   fromEmail String?
   fromName  String?
+  physicalAddress String? // ← NEW: Required for CAN-SPAM compliance
+  unsubscribeRedirectUrl String? // ← NEW: Optional custom redirect after unsubscribe
 
   // Plan / limits
   plan            WorkspacePlan @default(FREE)
@@ -160,7 +202,9 @@ model Workspace {
   automationWorkflows AutomationWorkflow[]
   segments            Segment[]
   purchases           Purchase[]
+  notifications       Notification[]
   attributions        RevenueAttribution[]
+  clickEvents         ClickEvent[]
   emailTemplates      EmailTemplate[]
   tags                Tag[]
   emailProviderConfig EmailProviderConfig?
@@ -168,6 +212,7 @@ model Workspace {
   aiCreditLogs        AiCreditLog[]
   addons              WorkspaceAddon[]
   campaignInsights    CampaignInsight[]
+  webhookLogs         WebhookLog[]
 
   @@index([slug])
   @@map("workspaces")
@@ -223,6 +268,8 @@ model Contact {
   lastName  String?
 
   whopMemberId String?
+  whopStatus   String?
+  whopPasses   String[]
   whopMetadata Json?
 
   status ContactStatus @default(SUBSCRIBED)
@@ -243,6 +290,7 @@ model Contact {
   automationEnrollments AutomationEnrollment[]
   purchases             Purchase[]
   attributions          RevenueAttribution[]
+  clickEvents           ClickEvent[]
 
   @@unique([workspaceId, email])
   @@index([workspaceId])
@@ -354,6 +402,7 @@ model EmailCampaign {
   workspace            Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   emailSends           EmailSend[]
   attributions         RevenueAttribution[]
+  clickEvents          ClickEvent[]
   deliverabilityReport DeliverabilityReport?
   inboxTestResults     InboxTestResult[]
   insight              CampaignInsight?
@@ -703,7 +752,7 @@ model AutomationStep {
   workflowId String
   type       AutomationStepType
   position   Int
-  config     String             @default("{}")
+  config     Json               @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -713,6 +762,25 @@ model AutomationStep {
 
   @@index([workflowId, position])
   @@map("automation_steps")
+}
+
+model AutomationLog {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  workflowId   String
+  enrollmentId String
+  contactId    String
+  stepId       String?
+  event        String   // 'enrollment', 'step_start', 'step_complete', 'step_failed'
+  message      String?  @db.Text
+  metadata     Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workflowId])
+  @@index([enrollmentId])
+  @@map("automation_logs")
 }
 
 model AutomationEnrollment {
@@ -844,6 +912,25 @@ model Purchase {
   @@map("purchases")
 }
 
+model ClickEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  campaignId  String
+  contactId   String
+  url         String   @db.Text
+  clickedAt   DateTime @default(now())
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign  EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact   Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([campaignId, contactId])
+  @@map("click_events")
+}
+
 model RevenueAttribution {
   id               String  @id @default(cuid())
   workspaceId      String
@@ -965,4 +1052,47 @@ model WorkspaceAddon {
   @@index([workspaceId])
   @@index([workspaceId, type])
   @@map("workspace_addons")
+}
+
+model WebhookLog {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  externalEventId String?  @unique // Whop event ID for idempotency
+  action          String
+  payload         Json
+  status          Int      @default(200)
+  errorMessage    String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@map("webhook_logs")
+}
+
+enum NotificationType {
+  SYSTEM
+  BILLING
+  CAMPAIGN
+  IMPORT
+  AI
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  workspaceId String
+  userId      String?          // Target specific user if needed
+  type        NotificationType @default(SYSTEM)
+  title       String
+  message     String           @db.Text
+  actionUrl   String?
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, isRead])
+  @@index([workspaceId, createdAt])
+  @@map("notifications")
 }

@@ -26,7 +26,9 @@ export type ConditionField =
   | 'lastOpened'
   | 'lastClicked'
   | 'opensCount'
-  | 'emailsSent';
+  | 'emailsSent'
+  | 'whopStatus'
+  | 'whopPasses';
 
 export type ConditionOp = 'eq' | 'not_eq' | 'has' | 'not_has' | 'gt' | 'lt' | 'within_days' | 'older_than_days' | 'never';
 
@@ -89,6 +91,36 @@ async function evaluateCondition(
         where: { workspaceId, status: String(cond.value) as any },
         select: { id: true },
       });
+      return new Set(contacts.map((c) => c.id));
+    }
+
+    case 'whopStatus': {
+      const contacts = await db.contact.findMany({
+        where: { 
+          workspaceId, 
+          status: 'SUBSCRIBED',
+          whopStatus: cond.op === 'eq' ? String(cond.value) : { not: String(cond.value) }
+        },
+        select: { id: true },
+      });
+      return new Set(contacts.map((c) => c.id));
+    }
+
+    case 'whopPasses': {
+      const contacts = await db.contact.findMany({
+        where: { 
+          workspaceId, 
+          status: 'SUBSCRIBED',
+          whopPasses: cond.op === 'has' ? { has: String(cond.value) } : undefined
+        },
+        select: { id: true, whopPasses: true },
+      });
+      
+      if (cond.op === 'not_has') {
+        const value = String(cond.value);
+        return new Set(contacts.filter(c => !c.whopPasses.includes(value)).map(c => c.id));
+      }
+      
       return new Set(contacts.map((c) => c.id));
     }
 

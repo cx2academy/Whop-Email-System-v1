@@ -15,6 +15,7 @@ interface WorkspaceSettingsFormProps {
     fromEmail: string | null;
     fromName: string | null;
     hasWhopApiKey: boolean;
+    niche: string | null;
   };
   isAdmin: boolean;
 }
@@ -45,6 +46,9 @@ export function WorkspaceSettingsForm({
           null,
         whopApiKey:
           (form.elements.namedItem("whopApiKey") as HTMLInputElement).value ||
+          null,
+        niche:
+          (form.elements.namedItem("niche") as HTMLInputElement).value ||
           null,
       };
 
@@ -107,6 +111,24 @@ export function WorkspaceSettingsForm({
           placeholder="Your Brand Name"
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
+      </div>
+
+      <div>
+        <label htmlFor="niche" className="mb-1 block text-sm font-medium text-foreground">
+          Community niche
+        </label>
+        <input
+          id="niche"
+          name="niche"
+          type="text"
+          disabled={!isAdmin || isLoading}
+          defaultValue={workspace.niche ?? ""}
+          placeholder="e.g. Crypto, Sports Betting, Fitness, SaaS"
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          We use this to train your AI copywriter.
+        </p>
       </div>
 
       <div>

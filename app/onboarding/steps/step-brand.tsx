@@ -7,22 +7,37 @@ import { saveBranding } from '@/lib/branding/actions';
 
 interface Props {
   companyName: string;
-  onNext: (companyName: string, brandColor: string) => void;
+  onNext: (companyName: string, brandColor: string, niche: string, physicalAddress: string) => void;
 }
 
 export default function StepBrand({ companyName: initial, onNext }: Props) {
   const [name, setName]           = useState(initial || '');
   const [color, setColor]         = useState('#22C55E');
+  const [niche, setNiche]         = useState('');
+  const [address, setAddress]     = useState('');
   const [editing, setEditing]     = useState(false);
   const [state, setState]         = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [error, setError]         = useState('');
 
   async function confirm() {
+    if (!niche.trim()) {
+      setError('Please enter your community niche.');
+      return;
+    }
+    if (!address.trim()) {
+      setError('A physical address is required for email compliance.');
+      return;
+    }
     setState('loading'); setError('');
-    const res = await saveBranding({ whopCompanyName: name, brandColor: color });
+    const res = await saveBranding({ 
+      whopCompanyName: name, 
+      brandColor: color, 
+      niche,
+      physicalAddress: address 
+    });
     if (!res.success) { setState('error'); setError(res.error ?? 'Failed to save.'); return; }
     setState('done');
-    setTimeout(() => onNext(name, color), 600);
+    setTimeout(() => onNext(name, color, niche, address), 600);
   }
 
   const initial_ = (name || '?')[0].toUpperCase();
@@ -52,6 +67,28 @@ export default function StepBrand({ companyName: initial, onNext }: Props) {
           <p style={{ fontSize: 16, fontWeight: 600, color: C.text, margin: 0 }}>{name || 'Your Brand'}</p>
           <p style={{ fontSize: 12, color: C.textHint, margin: '2px 0 0' }}>From Whop</p>
         </div>
+      </div>
+
+      {/* Niche input */}
+      <div style={{ marginTop: 12 }}>
+        <Input 
+          label="What is your community's niche?" 
+          value={niche} 
+          onChange={setNiche} 
+          placeholder="e.g. Crypto, Sports Betting, Fitness, SaaS" 
+        />
+        <p style={{ fontSize: 12, color: C.textHint, margin: '4px 0 0' }}>We use this to train your AI copywriter.</p>
+      </div>
+
+      {/* Address input */}
+      <div style={{ marginTop: 12 }}>
+        <Input 
+          label="Physical Mailing Address" 
+          value={address} 
+          onChange={setAddress} 
+          placeholder="e.g. 123 Main St, Suite 100, New York, NY 10001" 
+        />
+        <p style={{ fontSize: 12, color: C.textHint, margin: '4px 0 0' }}>Required by CAN-SPAM law for the email footer.</p>
       </div>
 
       {/* Edit toggle */}

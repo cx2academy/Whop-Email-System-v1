@@ -18,6 +18,7 @@ declare module "next-auth" {
       id: string;
       workspaceId?: string;
       workspaceRole?: WorkspaceMemberRole;
+      emailVerified?: Date | null;
     } & DefaultSession["user"];
   }
 }

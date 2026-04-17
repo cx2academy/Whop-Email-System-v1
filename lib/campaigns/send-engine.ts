@@ -23,6 +23,7 @@
 
 import { db } from "@/lib/db/client";
 import { sendEmail } from "@/lib/email";
+import { getAppUrl } from "@/lib/env";
 import { buildPlainText } from "@/emails/broadcast";
 import { SEND_BATCH_SIZE, SEND_BATCH_DELAY_MS } from "@/lib/constants";
 import { checkThrottle } from "@/lib/deliverability/send-throttle";
@@ -244,7 +245,7 @@ export async function sendCampaign(
     data: { status: "SENDING" },
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
   const fromEmail = workspace.fromEmail ?? process.env.RESEND_FROM_EMAIL ?? "noreply@example.com";
   const fromName = workspace.fromName ?? process.env.RESEND_FROM_NAME ?? workspace.name;
   const from = `${fromName} <${fromEmail}>`;

@@ -20,6 +20,13 @@ const dmSans = DM_Sans({
   weight: ['300', '400', '500', '600'],
 });
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#09090B',
+};
+
 export const metadata: Metadata = {
   title: {
     default: 'RevTray',
@@ -29,8 +36,12 @@ export const metadata: Metadata = {
     'Email marketing built for Whop creators. Sync your audience, send campaigns that convert, and see exactly how much revenue your emails generate.',
   keywords: ['whop', 'email marketing', 'revenue attribution', 'creator email', 'revtray'],
   authors: [{ name: 'RevTray' }],
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
+
+import { Suspense } from 'react';
+import { PostHogProvider } from '@/components/providers/posthog-provider';
+import PostHogPageview from '@/components/providers/posthog-pageview';
 
 export default function RootLayout({
   children,
@@ -40,8 +51,13 @@ export default function RootLayout({
       <body
         className={`${bricolage.variable} ${dmSans.variable} font-sans antialiased min-h-screen`}
       >
-        {children}
-        <Toaster position="bottom-right" />
+        <PostHogProvider>
+          <Suspense fallback={null}>
+            <PostHogPageview />
+          </Suspense>
+          {children}
+          <Toaster position="bottom-right" />
+        </PostHogProvider>
       </body>
     </html>
   );

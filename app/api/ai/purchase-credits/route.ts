@@ -18,6 +18,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
+import { getAppUrl } from '@/lib/env';
 import { addCredits } from '@/lib/ai/credits';
 import { rateLimit } from '@/lib/rate-limit';
 
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Product ID not configured for this package.' }, { status: 500 });
   }
 
-  const appUrl = process.env.NEXTAUTH_URL || process.env.APP_URL || 'http://localhost:3000';
+  const appUrl = getAppUrl();
   const callbackUrl = `${appUrl}/api/ai/purchase-credits/success?pkg=${packageId}&workspace=${workspaceId}`;
   const checkoutUrl = `https://whop.com/checkout/${pkg.productId}/?redirectUrl=${encodeURIComponent(callbackUrl)}`;
 

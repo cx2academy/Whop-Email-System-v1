@@ -18,6 +18,7 @@ import { db } from '@/lib/db/client';
 import { requireAdminAccess, requireWorkspaceAccess } from '@/lib/auth/session';
 import { sendEmail } from '@/lib/email';
 import { z } from 'zod';
+import { getAppUrl } from '@/lib/env';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -172,8 +173,19 @@ export async function handleFormSubmit(
   if (!form || !form.isActive) return { success: false, error: 'This form is no longer active.' };
 
   const workspaceId = form.workspace.id;
+  const { checkUsageLimit } = await import('@/lib/plans/gates');
 
   if (form.doubleOptIn) {
+    // Check contact limit before creating PENDING contact
+    const contactGate = await checkUsageLimit({
+      workspaceId,
+      type: 'contacts',
+      requested: 1,
+    });
+    if (!contactGate.allowed) {
+      return { success: false, error: 'This workspace has reached its contact limit.' };
+    }
+
     // Double opt-in: create/update contact as PENDING, send confirmation email
     await db.contact.upsert({
       where:  { workspaceId_email: { workspaceId, email: emailClean } },
@@ -188,7 +200,7 @@ export async function handleFormSubmit(
     });
 
     // Send confirmation email
-    const appUrl    = process.env.NEXTAUTH_URL ?? 'https://app.revtray.com';
+    const appUrl    = getAppUrl();
     const confirmUrl = `${appUrl}/confirm/${tokenRow.token}`;
     const fromName  = form.workspace.fromName ?? form.workspace.name;
     const fromEmail = form.workspace.fromEmail;
@@ -241,6 +253,17 @@ export async function handleFormSubmit(
       redirectUrl:    form.redirectUrl,
     };
   } else {
+    // Check contact limit before creating SUBSCRIBED contact
+    const { checkUsageLimit } = await import('@/lib/plans/gates');
+    const contactGate = await checkUsageLimit({
+      workspaceId,
+      type: 'contacts',
+      requested: 1,
+    });
+    if (!contactGate.allowed) {
+      return { success: false, error: 'This workspace has reached its contact limit.' };
+    }
+
     // Single opt-in: upsert as SUBSCRIBED + apply tags immediately
     const contact = await db.contact.upsert({
       where:  { workspaceId_email: { workspaceId, email: emailClean } },
@@ -310,6 +333,17 @@ export async function confirmOptIn(token: string): Promise<ConfirmOptInResult> {
   if (tokenRow.expiresAt < new Date()) return { success: false, error: 'This link has expired. Please subscribe again.' };
 
   const workspaceId = tokenRow.form.workspace.id;
+  const { checkUsageLimit } = await import('@/lib/plans/gates');
+
+  // Check contact limit before upgrading to SUBSCRIBED
+  const contactGate = await checkUsageLimit({
+    workspaceId,
+    type: 'contacts',
+    requested: 1,
+  });
+  if (!contactGate.allowed) {
+    return { success: false, error: 'This workspace has reached its contact limit.' };
+  }
 
   // Upgrade contact to SUBSCRIBED
   const contact = await db.contact.upsert({

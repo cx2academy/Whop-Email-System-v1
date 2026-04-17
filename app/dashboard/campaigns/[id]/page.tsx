@@ -74,7 +74,7 @@ export default async function CampaignPage(props: CampaignPageProps) {
 
       {/* Analytics stats */}
       {analytics && campaign.status !== "DRAFT" && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <StatCard
             label="Recipients"
             value={formatNumber(analytics.totalRecipients)}
@@ -99,6 +99,11 @@ export default async function CampaignPage(props: CampaignPageProps) {
             value={`${analytics.clickRate}%`}
             sub={formatNumber(analytics.totalClicked)}
             icon="🖱"
+          />
+          <StatCard
+            label="Revenue"
+            value={analytics.totalRevenue > 0 ? `$${(analytics.totalRevenue / 100).toLocaleString()}` : '—'}
+            icon="💰"
           />
         </div>
       )}

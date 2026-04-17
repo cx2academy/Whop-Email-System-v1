@@ -21,6 +21,7 @@
 
     /* RevTray brand green */
     --primary:             142 72% 45%;     /* #22C55E */
+    --primary-rgb:         34, 197, 94;
     --primary-foreground:  0 0% 100%;
 
     --secondary:           220 9% 96%;      /* #F3F4F6 */
@@ -36,6 +37,7 @@
     --destructive-foreground: 0 0% 100%;
 
     --border:              220 13% 91%;     /* #E6E8EC */
+    --border-subtle:       220 13% 94%;
     --input:               220 13% 91%;
     --ring:                142 72% 45%;
 
@@ -61,6 +63,49 @@
     --sidebar-bg:     #FFFFFF;
     --sidebar-border: #E6E8EC;
     --sidebar-w:      220px;
+  }
+
+  .dark {
+    --background:          220 14% 4%;      /* #090A0C */
+    --foreground:          0 0% 98%;        /* #FAFAFA */
+
+    --card:                220 14% 7%;      /* #0D0F12 */
+    --card-foreground:     0 0% 98%;
+
+    --popover:             220 14% 7%;
+    --popover-foreground:  0 0% 98%;
+
+    --primary:             142 72% 45%;
+    --primary-rgb:         34, 197, 94;
+    --primary-foreground:  0 0% 100%;
+
+    --secondary:           220 14% 12%;     /* #1A1D21 */
+    --secondary-foreground: 215 16% 70%;
+
+    --muted:               220 14% 12%;
+    --muted-foreground:    215 16% 70%;
+
+    --accent:              220 14% 12%;
+    --accent-foreground:   0 0% 98%;
+
+    --destructive:         0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border:              220 14% 12%;
+    --border-subtle:       220 14% 16%;
+    --input:               220 14% 12%;
+    --ring:                142 72% 45%;
+
+    --text-primary:   #FAFAFA;
+    --text-secondary: #9AA3AF;
+    --text-tertiary:  #5A6472;
+
+    --surface-app:    #090A0C;
+    --surface-card:   #0D0F12;
+    --surface-hover:  #1A1D21;
+
+    --sidebar-bg:     #0D0F12;
+    --sidebar-border: #1A1D21;
   }
 }
 

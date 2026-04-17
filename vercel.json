@@ -1,12 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/reset-ai-credits",
-      "schedule": "0 0 1 * *"
-    },
-    {
-      "path": "/api/cron/pick-ab-winners",
-      "schedule": "0 * * * *"
-    }
-  ]
+  "buildCommand": "npm run build"
 }

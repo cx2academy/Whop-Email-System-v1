@@ -16,6 +16,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import type { Tag } from '@prisma/client';
 import { createCampaign, updateCampaign, sendCampaignNow } from '@/lib/campaigns/actions';
 import { createUserTemplate, saveCampaignAsTemplate } from '@/lib/templates/actions';
@@ -161,6 +162,14 @@ export function CampaignBuilder({
           ? await updateCampaign(initial.id, payload)
           : await createCampaign(payload);
         if (!result.success) { setError((result as any).error ?? (result as any).message ?? 'You have reached your plan limit. Please upgrade to create more campaigns.'); return; }
+        
+        if (!initial?.id) {
+          posthog.capture('Campaign Created', {
+            channels: sendViaEmail && sendViaWhopDm ? 'both' : sendViaEmail ? 'email' : 'whop_dm',
+            is_ab_test: isAbTest,
+          });
+        }
+
         if ('data' in result && ((result as any).data?.id || (result as any).data?.campaignId)) setSavedCampaignId((result as any).data?.id ?? (result as any).data?.campaignId);
         setStep(3);
       } catch { setError('An unexpected error occurred.'); }
@@ -191,6 +200,11 @@ export function CampaignBuilder({
 
       const result = await sendCampaignNow(id);
       if (result.success && result.data) {
+        posthog.capture('Campaign Sent', {
+          campaign_id: id,
+          total_sent: result.data.totalSent,
+          channels: sendViaEmail && sendViaWhopDm ? 'both' : sendViaEmail ? 'email' : 'whop_dm',
+        });
         setSendResult({ type: result.data.totalFailed > 0 ? 'partial' : 'success', totalSent: result.data.totalSent, totalFailed: result.data.totalFailed, message: `Sent to ${result.data.totalSent} contacts${result.data.totalFailed > 0 ? `, ${result.data.totalFailed} failed` : ''}` });
       } else {
         setSendResult({ type: 'error', message: (!result.success && ((result as any).error || (result as any).message)) ? ((result as any).error ?? (result as any).message) : 'Send failed.' });

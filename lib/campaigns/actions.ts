@@ -317,6 +317,7 @@ export async function getCampaignAnalytics(campaignId: string) {
       totalClicked: true,
       totalBounced: true,
       totalFailed: true,
+      totalRevenue: true,
       isAbTest: true,
       abWinnerVariant: true,
       abSubjectB: true,
@@ -330,8 +331,8 @@ export async function getCampaignAnalytics(campaignId: string) {
       ? ((campaign.totalOpened / campaign.totalSent) * 100).toFixed(1)
       : "0.0";
   const clickRate =
-    campaign.totalOpened > 0
-      ? ((campaign.totalClicked / campaign.totalOpened) * 100).toFixed(1)
+    campaign.totalSent > 0
+      ? ((campaign.totalClicked / campaign.totalSent) * 100).toFixed(1)
       : "0.0";
   const bounceRate =
     campaign.totalSent > 0

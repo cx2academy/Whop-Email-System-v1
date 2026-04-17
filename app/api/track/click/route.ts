@@ -40,12 +40,29 @@ export async function GET(req: NextRequest) {
         where: { campaignId, contactId, clickedAt: null },
         data: { status: "CLICKED", clickedAt: new Date() },
       })
-      .then(() =>
-        db.emailCampaign.update({
+      .then(async () => {
+        await db.emailCampaign.update({
           where: { id: campaignId },
           data: { totalClicked: { increment: 1 } },
-        })
-      )
+        });
+
+        // Get workspaceId from campaign
+        const campaign = await db.emailCampaign.findUnique({
+          where: { id: campaignId },
+          select: { workspaceId: true }
+        });
+
+        if (campaign && safeRedirect) {
+          await db.clickEvent.create({
+            data: {
+              workspaceId: campaign.workspaceId,
+              campaignId,
+              contactId,
+              url: safeRedirect,
+            }
+          });
+        }
+      })
       .catch((err) =>
         console.warn("[track/click] Non-fatal tracking error:", err)
       );

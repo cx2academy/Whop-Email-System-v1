@@ -32,6 +32,7 @@ import {
   AlertCircleIcon, ExternalLinkIcon, ChevronDownIcon,
   CopyIcon, CheckCircleIcon,
 } from 'lucide-react';
+import { Logo } from '@/components/ui/logo';
 
 // Server actions
 import { saveWhopApiKey, saveSenderEmail, triggerOnboardingSync } from '@/lib/onboarding/actions';
@@ -94,22 +95,6 @@ const T = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared micro-components
 // ─────────────────────────────────────────────────────────────────────────────
-
-function Logo() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ width: 28, height: 28, borderRadius: 8, background: T.brand, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg width="14" height="14" viewBox="0 0 100 100" fill="none">
-          <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
-          <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="white"/>
-        </svg>
-      </div>
-      <span style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: 16, fontWeight: 700, color: T.textPrimary, letterSpacing: '-0.03em' }}>
-        RevTray
-      </span>
-    </div>
-  );
-}
 
 function StepDots({ current, total }: { current: number; total: number }) {
   return (
@@ -272,7 +257,12 @@ function StepShell({ step, total, eyebrow, headline, sub, children }: {
         borderBottom: `1px solid ${T.border}`,
         zIndex: 10,
       }}>
-        <Logo />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Logo size={28} />
+          <span style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: 16, fontWeight: 700, color: T.textPrimary, letterSpacing: '-0.03em' }}>
+            RevTray
+          </span>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
           <StepDots current={step} total={total} />
           <span style={{ fontSize: 11, color: T.textTertiary }}>{step} of {total}</span>

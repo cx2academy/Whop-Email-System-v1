@@ -35,24 +35,24 @@ const C = {
 // ── Feature lists per plan ────────────────────────────────────────────────────
 const FEATURES: Record<string, string[]> = {
   FREE: [
-    '500 emails / month',
-    '250 contacts',
-    '10 AI credits / month',
+    `${formatLimit(PLANS.FREE.limits.emailsPerMonth)} emails / month`,
+    `${formatLimit(PLANS.FREE.limits.contacts)} contacts`,
+    `${formatLimit(PLANS.FREE.limits.aiCreditsMonthly)} AI credits / month`,
     'Campaign builder',
     'Basic analytics',
   ],
   STARTER: [
-    '5,000 emails / month',
-    '2,500 contacts',
-    '50 AI credits / month',
-    '3 automation workflows',
+    `${formatLimit(PLANS.STARTER.limits.emailsPerMonth)} emails / month`,
+    `${formatLimit(PLANS.STARTER.limits.contacts)} contacts`,
+    `${formatLimit(PLANS.STARTER.limits.aiCreditsMonthly)} AI credits / month`,
+    `${PLANS.STARTER.limits.automations} automation workflows`,
     'Custom sending domain',
     'Full analytics (30 days)',
   ],
   GROWTH: [
-    '25,000 emails / month',
-    '10,000 contacts',
-    '150 AI credits / month',
+    `${formatLimit(PLANS.GROWTH.limits.emailsPerMonth)} emails / month`,
+    `${formatLimit(PLANS.GROWTH.limits.contacts)} contacts`,
+    `${formatLimit(PLANS.GROWTH.limits.aiCreditsMonthly)} AI credits / month`,
     'Unlimited automations',
     'Revenue attribution',
     'A/B testing',
@@ -63,7 +63,7 @@ const FEATURES: Record<string, string[]> = {
   SCALE: [
     'Unlimited emails',
     'Unlimited contacts',
-    '500 AI credits / month',
+    `${formatLimit(PLANS.SCALE.limits.aiCreditsMonthly)} AI credits / month`,
     'Unlimited automations',
     'All Growth features',
     'Multiple email providers',

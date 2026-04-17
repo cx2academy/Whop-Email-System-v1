@@ -26,6 +26,10 @@ import { ResendProvider } from './providers/resend';
 import { SmtpProvider } from './providers/smtp';
 import { SesProvider, parseSesCredentials } from './providers/ses';
 import { SendGridProvider } from './providers/sendgrid';
+import { render } from '@react-email/render';
+import { EmailFooter } from '@/emails/components/footer';
+import { generateUnsubscribeToken } from './unsubscribe';
+import { getAppUrl } from '@/lib/env';
 import type {
   EmailProvider,
   SendEmailOptions,
@@ -130,12 +134,48 @@ export async function sendEmail(
 ): Promise<SendEmailResult> {
   // --- Resolve provider ---
   let primary: EmailProvider;
+  let workspace: any = null;
 
   if (workspaceId) {
-    const workspaceProvider = await getWorkspaceProvider(workspaceId);
+    const [workspaceProvider, ws] = await Promise.all([
+      getWorkspaceProvider(workspaceId),
+      db.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { name: true, brandColor: true, physicalAddress: true },
+      }),
+    ]);
     primary = workspaceProvider ?? getSystemProvider();
+    workspace = ws;
   } else {
     primary = getSystemProvider();
+  }
+
+  // --- Compliance Logic (Footer & Unsubscribe) ---
+  if (workspaceId && workspace && options.contactId) {
+    const token = generateUnsubscribeToken(workspaceId, options.contactId);
+    const appUrl = getAppUrl();
+    const unsubscribeUrl = `${appUrl}/unsubscribe/${token}`;
+    const oneClickUrl = `${appUrl}/api/unsubscribe/one-click?token=${token}`;
+
+    // 1. Inject Footer
+    const footerHtml = await render(
+      EmailFooter({
+        workspaceName: workspace.name,
+        physicalAddress: workspace.physicalAddress || undefined,
+        unsubscribeUrl,
+        brandColor: workspace.brandColor,
+      })
+    );
+    
+    // Append footer to HTML body
+    options.html = `${options.html}<br/>${footerHtml}`;
+
+    // 2. Add RFC 8058 Headers
+    options.headers = {
+      ...options.headers,
+      'List-Unsubscribe': `<${unsubscribeUrl}>, <${oneClickUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    };
   }
 
   // --- Attempt primary send ---

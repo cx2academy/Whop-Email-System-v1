@@ -6,6 +6,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LoginForm } from './login-form';
+import { Logo } from '@/components/ui/logo';
 
 export const metadata: Metadata = { title: 'Sign in to RevTray' };
 
@@ -17,79 +18,79 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { callbackUrl, error } = await searchParams;
 
   return (
-    <main
-      className="flex min-h-screen items-center justify-center px-4 py-12"
-      style={{ background: 'var(--surface-app)' }}
-    >
-      <div className="w-full max-w-[380px]">
+    <main className="flex min-h-screen bg-[#090A0C] text-white overflow-hidden">
+      {/* Left Side: Brand & Value Prop */}
+      <div className="hidden lg:flex flex-1 relative items-center justify-center p-12 border-r border-white/5">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-[#22C55E]/10 blur-[120px] rounded-full" />
+          <div className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] bg-[#22C55E]/5 blur-[120px] rounded-full" />
+        </div>
 
-        {/* Logo */}
-        <div className="flex justify-center mb-10">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{ background: 'var(--brand)' }}
-            >
-              <svg width="18" height="18" viewBox="0 0 100 100" fill="none">
-                <path d="M72 18 A38 38 0 1 0 88 58 Q94 72 82 82 Q68 92 50 88" stroke="white" strokeWidth="8" fill="none" strokeLinecap="round"/>
-                <path d="M85 15 L32 46 L44 58 L52 80 L63 62 Z" fill="white"/>
-              </svg>
+        <div className="relative z-10 max-w-xl">
+          <Link href="/" className="flex items-center gap-3 mb-16">
+            <Logo size={40} />
+            <span className="text-2xl font-bold tracking-tight font-display">RevTray</span>
+          </Link>
+
+          <h1 className="text-6xl font-bold leading-[0.9] tracking-tighter font-display mb-8">
+            STOP GUESSING.<br />
+            <span className="text-[#22C55E]">START EARNING.</span>
+          </h1>
+          
+          <p className="text-xl text-gray-400 font-medium leading-relaxed mb-12">
+            The only email marketing engine built specifically for Whop creators. 
+            Sync your audience and see the revenue in real-time.
+          </p>
+
+          <div className="grid grid-cols-2 gap-8">
+            <div>
+              <div className="text-2xl font-bold font-display text-white mb-1">98%</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Delivery Rate</div>
             </div>
-            <span
-              className="text-xl font-bold"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}
-            >
-              RevTray
-            </span>
+            <div>
+              <div className="text-2xl font-bold font-display text-white mb-1">15m</div>
+              <div className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Setup Time</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side: Auth Form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative">
+        <div className="lg:hidden absolute top-8 left-8">
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size={32} />
+            <span className="text-lg font-bold tracking-tight font-display">RevTray</span>
           </Link>
         </div>
 
-        {/* Card */}
-        <div
-          className="rounded-2xl p-8 shadow-card-md"
-          style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}
-        >
-          {/* Headline */}
-          <div className="mb-8">
-            <h1
-              className="text-2xl font-bold mb-1"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
-            >
-              See what your emails earn.
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              Connect your Whop account to get started.
-            </p>
+        <div className="w-full max-w-[400px]">
+          <div className="bg-[#0D0F12] border border-white/5 rounded-3xl p-8 sm:p-10 shadow-2xl">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold font-display mb-2">Welcome back</h2>
+              <p className="text-gray-500 text-sm">Connect your Whop account to access your dashboard.</p>
+            </div>
+
+            {error && (
+              <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+                {error === 'OAuthAccountNotLinked'
+                  ? 'An account with this email already exists. Sign in with email instead.'
+                  : error === 'CredentialsSignin'
+                  ? 'Incorrect email or password.'
+                  : 'Something went wrong. Please try again.'}
+              </div>
+            )}
+
+            <LoginForm callbackUrl={callbackUrl} />
           </div>
 
-          {/* Error */}
-          {error && (
-            <div
-              className="mb-5 rounded-lg px-4 py-3 text-sm"
-              style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#DC2626' }}
-            >
-              {error === 'OAuthAccountNotLinked'
-                ? 'An account with this email already exists. Sign in with email instead.'
-                : error === 'CredentialsSignin'
-                ? 'Incorrect email or password.'
-                : 'Something went wrong. Please try again.'}
-            </div>
-          )}
-
-          <LoginForm callbackUrl={callbackUrl} />
+          <p className="mt-8 text-center text-sm text-gray-600">
+            New to RevTray?{' '}
+            <Link href="/auth/register" className="text-[#22C55E] font-semibold hover:underline">
+              Create an account
+            </Link>
+          </p>
         </div>
-
-        {/* Register */}
-        <p className="mt-5 text-center text-sm" style={{ color: 'var(--text-tertiary)' }}>
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/auth/register"
-            className="font-medium transition-opacity hover:opacity-70"
-            style={{ color: 'var(--brand)' }}
-          >
-            Create one free
-          </Link>
-        </p>
       </div>
     </main>
   );

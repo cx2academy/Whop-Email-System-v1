@@ -21,6 +21,9 @@ import { NextRequest } from 'next/server';
 import { createHmac } from 'crypto';
 import { db } from '@/lib/db/client';
 import { recordPurchase } from '@/lib/attribution/purchase-tracker';
+import { triggerAutomations } from '@/lib/automations/engine';
+import { createNotification } from '@/lib/notifications/actions';
+import { NotificationType } from '@prisma/client';
 
 // ---------------------------------------------------------------------------
 // Whop webhook payload types (v2 / v5 shape)
@@ -107,7 +110,7 @@ async function handleMembershipWentValid(
 ) {
   const amountCents = data.amount_paid ?? 0;
 
-  return recordPurchase({
+  const purchaseResult = await recordPurchase({
     workspaceId,
     email: data.email,
     productId: data.product,
@@ -117,13 +120,39 @@ async function handleMembershipWentValid(
     source: 'whop',
     externalId: `whop_mem_${data.id}`,
   });
+
+  // Trigger automations
+  const contact = await db.contact.findUnique({
+    where: { workspaceId_email: { workspaceId, email: data.email } },
+    select: { id: true },
+  });
+
+  if (contact) {
+    await triggerAutomations({
+      workspaceId,
+      contactId: contact.id,
+      triggerType: 'whop_purchase',
+      metadata: { productId: data.product, planId: data.plan },
+    });
+  }
+
+  // Notify workspace owner of the new sale
+  await createNotification({
+    workspaceId,
+    type: NotificationType.BILLING,
+    title: 'New Sale!',
+    message: `A new purchase was made by ${data.email} for $${(amountCents / 100).toFixed(2)}.`,
+    actionUrl: '/dashboard/revenue',
+  });
+
+  return purchaseResult;
 }
 
 async function handlePaymentSucceeded(
   data: WhopPaymentPayload,
   workspaceId: string
 ) {
-  return recordPurchase({
+  const purchaseResult = await recordPurchase({
     workspaceId,
     email: data.email,
     productId: data.product_id,
@@ -133,6 +162,17 @@ async function handlePaymentSucceeded(
     source: 'whop',
     externalId: `whop_pay_${data.id}`,
   });
+
+  // Notify workspace owner of the payment
+  await createNotification({
+    workspaceId,
+    type: NotificationType.BILLING,
+    title: 'Payment Received',
+    message: `Payment of $${(data.amount / 100).toFixed(2)} received from ${data.email}.`,
+    actionUrl: '/dashboard/revenue',
+  });
+
+  return purchaseResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -157,7 +197,20 @@ export async function POST(req: NextRequest) {
   }
 
   const { action, data } = event;
-  console.log(`[whop/webhook] Received: ${action}`);
+  const externalEventId = (data as any).id;
+  console.log(`[whop/webhook] Received: ${action} (ID: ${externalEventId})`);
+
+  // Check for idempotency
+  if (externalEventId) {
+    const existing = await db.webhookLog.findUnique({
+      where: { externalEventId },
+      select: { id: true, status: true }
+    });
+    if (existing) {
+      console.log(`[whop/webhook] Event ${externalEventId} already processed with status ${existing.status} — skipping`);
+      return Response.json({ received: true, duplicate: true });
+    }
+  }
 
   // Resolve workspace — Whop events include company_id
   const companyId = (data as any).company_id;
@@ -166,6 +219,19 @@ export async function POST(req: NextRequest) {
   }
 
   const workspaceId = await resolveWorkspace(companyId);
+  
+  // Log the incoming webhook
+  const webhookLog = await db.webhookLog.create({
+    data: {
+      workspaceId: workspaceId || 'unknown',
+      externalEventId,
+      action,
+      payload: event,
+      status: workspaceId ? 200 : 422,
+      errorMessage: workspaceId ? null : `No workspace found for company ${companyId}`,
+    }
+  });
+
   if (!workspaceId) {
     // This Whop company isn't connected to any workspace — ignore silently
     console.log(`[whop/webhook] No workspace for company ${companyId} — skipping`);
@@ -186,16 +252,33 @@ export async function POST(req: NextRequest) {
         workspaceId
       );
     } else {
-      // Unhandled event type — acknowledge so Whop doesn't retry
+      // Update log for unhandled action
+      await db.webhookLog.update({
+        where: { id: webhookLog.id },
+        data: { status: 204, errorMessage: `Unhandled action: ${action}` }
+      });
       return Response.json({ received: true, action, handled: false });
     }
+
+    // Update log for success
+    await db.webhookLog.update({
+      where: { id: webhookLog.id },
+      data: { status: 200 }
+    });
 
     console.log(`[whop/webhook] ${action} processed:`, result);
     return Response.json({ received: true, ...result });
 
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
     console.error('[whop/webhook] Error processing event:', err);
-    // Return 500 so Whop retries the webhook
+    
+    // Update log for failure
+    await db.webhookLog.update({
+      where: { id: webhookLog.id },
+      data: { status: 500, errorMessage }
+    });
+
     return Response.json({ error: 'Processing failed' }, { status: 500 });
   }
 }

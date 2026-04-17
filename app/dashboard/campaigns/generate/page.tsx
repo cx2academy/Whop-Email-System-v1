@@ -15,6 +15,7 @@
 import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { ChevronLeftIcon, SparklesIcon } from 'lucide-react';
 import { generateEmailDraft, type CampaignBrief } from '@/lib/ai/actions';
 
@@ -88,6 +89,11 @@ export default function GeneratePage() {
       );
 
       if (r.success) {
+        posthog.capture('AI Email Generated', {
+          tone,
+          email_type: emailType,
+          goal: goal,
+        });
         setDraft(r.data);
         setPhase('preview');
         setTimeout(() => {

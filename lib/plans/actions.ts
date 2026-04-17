@@ -16,6 +16,7 @@ import { PLANS, PLAN_ORDER, type PlanKey } from '@/lib/plans/config';
 import { buildPlanCheckoutUrl, buildAddonCheckoutUrl } from '@/lib/whop/billing';
 import { ADDON_PACKAGES, type AddonPackageId } from '@/lib/plans/packages';
 import { auth } from '@/auth';
+import { getAppUrl } from '@/lib/env';
 
 export async function getPlanUsage() {
   const { workspaceId } = await requireWorkspaceAccess();
@@ -37,7 +38,7 @@ export async function upgradePlan(
 
   const session = await auth();
   const userEmail = session?.user?.email ?? '';
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+  const appUrl = getAppUrl();
 
   const checkoutUrl = buildPlanCheckoutUrl(
     targetPlan as Exclude<PlanKey, 'FREE'>,
@@ -71,7 +72,7 @@ export async function purchaseAddon(
 
   const session = await auth();
   const userEmail = session?.user?.email ?? '';
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+  const appUrl = getAppUrl();
 
   const checkoutUrl = buildAddonCheckoutUrl(packageId, workspaceId, userEmail, appUrl);
 

@@ -45,6 +45,10 @@ export interface SendEmailOptions {
   idempotencyKey?: string;
   /** Optional scheduled time for the email (ISO 8601 string) */
   scheduledAt?: string;
+  /** Optional contact ID for unsubscribe token generation */
+  contactId?: string;
+  /** Optional custom headers (e.g. List-Unsubscribe) */
+  headers?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------

@@ -19,10 +19,11 @@ const PUBLIC_PREFIXES = [
   '/api/attribution',
   '/api/whop',
   '/api/track',
-  '/api/forms',    // ← Phase 4: public form submission endpoint
-  '/forms',        // ← Phase 4: public form pages
-  '/confirm',      // ← Phase 4: double opt-in confirmation
+  '/api/forms',
+  '/forms',
+  '/confirm',
   '/unsubscribe',
+  '/auth/verify-request',
   '/_next',
   '/favicon.ico',
   '/images',
@@ -34,7 +35,11 @@ export function proxy(req: NextRequest) {
   const pathname = nextUrl.pathname;
 
   // --- PREVIEW MODE BYPASS ---
-  if (process.env.PREVIEW_MODE === "true" || process.env.NEXT_PUBLIC_PREVIEW_MODE === "true") {
+  const isDev = process.env.NODE_ENV === "development" && process.env.PREVIEW_MODE === "true";
+  const isStagingBypass = process.env.NEXT_PUBLIC_STAGING_MODE === "true" && 
+                          req.cookies.get("staging_bypass")?.value === process.env.STAGING_BYPASS_TOKEN;
+
+  if (isDev || isStagingBypass) {
     return NextResponse.next();
   }
   // --- END PREVIEW MODE BYPASS ---
@@ -58,6 +63,19 @@ export function proxy(req: NextRequest) {
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
+
+  // --- VERIFICATION WALL ---
+  // If logged in, but hitting dashboard/onboarding, check if we need to verify.
+  // Since we can't easily check 'emailVerified' from a raw encrypted session cookie here
+  // without a DB hit (which proxy.ts avoids), we will rely on a secure cookie 
+  // or the 'authorized' callback in auth.config.ts if it runs.
+  // However, proxy.ts seems to be the primary router here.
+  // 
+  // Temporary Strategy for Step 1.3: 
+  // We'll perform the verification check in a Server Component inside /dashboard
+  // to ensure data is protected, BUT we'll also try to detect the verification state
+  // if we can pass it in the token.
+  // -------------------------
 
   return NextResponse.next();
 }

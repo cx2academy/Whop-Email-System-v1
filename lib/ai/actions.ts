@@ -231,10 +231,10 @@ export async function buildCampaignSequence(
     const _check4 = await checkCredits(workspaceId, 'buildCampaignSequence');
     if (!_check4.allowed) return { success: false, error: `Not enough AI credits. Need 5, have ${_check4.currentBalance}.` };
 
-    // Fetch workspace to get voice profile
+    // Fetch workspace to get voice profile and niche
     const workspace = await db.workspace.findUnique({
       where: { id: workspaceId },
-      select: { voiceProfile: true },
+      select: { voiceProfile: true, niche: true },
     });
 
     let voiceProfile: VoiceProfile | null = null;
@@ -246,13 +246,15 @@ export async function buildCampaignSequence(
       }
     }
 
+    const nicheContext = workspace?.niche ? `\nCommunity Niche: "${workspace.niche}"` : '';
+
     const basePrompt = `You are a launch strategist who specializes in email sequences for creators and course sellers.
 
 Build a high-converting email sequence using proven launch frameworks (Story → Value → Proof → Offer → Urgency).
 
 Product: "${product}"
 Audience: "${audience}"
-Goal: "${goal}"
+Goal: "${goal}"${nicheContext}
 
 Create a 5-email sequence. Respond ONLY with JSON (no markdown):
 {

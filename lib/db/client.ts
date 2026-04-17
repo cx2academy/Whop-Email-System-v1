@@ -17,14 +17,28 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const db: PrismaClient =
-  globalForPrisma.prisma ??
+export const db = (globalForPrisma.prisma ??
   new PrismaClient({
     log:
       process.env.NODE_ENV === "development"
         ? ["error", "warn"]
         : ["error"],
-  });
+  })).$extends({
+    query: {
+      async $allOperations({ operation, model, args, query }) {
+        const start = performance.now();
+        const result = await query(args);
+        const end = performance.now();
+        const duration = end - start;
+
+        if (duration > 100) { // Log queries taking longer than 100ms
+          console.warn(`[Prisma] 🐢 Slow Query: ${model}.${operation} took ${duration.toFixed(2)}ms`);
+        }
+
+        return result;
+      },
+    },
+  }) as PrismaClient;
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = db;

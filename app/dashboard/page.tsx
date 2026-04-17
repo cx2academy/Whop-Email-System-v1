@@ -8,6 +8,7 @@ import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { formatNumber, formatDate } from '@/lib/utils';
 import { OnboardingChecklist } from './onboarding-checklist';
+import { FeatureFlag } from '@/components/ui/feature-flag';
 import { deriveOnboardingState } from '@/lib/onboarding/steps';
 import { getWorkspaceUsage } from '@/lib/plans/gates';
 import { PlusIcon, TrendingUpIcon, MailIcon, UsersIcon, MousePointerClickIcon } from 'lucide-react';
@@ -18,7 +19,7 @@ export default async function DashboardPage() {
   const { workspaceId, userId } = await requireWorkspaceAccess();
   const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000);
 
-  const [workspace, contactCount, newThisWeek, recentCampaigns, user, revResult, sentThisWeek] =
+  const [workspace, contactCount, newThisWeek, recentCampaigns, user, revResult, sentThisWeek, totalClicks] =
     await Promise.all([
       db.workspace.findUnique({
         where: { id: workspaceId },
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
         take: 5,
         select: {
           id: true, name: true, status: true,
-          totalSent: true, totalOpened: true, totalRevenue: true, sentAt: true, createdAt: true,
+          totalSent: true, totalOpened: true, totalClicked: true, totalRevenue: true, sentAt: true, createdAt: true,
         },
       }),
       db.user.findUnique({
@@ -43,12 +44,16 @@ export default async function DashboardPage() {
         where: { workspaceId }, _sum: { revenue: true },
       }).catch(() => ({ _sum: { revenue: 0 } })),
       db.emailSend.count({ where: { workspaceId, createdAt: { gte: sevenDaysAgo } } }),
+      db.clickEvent.count({ where: { workspaceId } }),
     ]);
 
   const totalRevenue = revResult._sum.revenue ?? 0;
   const sentCampaigns = recentCampaigns.filter((c) => c.totalSent > 0);
   const avgOpenRate = sentCampaigns.length > 0
     ? sentCampaigns.reduce((acc, c) => acc + (c.totalOpened / c.totalSent) * 100, 0) / sentCampaigns.length
+    : 0;
+  const avgClickRate = sentCampaigns.length > 0
+    ? sentCampaigns.reduce((acc, c) => acc + (c.totalClicked / c.totalSent) * 100, 0) / sentCampaigns.length
     : 0;
 
   const onboarding = deriveOnboardingState({
@@ -59,7 +64,12 @@ export default async function DashboardPage() {
     onboardingDismissedAt: user?.onboardingDismissedAt,
   });
 
-  const isPreview = process.env.PREVIEW_MODE === "true" || process.env.NEXT_PUBLIC_PREVIEW_MODE === "true";
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  const isStagingBypass = process.env.NEXT_PUBLIC_STAGING_MODE === "true" && 
+                          cookieStore.get("staging_bypass")?.value === process.env.STAGING_BYPASS_TOKEN;
+
+  const isPreview = process.env.PREVIEW_MODE === "true" || process.env.NEXT_PUBLIC_PREVIEW_MODE === "true" || isStagingBypass;
   const isNewUser = onboarding.shouldShow && onboarding.completedCount < 2 && !isPreview;
 
   // ── New user view: onboarding fills the screen ──────────────────────────
@@ -129,7 +139,7 @@ export default async function DashboardPage() {
       )}
 
       {/* KPI cards — 4 columns */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <KpiCard
           label="Revenue from email"
           value={totalRevenue > 0 ? `$${(totalRevenue / 100).toLocaleString()}` : '—'}
@@ -137,6 +147,13 @@ export default async function DashboardPage() {
           cta={totalRevenue === 0 ? { label: 'Connect Whop', href: '/dashboard/settings?tab=integrations' } : undefined}
           icon={<TrendingUpIcon className="h-4 w-4" />}
           accent
+          badge={
+            <FeatureFlag flag="show-revenue-badge">
+              <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-600">
+                NEW
+              </span>
+            </FeatureFlag>
+          }
         />
         <KpiCard
           label="Subscribers"
@@ -156,6 +173,19 @@ export default async function DashboardPage() {
           value={sentCampaigns.length > 0 ? `${avgOpenRate.toFixed(1)}%` : '—'}
           sub="Last 5 campaigns"
           subGreen={avgOpenRate >= 20}
+          icon={<MousePointerClickIcon className="h-4 w-4" />}
+        />
+        <KpiCard
+          label="Total Clicks"
+          value={totalClicks > 0 ? formatNumber(totalClicks) : '—'}
+          sub="All time"
+          icon={<MousePointerClickIcon className="h-4 w-4" />}
+        />
+        <KpiCard
+          label="Click-Through Rate"
+          value={sentCampaigns.length > 0 ? `${avgClickRate.toFixed(1)}%` : '—'}
+          sub="Last 5 campaigns"
+          subGreen={avgClickRate >= 2}
           icon={<MousePointerClickIcon className="h-4 w-4" />}
         />
       </div>
@@ -262,10 +292,11 @@ export default async function DashboardPage() {
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function KpiCard({
-  label, value, sub, subGreen, icon, accent, cta,
+  label, value, sub, subGreen, icon, accent, cta, badge,
 }: {
   label: string; value: string; sub?: string; subGreen?: boolean;
   icon: React.ReactNode; accent?: boolean; cta?: { label: string; href: string };
+  badge?: React.ReactNode;
 }) {
   return (
     <div
@@ -273,9 +304,12 @@ function KpiCard({
       style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}
     >
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
-          {label}
-        </p>
+        <div className="flex items-center gap-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>
+            {label}
+          </p>
+          {badge}
+        </div>
         <div
           className="flex h-7 w-7 items-center justify-center rounded-lg"
           style={{ background: accent ? 'var(--brand-tint)' : 'var(--surface-app)' }}
