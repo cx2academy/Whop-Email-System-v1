@@ -20,12 +20,12 @@ export default async function OnboardingPage() {
   // If user already has a workspace and has finished onboarding, redirect to dashboard
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { hasAchievedFirstSend: true, workspaceId: true },
+    select: { hasAchievedFirstSend: true },
   });
 
   if (user?.hasAchievedFirstSend) redirect('/dashboard');
 
-  let workspaceId = user?.workspaceId;
+  let workspaceId = session.user.workspaceId;
 
   // If no workspace, create a default one to start with
   if (!workspaceId) {
