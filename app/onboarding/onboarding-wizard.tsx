@@ -41,10 +41,15 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
     if (!name || !slug) return toast.error('Please fill in all fields');
     setIsLoading(true);
     try {
-      await saveOnboardingData({ name, slug, niche });
+      const result = await saveOnboardingData({ name, slug, niche });
+      if (!result.success) {
+        toast.error(result.error || 'Failed to save data');
+        setIsLoading(false);
+        return;
+      }
       nextStep();
     } catch (error) {
-      toast.error('Failed to save data');
+      toast.error('Failed to save data. The URL might be taken.');
     } finally {
       setIsLoading(false);
     }
@@ -188,12 +193,17 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
                     onChange={(e) => setNiche(e.target.value)}
                     className="w-full rounded-xl px-4 py-3.5 text-sm bg-white/5 border border-white/10 text-white focus:outline-none focus:border-[#22C55E]/50 transition-all appearance-none"
                   >
-                    <option value="" disabled>Select a niche</option>
-                    <option value="trading">Trading & Finance</option>
-                    <option value="sports">Sports Betting</option>
-                    <option value="ecommerce">E-commerce</option>
-                    <option value="education">Education / Courses</option>
-                    <option value="other">Other</option>
+                    <option value="" disabled className="text-gray-500 bg-[#0D0F12]">Select a niche</option>
+                    {[
+                      "Fitness", "Real estate", "Business", "Health & wellness", "Dating",
+                      "Agencies", "Personal development", "Sales", "Social media",
+                      "Personal finance", "AI", "Ecommerce", "Public speaking",
+                      "Trading", "Amazon FBA", "Reselling", "Spirituality", "Careers",
+                      "Home services", "Travel", "Software", "Kindle book publishing",
+                      "Video games", "Clipping", "Sports betting", "VAs", "Other"
+                    ].map(n => (
+                       <option key={n} value={n.toLowerCase().replace(/ /g, '-')} className="text-white bg-[#0D0F12] p-2">{n}</option>
+                    ))}
                   </select>
                 </div>
               </div>

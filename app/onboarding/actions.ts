@@ -44,18 +44,26 @@ export async function saveOnboardingData(data: {
 }) {
   const { workspaceId } = await requireWorkspaceAccessOrThrow();
 
-  await db.workspace.update({
-    where: { id: workspaceId },
-    data: {
-      name: data.name,
-      slug: data.slug,
-      niche: data.niche,
-      brandColor: data.brandColor,
-      logoUrl: data.logoUrl,
-      whopApiKey: data.whopApiKey,
-      whopCompanyName: data.whopCompanyName,
-    },
-  });
+  try {
+    await db.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        name: data.name,
+        slug: data.slug,
+        niche: data.niche,
+        brandColor: data.brandColor,
+        logoUrl: data.logoUrl,
+        whopApiKey: data.whopApiKey,
+        whopCompanyName: data.whopCompanyName,
+      },
+    });
+  } catch (error: any) {
+    if (error.code === 'P2002' && error.meta?.target?.includes('slug')) {
+      return { success: false, error: 'That workspace URL is already taken.' };
+    }
+    console.error('Failed to save onboarding data:', error);
+    return { success: false, error: 'An unexpected error occurred while saving.' };
+  }
 
   revalidatePath('/onboarding');
   return { success: true };
