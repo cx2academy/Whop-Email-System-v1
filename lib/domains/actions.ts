@@ -17,7 +17,21 @@ export async function checkDomainAvailability(domain: string) {
     const availRes = await fetch(availUrl, { cache: 'no-store' });
     const availText = await availRes.text();
 
-    const isAvailable = availText.includes(`<available>\n\t\t<domain>${cleanDomain}</domain>`);
+    // Check for API errors first
+    const codeMatch = availText.match(/<code>(\d+)<\/code>/);
+    const detailMatch = availText.match(/<detail>([\s\S]*?)<\/detail>/);
+    const apiCode = codeMatch ? codeMatch[1] : null;
+
+    if (apiCode && apiCode !== '300') {
+      console.error(`NameSilo API Error (${apiCode}): ${detailMatch ? detailMatch[1] : 'Unknown error'}`);
+      // Usually 300 is success. If not 300, something is wrong with the request/key
+      if (apiCode === '280') return { available: false }; // Invalid domain
+      throw new Error(detailMatch ? detailMatch[1] : 'NameSilo API Error');
+    }
+
+    // More robust XML parsing for availability
+    const availableMatch = availText.match(/<available>([\s\S]*?)<\/available>/);
+    const isAvailable = availableMatch ? availableMatch[1].includes(`<domain>${cleanDomain}</domain>`) : false;
 
     if (!isAvailable) {
       return { available: false };
