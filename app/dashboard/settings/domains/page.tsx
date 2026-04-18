@@ -2,22 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Plus, 
-  Trash2, 
-  RefreshCw, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle,
-  ExternalLink,
-  Copy,
-  ChevronDown,
-  ChevronUp,
-  Globe,
-  Loader2,
-  Check,
-  ShieldCheck,
-  Zap,
-  Tag
+  Plus, Trash2, RefreshCw, CheckCircle2, Clock, 
+  AlertCircle, ExternalLink, Copy, ChevronDown, ChevronUp, 
+  Globe, Loader2, Search, Zap, Check, ShieldCheck, X
 } from 'lucide-react';
 import { addDomain, getDomains, verifyDomain, deleteDomain } from './actions';
 import { checkDomainAvailability } from '@/lib/domains/actions';
@@ -27,16 +14,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function DomainsPage() {
   const [domains, setDomains] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState<'connect' | 'search'>('connect');
+
+  // Connect State
   const [isAdding, setIsAdding] = useState(false);
   const [newDomain, setNewDomain] = useState('');
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
 
-  // Search tab states
-  const [activeTab, setActiveTab] = useState<'list' | 'search'>('list');
+  // Search State
   const [domainSearch, setDomainSearch] = useState('');
   const [domainStatus, setDomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [domainPrice, setDomainPrice] = useState('$13.95/yr');
-  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     loadDomains();
@@ -73,8 +64,6 @@ export default function DomainsPage() {
 
   async function handleAddDomain() {
     if (!newDomain) return;
-    
-    // Simple domain validation regex
     const domainRegex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/;
     if (!domainRegex.test(newDomain)) {
       toast.error('Please enter a valid domain (e.g. mail.example.com)');
@@ -89,6 +78,7 @@ export default function DomainsPage() {
         setNewDomain('');
         loadDomains();
         setExpandedDomain(result.domain?.id || null);
+        setIsModalOpen(false); // Close modal on success
       } else {
         toast.error(result.error || 'Failed to add domain');
       }
@@ -132,230 +122,57 @@ export default function DomainsPage() {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard', {
       icon: '📋',
-      style: {
-        borderRadius: '10px',
-        background: '#1A1A1A',
-        color: '#fff',
-        fontSize: '12px',
-      },
+      style: { borderRadius: '10px', background: '#1A1A1A', color: '#fff', fontSize: '12px' },
     });
   };
 
+  const verifiedCount = domains.filter(d => d.resendStatus === 'verified').length;
+
   return (
-    <div className="space-y-10 max-w-5xl mx-auto pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#22C55E]/10 border border-[#22C55E]/20 text-[#22C55E] text-[10px] font-bold uppercase tracking-widest mb-4">
-            <ShieldCheck className="h-3 w-3" /> Deliverability
-          </div>
-          <h1 className="text-4xl font-bold text-foreground tracking-tight mb-3">
-            Sending Domains
-          </h1>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            Verify your domains to improve deliverability, protect your sender reputation, and build trust with your audience.
+    <div className="space-y-8 max-w-5xl mx-auto pb-20">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 pb-6 border-b border-border">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">Sending Domains</h1>
+          <p className="text-muted-foreground text-sm flex items-center gap-2">
+             Manage and verify domains for high deliverability. 
+             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary text-xs font-medium text-foreground">
+               <ShieldCheck className="h-3 w-3 text-primary" />
+               {verifiedCount} / {domains.length} Verified
+             </span>
           </p>
         </div>
-        
-        <div className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border shadow-sm">
-          <div className="text-right">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Connected</div>
-            <div className="text-xs font-medium text-foreground">
-              {domains.filter(d => d.resendStatus === 'verified').length} / {domains.length} Verified
-            </div>
-          </div>
-          <div className="h-8 w-px bg-border mx-2" />
-          <div className="flex gap-1 p-1 rounded-xl bg-secondary/50 border border-border">
-            <button
-              onClick={() => setActiveTab('list')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'list' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              My Domains
-            </button>
-            <button
-              onClick={() => setActiveTab('search')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'search' ? 'bg-[#22C55E] text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Get New
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-sm shrink-0 whitespace-nowrap"
+        >
+          <Plus className="h-4 w-4" />
+          Add Domain
+        </button>
       </div>
 
-      <AnimatePresence mode="wait">
-        {activeTab === 'search' ? (
-          <motion.div
-            key="search-view"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            className="space-y-6"
-          >
-            <div className="bg-card border border-border rounded-3xl p-10 shadow-card-md relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
-                <Globe className="h-48 w-48" />
-              </div>
-
-              <div className="relative z-10 max-w-xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <Zap className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <h2 className="text-2xl font-bold">Secure your Deliverability</h2>
-                </div>
-                
-                <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-                  Avoid the &quot;sent via resend.com&quot; notice and land in the primary inbox. 
-                  Search for a clean domain to use exclusively for your email campaigns.
-                </p>
-
-                <div className="relative group">
-                  < Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="text"
-                    value={domainSearch}
-                    onChange={(e) => {
-                      setDomainSearch(e.target.value.toLowerCase().replace(/[^a-z0-9-.]/g, ''));
-                      setDomainStatus('idle');
-                    }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleDomainCheck()}
-                    placeholder="e.g. mail.alpha-agency.com"
-                    className="w-full bg-black border border-border rounded-2xl pl-12 pr-32 py-4.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
-                  />
-                  <div className="absolute right-2 top-2 bottom-2">
-                    <button
-                      onClick={handleDomainCheck}
-                      disabled={domainStatus === 'checking' || !domainSearch}
-                      className="h-full px-6 flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-all disabled:opacity-50"
-                    >
-                      {domainStatus === 'checking' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search Availability'}
-                    </button>
-                  </div>
-                </div>
-
-                <AnimatePresence>
-                  {domainStatus === 'taken' && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }} 
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 rounded-xl bg-destructive/5 border border-destructive/10 text-destructive text-sm flex items-center gap-3"
-                    >
-                      <AlertCircle className="h-4 w-4" /> 
-                      Oops! That domain is already registered. Try a different variation!
-                    </motion.div>
-                  )}
-
-                  {domainStatus === 'available' && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 20 }} 
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 space-y-4"
-                    >
-                      <div className="p-6 rounded-2xl bg-[#22C55E]/5 border border-[#22C55E]/10 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-full bg-[#22C55E]/10 flex items-center justify-center">
-                            <Check className="h-6 w-6 text-[#22C55E]" />
-                          </div>
-                          <div>
-                            <div className="text-lg font-bold text-foreground">{domainSearch}</div>
-                            <div className="flex items-center gap-2 text-xs text-[#22C55E]">
-                              <Tag className="h-3 w-3" />
-                              {domainPrice} · Available Now
-                            </div>
-                          </div>
-                        </div>
-                        <a
-                          href={`https://www.namesilo.com/domain/search-results?query=${domainSearch}&rid=9b15194xx`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#22C55E] text-white text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-[#22C55E]/20"
-                        >
-                          Register Domain <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground text-center">
-                        Pricing is pulled in real-time from NameSilo. You will be redirected to their secure checkout.
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { title: 'Brand Safety', desc: 'Secure your brand name across extensions early.', icon: ShieldCheck },
-                { title: 'Global Reach', desc: 'Use localized extensions for better trust.', icon: Globe },
-                { title: 'Instant Setup', desc: 'Connect to RevTray immediately after purchase.', icon: Zap }
-              ].map((feature, i) => (
-                <div key={i} className="p-6 rounded-2xl bg-card border border-border">
-                  <feature.icon className="h-6 w-6 text-primary mb-3" />
-                  <h4 className="font-bold text-foreground mb-1">{feature.title}</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="list-view"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            className="space-y-10"
-          >
-            {/* Add Domain Form */}
-            <div className="bg-card border border-border rounded-2xl p-8 shadow-card-md relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
-                <Globe className="h-32 w-32" />
-              </div>
-              
-              <div className="relative z-10">
-                <h2 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-primary" />
-                  Connect an existing domain
-                </h2>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1 relative">
-                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      value={newDomain}
-                      onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddDomain()}
-                      placeholder="e.g. mail.yourdomain.com"
-                      className="w-full bg-secondary/50 border border-border rounded-xl pl-11 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                    />
-                  </div>
-                  <button
-                    onClick={handleAddDomain}
-                    disabled={isAdding || !newDomain}
-                    className="bg-primary text-primary-foreground px-8 py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-                  >
-                    {isAdding ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                    Add Domain
-                  </button>
-                </div>
-                <p className="mt-4 text-[11px] text-muted-foreground italic">
-                  Tip: We recommend using a subdomain like <code className="text-foreground/80 font-mono">mail.yourdomain.com</code> for better isolation.
-                </p>
-              </div>
-            </div>
-
-      {/* Domains List */}
+      {/* Main List */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-4">
-            <RefreshCw className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-sm font-mono tracking-widest uppercase">Initializing...</p>
+          <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-4">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary/60" />
           </div>
         ) : domains.length === 0 ? (
-          <div className="text-center py-20 bg-card border border-dashed border-border rounded-3xl">
+          <div className="text-center py-24 bg-card border border-dashed border-border rounded-3xl">
             <div className="h-16 w-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
               <Globe className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="text-foreground font-bold mb-2">No custom domains yet</h3>
-            <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-              Add your first sending domain above to start building your sender reputation.
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-6">
+              You need a custom domain to send emails. Add your existing domain or buy a new one to get started.
             </p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold hover:opacity-90 inline-flex items-center gap-2 transition-all"
+            >
+              <Plus className="h-4 w-4" /> Add Domain
+            </button>
           </div>
         ) : (
           domains.map((domain) => (
@@ -363,127 +180,114 @@ export default function DomainsPage() {
               key={domain.id}
               className={`bg-card border transition-all rounded-2xl overflow-hidden ${expandedDomain === domain.id ? 'border-primary/30 ring-1 ring-primary/20 shadow-card-md' : 'border-border hover:border-primary/20'}`}
             >
-              <div className="p-6 flex items-center justify-between">
+              <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-5">
-                  <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-colors ${domain.resendStatus === 'verified' ? 'bg-primary/10 text-primary' : 'bg-yellow-500/10 text-yellow-600'}`}>
-                    <Globe className="h-6 w-6" />
+                  <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-colors shrink-0 ${domain.resendStatus === 'verified' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'bg-yellow-500/10 text-yellow-600'}`}>
+                    {domain.resendStatus === 'verified' ? <CheckCircle2 className="h-6 w-6" /> : <Clock className="h-6 w-6" />}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-foreground text-lg">{domain.domain}</h3>
-                    <div className="flex items-center gap-3 mt-1.5">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-foreground text-lg truncate">{domain.domain}</h3>
+                    <div className="flex items-center flex-wrap gap-2 mt-1.5">
                       {domain.resendStatus === 'verified' ? (
-                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
-                          <CheckCircle2 className="h-3 w-3" /> Verified
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#22C55E] bg-[#22C55E]/10 px-2 py-0.5 rounded border border-[#22C55E]/20">
+                          Verified
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-yellow-600 bg-yellow-500/5 px-2 py-0.5 rounded-md border border-yellow-500/10">
-                          <Clock className="h-3 w-3" /> Pending DNS
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-yellow-600 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
+                          Pending DNS Setup
                         </span>
                       )}
-                      <span className="text-[10px] text-muted-foreground font-mono">
+                      <span className="text-[10px] text-muted-foreground font-mono bg-secondary px-2 py-0.5 rounded border border-border">
                         ID: {domain.resendDomainId.slice(0, 8)}...
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setExpandedDomain(expandedDomain === domain.id ? null : domain.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${expandedDomain === domain.id ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${expandedDomain === domain.id ? 'bg-secondary text-foreground border border-border' : 'text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent'}`}
                   >
                     {expandedDomain === domain.id ? 'Hide DNS' : 'View DNS'}
                     {expandedDomain === domain.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </button>
-                  <div className="h-8 w-px bg-border mx-1" />
+                  <div className="h-6 w-px bg-border mx-1" />
                   <button
                     onClick={() => handleVerify(domain.id)}
-                    className="p-2.5 rounded-xl bg-secondary hover:bg-primary/10 text-primary transition-all border border-border"
+                    className="p-2.5 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20"
                     title="Refresh status"
                   >
-                    <RefreshCw className="h-5 w-5" />
+                    <RefreshCw className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(domain.id)}
-                    className="p-2.5 rounded-xl bg-secondary hover:bg-destructive/10 text-destructive transition-all border border-border"
+                    className="p-2.5 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all border border-transparent hover:border-destructive/20"
                     title="Delete domain"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
 
+              {/* DNS Records Expandable Section */}
               <AnimatePresence>
                 {expandedDomain === domain.id && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-border bg-secondary/30"
+                    className="border-t border-border bg-secondary/20"
                   >
-                    <div className="p-8 space-y-8">
-                      <div className="flex items-start gap-4 p-5 rounded-2xl bg-blue-500/5 border border-blue-500/10">
+                    <div className="p-8 space-y-6">
+                      <div className="flex items-start gap-4 p-5 rounded-2xl bg-card border border-border">
                         <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
                           <AlertCircle className="h-5 w-5 text-blue-500" />
                         </div>
                         <div>
-                          <h4 className="text-sm font-bold text-blue-700 mb-1">DNS Configuration Required</h4>
-                          <p className="text-xs text-blue-600/80 leading-relaxed">
-                            Add the following records to your domain provider (GoDaddy, Cloudflare, etc.). 
-                            Verification can take up to 48 hours, but usually happens within minutes.
+                          <h4 className="text-sm font-bold text-foreground mb-1">Update your DNS records</h4>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Log in to your domain registrar (e.g. NameSilo, GoDaddy) and add these records to your DNS settings. 
+                            If you purchased your domain through RevTray (NameSilo), <a href="https://www.namesilo.com/login" target="_blank" rel="noreferrer" className="text-primary hover:underline">login to your NameSilo account here</a>.
                           </p>
                         </div>
                       </div>
 
-                      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                      <div className="overflow-hidden rounded-xl border border-border bg-card">
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="bg-secondary/50 border-b border-border">
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type</th>
-                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Host / Name</th>
-                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Value / Points to</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Name</th>
+                              <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Content/Value</th>
                               <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Status</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
                             {domain.resendDnsRecords?.map((record: any, idx: number) => (
-                              <tr key={idx} className="group hover:bg-secondary/20 transition-colors">
-                                <td className="px-4 py-4">
-                                  <span className="px-2 py-1 rounded bg-secondary text-[10px] font-mono font-bold text-muted-foreground border border-border">
+                              <tr key={idx} className="group hover:bg-secondary/30 transition-colors">
+                                <td className="px-4 py-3">
+                                  <span className="px-1.5 py-0.5 rounded bg-secondary text-[10px] font-mono font-bold text-muted-foreground border border-border">
                                     {record.type}
                                   </span>
                                 </td>
-                                <td className="px-4 py-4">
+                                <td className="px-4 py-3">
                                   <div className="flex items-center gap-2">
-                                    <code className="text-xs text-foreground font-mono break-all max-w-[150px] md:max-w-none">{record.name}</code>
-                                    <button 
-                                      onClick={() => copyToClipboard(record.name)}
-                                      className="p-1 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-all"
-                                    >
-                                      <Copy className="h-3 w-3 text-muted-foreground" />
-                                    </button>
+                                    <code className="text-[11px] text-foreground font-mono break-all">{record.name}</code>
+                                    <button onClick={() => copyToClipboard(record.name)} className="p-1 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-all"><Copy className="h-3 w-3 text-muted-foreground" /></button>
                                   </div>
                                 </td>
-                                <td className="px-4 py-4">
+                                <td className="px-4 py-3">
                                   <div className="flex items-center gap-2">
-                                    <code className="text-xs text-foreground font-mono break-all max-w-[200px] md:max-w-none">{record.value}</code>
-                                    <button 
-                                      onClick={() => copyToClipboard(record.value)}
-                                      className="p-1 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-all"
-                                    >
-                                      <Copy className="h-3 w-3 text-muted-foreground" />
-                                    </button>
+                                    <code className="text-[11px] text-foreground font-mono break-all max-w-[200px] md:max-w-none">{record.value}</code>
+                                    <button onClick={() => copyToClipboard(record.value)} className="p-1 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-all"><Copy className="h-3 w-3 text-muted-foreground" /></button>
                                   </div>
                                 </td>
-                                <td className="px-4 py-4 text-right">
+                                <td className="px-4 py-3 text-right">
                                   {record.status === 'verified' ? (
-                                    <span className="text-[10px] font-bold text-primary flex items-center justify-end gap-1">
-                                      <CheckCircle2 className="h-3 w-3" /> Verified
-                                    </span>
+                                    <span className="text-[10px] font-bold text-[#22C55E] flex items-center justify-end gap-1"><CheckCircle2 className="h-3 w-3" /> OK</span>
                                   ) : (
-                                    <span className="text-[10px] font-bold text-muted-foreground flex items-center justify-end gap-1">
-                                      <Clock className="h-3 w-3" /> Pending
-                                    </span>
+                                    <span className="text-[10px] font-bold text-yellow-600 flex items-center justify-end gap-1"><Clock className="h-3 w-3" /> Pending</span>
                                   )}
                                 </td>
                               </tr>
@@ -492,16 +296,12 @@ export default function DomainsPage() {
                         </table>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4 border-t border-border">
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <AlertCircle className="h-3.5 w-3.5" />
-                          <span>Need help? Check our <a href="#" className="text-primary hover:underline">DNS setup guide</a>.</span>
-                        </div>
+                      <div className="flex justify-end pt-2">
                         <button
                           onClick={() => handleVerify(domain.id)}
-                          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-all border border-primary/20"
+                          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-secondary text-foreground text-xs font-bold hover:bg-secondary/80 border border-border transition-all shadow-sm"
                         >
-                          I&apos;ve added these records, check now <ExternalLink className="h-3.5 w-3.5" />
+                          Verify Records Now
                         </button>
                       </div>
                     </div>
@@ -512,9 +312,166 @@ export default function DomainsPage() {
           ))
         )}
       </div>
-    </motion.div>
-  )}
-</AnimatePresence>
+
+      {/* Add Domain Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              onClick={() => setIsModalOpen(false)}
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-xl bg-card border border-border rounded-2xl shadow-xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="px-6 py-4 flex items-center justify-between border-b border-border bg-card">
+                <h3 className="font-bold text-foreground">Add Sending Domain</h3>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 -mr-2 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto">
+                <div className="flex p-1 bg-secondary rounded-xl mb-6">
+                  <button 
+                    onClick={() => setModalTab('connect')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all ${modalTab === 'connect' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    I own a domain
+                  </button>
+                  <button 
+                    onClick={() => setModalTab('search')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold rounded-lg transition-all ${modalTab === 'search' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Register new domain
+                  </button>
+                </div>
+
+                {modalTab === 'connect' ? (
+                  <div className="space-y-4">
+                    <div className="bg-secondary/30 rounded-xl p-5 border border-border">
+                      <h4 className="text-sm font-bold text-foreground mb-1">Connect Existing Domain</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                        We highly recommend using a subdomain (e.g. <code className="bg-secondary px-1 py-0.5 rounded text-foreground font-mono">mail.yourdomain.com</code>) entirely dedicated to RevTray to protect your root domain's reputation.
+                      </p>
+                      
+                      <div className="relative">
+                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <input
+                          value={newDomain}
+                          onChange={(e) => setNewDomain(e.target.value.toLowerCase().replace(/[^a-z0-9-.]/g, ''))}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddDomain()}
+                          placeholder="mail.example.com"
+                          className="w-full bg-background border border-border rounded-xl pl-12 pr-4 py-3.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all font-mono"
+                        />
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={handleAddDomain}
+                      disabled={isAdding || !newDomain}
+                      className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect Domain'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-secondary/30 rounded-xl p-5 border border-border">
+                      <h4 className="text-sm font-bold text-foreground mb-1">Find a Clean Domain</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                        Search NameSilo for a fresh domain to use exclusively for cold email.
+                      </p>
+                      
+                      <div className="relative flex items-center">
+                        <Search className="absolute left-4 h-5 w-5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={domainSearch}
+                          onChange={(e) => {
+                            setDomainSearch(e.target.value.toLowerCase().replace(/[^a-z0-9-.]/g, ''));
+                            setDomainStatus('idle');
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleDomainCheck()}
+                          placeholder="alpha-agency-mail.com"
+                          className="w-full bg-background border border-border rounded-xl pl-12 pr-28 py-3.5 text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all font-mono"
+                        />
+                        <div className="absolute right-1.5">
+                          <button
+                            onClick={handleDomainCheck}
+                            disabled={domainStatus === 'checking' || !domainSearch}
+                            className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center"
+                          >
+                            {domainStatus === 'checking' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Check'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <AnimatePresence mode="wait">
+                      {domainStatus === 'taken' && (
+                        <motion.div 
+                          key="taken"
+                          initial={{ opacity: 0, height: 0 }} 
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="p-4 rounded-xl bg-destructive/5 border border-destructive/10 text-destructive text-xs font-medium flex items-center gap-2"
+                        >
+                          <AlertCircle className="h-4 w-4 shrink-0" /> 
+                          That domain is already registered. Try another variation.
+                        </motion.div>
+                      )}
+
+                      {domainStatus === 'available' && (
+                        <motion.div 
+                          key="available"
+                          initial={{ opacity: 0, height: 0 }} 
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-5 rounded-xl bg-[#22C55E]/5 border border-[#22C55E]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                              <div className="flex items-center gap-2 text-[#22C55E] text-xs font-bold uppercase tracking-wider mb-1">
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Available Now
+                              </div>
+                              <div className="font-mono text-foreground font-bold">{domainSearch}</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-bold text-foreground">{domainPrice}</span>
+                              <a
+                                href={`https://www.namesilo.com/domain/search-results?query=${domainSearch}&rid=9b15194xx`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#22C55E] text-white text-xs font-bold hover:opacity-90 transition-all whitespace-nowrap shadow-sm"
+                              >
+                                Buy <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </div>
+                          </div>
+                          <p className="text-center text-[10px] text-muted-foreground mt-3">
+                            After purchasing on NameSilo, return to the "I own a domain" tab to connect it.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
