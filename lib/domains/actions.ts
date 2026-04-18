@@ -31,29 +31,27 @@ export async function checkDomainAvailability(domain: string) {
 
     // More robust XML parsing for availability
     const availableMatch = availText.match(/<available>([\s\S]*?)<\/available>/);
-    const isAvailable = availableMatch ? availableMatch[1].includes(`<domain>${cleanDomain}</domain>`) : false;
+    const domainRegex = new RegExp(`<domain[^>]*price="([^"]+)"[^>]*>\\s*${cleanDomain}\\s*<\\/domain>`);
+    
+    let isAvailable = false;
+    let priceStr = '$13.95/yr';
+
+    if (availableMatch) {
+      const match = availableMatch[1].match(domainRegex);
+      if (match) {
+        isAvailable = true;
+        if (match[1]) priceStr = `$${match[1]}/yr`;
+      } else {
+        // Fallback if price attribute is missing but domain is still there
+        const simpleDomainRegex = new RegExp(`<domain[^>]*>\\s*${cleanDomain}\\s*<\\/domain>`);
+        if (simpleDomainRegex.test(availableMatch[1])) {
+          isAvailable = true;
+        }
+      }
+    }
 
     if (!isAvailable) {
       return { available: false };
-    }
-
-    // Now try to fetch the pricing dynamically
-    let priceStr = '$13.95/yr'; 
-    try {
-      const priceUrl = `https://www.namesilo.com/api/getPrices?version=1&type=xml&key=${apiKey}`;
-      const priceRes = await fetch(priceUrl, { cache: 'no-store', next: { revalidate: 3600 } });
-      const priceText = await priceRes.text();
-      
-      const ext = cleanDomain.split('.').pop() || 'com';
-      
-      // Look for the specific TLD price in the XML (e.g., <com><registration>13.95</registration></com>)
-      const regex = new RegExp(`<${ext}>.*?<registration>([0-9.]+)</registration>.*?</${ext}>`, 's');
-      const match = priceText.match(regex);
-      if (match && match[1]) {
-        priceStr = `$${match[1]}/yr`;
-      }
-    } catch (e) {
-      console.error("Failed to fetch exact pricing, falling back to default.", e);
     }
 
     return { available: true, price: priceStr };
