@@ -13,7 +13,10 @@ import { OnboardingWizard } from './onboarding-wizard';
 
 export const metadata: Metadata = { title: 'Get started — RevTray' };
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage(props: { searchParams: Promise<{ force?: string }> }) {
+  const searchParams = await props.searchParams;
+  const isForce = searchParams.force === 'true';
+
   const session = await auth();
   if (!session?.user?.id) redirect('/auth/login');
 
@@ -23,7 +26,7 @@ export default async function OnboardingPage() {
     select: { hasAchievedFirstSend: true },
   });
 
-  if (user?.hasAchievedFirstSend) redirect('/dashboard');
+  if (user?.hasAchievedFirstSend && !isForce) redirect('/dashboard');
 
   let workspaceId = session.user.workspaceId;
 

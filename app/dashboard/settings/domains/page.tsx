@@ -12,9 +12,15 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
-  Globe
+  Globe,
+  Loader2,
+  Check,
+  ShieldCheck,
+  Zap,
+  Tag
 } from 'lucide-react';
 import { addDomain, getDomains, verifyDomain, deleteDomain } from './actions';
+import { checkDomainAvailability } from '@/lib/domains/actions';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,9 +31,33 @@ export default function DomainsPage() {
   const [newDomain, setNewDomain] = useState('');
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
 
+  // Search tab states
+  const [activeTab, setActiveTab] = useState<'list' | 'search'>('list');
+  const [domainSearch, setDomainSearch] = useState('');
+  const [domainStatus, setDomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [domainPrice, setDomainPrice] = useState('$13.95/yr');
+  const [isChecking, setIsChecking] = useState(false);
+
   useEffect(() => {
     loadDomains();
   }, []);
+
+  async function handleDomainCheck() {
+    if (!domainSearch) return;
+    setDomainStatus('checking');
+    try {
+      const res = await checkDomainAvailability(domainSearch);
+      if (res.available) {
+        setDomainStatus('available');
+        setDomainPrice(res.price || '$13.95/yr');
+      } else {
+        setDomainStatus('taken');
+      }
+    } catch {
+      toast.error('Failed to check domain.');
+      setDomainStatus('idle');
+    }
+  }
 
   async function loadDomains() {
     setIsLoading(true);
@@ -112,68 +142,203 @@ export default function DomainsPage() {
   };
 
   return (
-    <div className="space-y-10 max-w-5xl mx-auto pb-20 animate-fade-up">
+    <div className="space-y-10 max-w-5xl mx-auto pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-widest mb-4">
-            Deliverability
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-[#22C55E]/10 border border-[#22C55E]/20 text-[#22C55E] text-[10px] font-bold uppercase tracking-widest mb-4">
+            <ShieldCheck className="h-3 w-3" /> Deliverability
           </div>
           <h1 className="text-4xl font-bold text-foreground tracking-tight mb-3">
             Sending Domains
           </h1>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Verify your domains to improve deliverability, protect your sender reputation, and remove the &quot;via resend.com&quot; notice from your emails.
+            Verify your domains to improve deliverability, protect your sender reputation, and build trust with your audience.
           </p>
         </div>
         
         <div className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border shadow-sm">
           <div className="text-right">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Status</div>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Connected</div>
             <div className="text-xs font-medium text-foreground">
               {domains.filter(d => d.resendStatus === 'verified').length} / {domains.length} Verified
             </div>
           </div>
-          <div className="h-8 w-px bg-border" />
-          <Globe className="h-5 w-5 text-primary" />
+          <div className="h-8 w-px bg-border mx-2" />
+          <div className="flex gap-1 p-1 rounded-xl bg-secondary/50 border border-border">
+            <button
+              onClick={() => setActiveTab('list')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'list' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              My Domains
+            </button>
+            <button
+              onClick={() => setActiveTab('search')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'search' ? 'bg-[#22C55E] text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Get New
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Add Domain Form */}
-      <div className="bg-card border border-border rounded-2xl p-8 shadow-card-md relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
-          <Globe className="h-32 w-32" />
-        </div>
-        
-        <div className="relative z-10">
-          <h2 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
-            <Plus className="h-5 w-5 text-primary" />
-            Connect a new domain
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                value={newDomain}
-                onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddDomain()}
-                placeholder="e.g. mail.yourdomain.com"
-                className="w-full bg-secondary/50 border border-border rounded-xl pl-11 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-              />
+      <AnimatePresence mode="wait">
+        {activeTab === 'search' ? (
+          <motion.div
+            key="search-view"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="space-y-6"
+          >
+            <div className="bg-card border border-border rounded-3xl p-10 shadow-card-md relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
+                <Globe className="h-48 w-48" />
+              </div>
+
+              <div className="relative z-10 max-w-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Zap className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <h2 className="text-2xl font-bold">Secure your Deliverability</h2>
+                </div>
+                
+                <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+                  Avoid the &quot;sent via resend.com&quot; notice and land in the primary inbox. 
+                  Search for a clean domain to use exclusively for your email campaigns.
+                </p>
+
+                <div className="relative group">
+                  < Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <input
+                    type="text"
+                    value={domainSearch}
+                    onChange={(e) => {
+                      setDomainSearch(e.target.value.toLowerCase().replace(/[^a-z0-9-.]/g, ''));
+                      setDomainStatus('idle');
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleDomainCheck()}
+                    placeholder="e.g. mail.alpha-agency.com"
+                    className="w-full bg-black border border-border rounded-2xl pl-12 pr-32 py-4.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all shadow-inner"
+                  />
+                  <div className="absolute right-2 top-2 bottom-2">
+                    <button
+                      onClick={handleDomainCheck}
+                      disabled={domainStatus === 'checking' || !domainSearch}
+                      className="h-full px-6 flex items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      {domainStatus === 'checking' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search Availability'}
+                    </button>
+                  </div>
+                </div>
+
+                <AnimatePresence>
+                  {domainStatus === 'taken' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }} 
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 p-4 rounded-xl bg-destructive/5 border border-destructive/10 text-destructive text-sm flex items-center gap-3"
+                    >
+                      <AlertCircle className="h-4 w-4" /> 
+                      Oops! That domain is already registered. Try a different variation!
+                    </motion.div>
+                  )}
+
+                  {domainStatus === 'available' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }} 
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6 space-y-4"
+                    >
+                      <div className="p-6 rounded-2xl bg-[#22C55E]/5 border border-[#22C55E]/10 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-[#22C55E]/10 flex items-center justify-center">
+                            <Check className="h-6 w-6 text-[#22C55E]" />
+                          </div>
+                          <div>
+                            <div className="text-lg font-bold text-foreground">{domainSearch}</div>
+                            <div className="flex items-center gap-2 text-xs text-[#22C55E]">
+                              <Tag className="h-3 w-3" />
+                              {domainPrice} · Available Now
+                            </div>
+                          </div>
+                        </div>
+                        <a
+                          href={`https://www.namesilo.com/domain/search-results?query=${domainSearch}&rid=9b15194xx`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#22C55E] text-white text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-[#22C55E]/20"
+                        >
+                          Register Domain <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground text-center">
+                        Pricing is pulled in real-time from NameSilo. You will be redirected to their secure checkout.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-            <button
-              onClick={handleAddDomain}
-              disabled={isAdding || !newDomain}
-              className="bg-primary text-primary-foreground px-8 py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-            >
-              {isAdding ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              Add Domain
-            </button>
-          </div>
-          <p className="mt-4 text-[11px] text-muted-foreground italic">
-            Tip: We recommend using a subdomain like <code className="text-foreground/80 font-mono">mail.yourdomain.com</code> for better isolation.
-          </p>
-        </div>
-      </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { title: 'Brand Safety', desc: 'Secure your brand name across extensions early.', icon: ShieldCheck },
+                { title: 'Global Reach', desc: 'Use localized extensions for better trust.', icon: Globe },
+                { title: 'Instant Setup', desc: 'Connect to RevTray immediately after purchase.', icon: Zap }
+              ].map((feature, i) => (
+                <div key={i} className="p-6 rounded-2xl bg-card border border-border">
+                  <feature.icon className="h-6 w-6 text-primary mb-3" />
+                  <h4 className="font-bold text-foreground mb-1">{feature.title}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="list-view"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="space-y-10"
+          >
+            {/* Add Domain Form */}
+            <div className="bg-card border border-border rounded-2xl p-8 shadow-card-md relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
+                <Globe className="h-32 w-32" />
+              </div>
+              
+              <div className="relative z-10">
+                <h2 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-primary" />
+                  Connect an existing domain
+                </h2>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      value={newDomain}
+                      onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddDomain()}
+                      placeholder="e.g. mail.yourdomain.com"
+                      className="w-full bg-secondary/50 border border-border rounded-xl pl-11 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddDomain}
+                    disabled={isAdding || !newDomain}
+                    className="bg-primary text-primary-foreground px-8 py-3.5 rounded-xl text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                  >
+                    {isAdding ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    Add Domain
+                  </button>
+                </div>
+                <p className="mt-4 text-[11px] text-muted-foreground italic">
+                  Tip: We recommend using a subdomain like <code className="text-foreground/80 font-mono">mail.yourdomain.com</code> for better isolation.
+                </p>
+              </div>
+            </div>
 
       {/* Domains List */}
       <div className="space-y-4">
