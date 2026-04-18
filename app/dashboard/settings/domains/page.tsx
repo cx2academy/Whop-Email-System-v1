@@ -512,6 +512,9 @@ export default function DomainsPage() {
           ))
         )}
       </div>
+    </motion.div>
+  )}
+</AnimatePresence>
     </div>
   );
 }
