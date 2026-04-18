@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronRight, Loader2, Rocket, ShieldCheck, Zap, Palette, Globe } from 'lucide-react';
-import { saveOnboardingData, validateWhopKey, completeOnboarding } from './actions';
+import { Check, ChevronRight, Loader2, Rocket, ShieldCheck, Zap, Palette, Globe, Search, ExternalLink, AlertCircle } from 'lucide-react';
+import { saveOnboardingData, validateWhopKey, completeOnboarding, checkDomainAvailability } from './actions';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Logo } from '@/components/ui/logo';
@@ -32,7 +32,12 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
   const [isValidating, setIsValidating] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState(false);
 
-  const totalSteps = 4;
+  // Domain State
+  const [domainSearch, setDomainSearch] = useState('');
+  const [domainStatus, setDomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [domainPrice, setDomainPrice] = useState<string | null>(null);
+
+  const totalSteps = 5;
 
   const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
@@ -84,6 +89,23 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
       toast.error('Validation failed');
     } finally {
       setIsValidating(false);
+    }
+  }
+
+  async function handleDomainCheck() {
+    if (!domainSearch) return;
+    setDomainStatus('checking');
+    try {
+      const res = await checkDomainAvailability(domainSearch);
+      if (res.available) {
+        setDomainStatus('available');
+        setDomainPrice(res.price || '$13.95/yr');
+      } else {
+        setDomainStatus('taken');
+      }
+    } catch {
+      toast.error('Failed to check domain.');
+      setDomainStatus('idle');
     }
   }
 
@@ -367,6 +389,107 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
           )}
 
           {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-8"
+            >
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                  <ShieldCheck className="h-3 w-3" /> Deliverability
+                </div>
+                <h1 className="text-3xl font-bold font-display mb-3">Secure your Deliverability</h1>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  To hit the primary inbox and avoid spam filters, you must send from your own domain.
+                  For example, if you buy <strong className="text-white">mybrand.com</strong>, your emails will be sent from <strong className="text-[#22C55E]">contact@mybrand.com</strong>.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                    Search for a sending domain
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={domainSearch}
+                      onChange={(e) => {
+                        setDomainSearch(e.target.value.toLowerCase().replace(/[^a-z0-9-.]/g, ''));
+                        setDomainStatus('idle');
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleDomainCheck()}
+                      placeholder="e.g., mailmybrand.com or newsmybrand.com"
+                      className="w-full rounded-xl px-4 py-3.5 pl-10 text-sm bg-white/5 border border-white/10 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#22C55E]/50 transition-all pr-24"
+                    />
+                    <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <button
+                      onClick={handleDomainCheck}
+                      disabled={domainStatus === 'checking' || !domainSearch}
+                      className="absolute right-2 top-2 bottom-2 px-3 flex items-center justify-center rounded-lg bg-blue-500/20 text-blue-400 text-xs font-bold hover:bg-blue-500/30 transition-all disabled:opacity-50"
+                    >
+                      {domainStatus === 'checking' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Check'}
+                    </button>
+                  </div>
+                </div>
+
+                {domainStatus === 'taken' && (
+                  <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" /> That domain is taken. Try another!
+                  </motion.div>
+                )}
+
+                {domainStatus === 'available' && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
+                    <div className="p-4 rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/20">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-[#22C55E]/20 flex items-center justify-center">
+                          <Check className="h-4 w-4 text-[#22C55E]" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-white">{domainSearch} is available!</div>
+                          <div className="text-xs text-[#22C55E]">~{domainPrice}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <a
+                      href={`https://www.namesilo.com/domain/search-domains?query=${domainSearch}&rid=9b15194xx`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => nextStep()}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-bold bg-white text-black hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                    >
+                      Buy on NameSilo <ExternalLink className="h-4 w-4" />
+                    </a>
+                    <p className="text-[10px] text-gray-500 text-center leading-relaxed">
+                      Clicking this will pop open a new window to buy your domain. Once you're done checkout, come back here to finish setting up RevTray.
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-white/5">
+                <button
+                  onClick={prevStep}
+                  className="px-6 rounded-xl py-4 text-sm font-bold bg-white/5 text-gray-400 hover:bg-white/10 transition-all"
+                >
+                  Back
+                </button>
+                <div className="flex-1" />
+                <button
+                  onClick={nextStep}
+                  className="px-6 rounded-xl py-4 text-sm font-medium text-gray-400 hover:text-white transition-all underline decoration-white/20 underline-offset-4"
+                >
+                  I already have one (Skip)
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 5 && (
             <motion.div
               key="step4"
               initial={{ opacity: 0, scale: 0.95 }}
