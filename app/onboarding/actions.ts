@@ -116,6 +116,7 @@ export async function checkDomainAvailability(domain: string) {
     throw error;
   }
 }
+export async function completeOnboarding() {
   const { userId, workspaceId } = await requireWorkspaceAccessOrThrow();
 
   // Mark user as having achieved first send (or just finished onboarding)
