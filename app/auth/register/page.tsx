@@ -7,6 +7,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db/client";
 import { RegisterForm } from "./register-form";
 import { Logo } from "@/components/ui/logo";
 
@@ -14,7 +16,25 @@ export const metadata: Metadata = {
   title: "Create Account",
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ invite?: string }> }) {
+  const params = await searchParams;
+  const isBeta = process.env.NEXT_PUBLIC_BETA_MODE === 'true';
+  const inviteCode = params.invite;
+
+  if (isBeta) {
+    if (!inviteCode) {
+      redirect('/');
+    }
+
+    const invite = await db.inviteCode.findUnique({
+      where: { code: inviteCode.trim().toUpperCase() }
+    });
+
+    if (!invite || (invite.maxUses > 0 && invite.currentUses >= invite.maxUses)) {
+      redirect('/');
+    }
+  }
+
   return (
     <main className="flex min-h-screen bg-[#090A0C] text-white overflow-hidden">
       {/* Left Side: Brand & Value Prop (Mirroring Login) */}

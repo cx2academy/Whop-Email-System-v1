@@ -29,7 +29,7 @@ export function BetaVaultPage() {
       
       await validateBetaCode(code.trim().toUpperCase());
       
-      router.push(`/auth/login?invite=${encodeURIComponent(code.trim().toUpperCase())}`);
+      router.push(`/auth/register?invite=${encodeURIComponent(code.trim().toUpperCase())}`);
     } catch (err: any) {
       setError(err.message || 'Something went wrong.');
     } finally {

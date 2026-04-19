@@ -2,6 +2,10 @@
 
 import { db } from '@/lib/db/client';
 import { ensureAdmin } from '@/lib/admin/utils';
+import { sendEmail } from '@/lib/email';
+import { render } from '@react-email/render';
+import { BetaWelcomeEmail } from '@/emails/beta-welcome';
+import { getAppUrl } from '@/lib/env';
 
 export async function generateInviteCode(maxUses: number = 1, prefix: string = 'BETA') {
   await ensureAdmin();
@@ -34,7 +38,7 @@ export async function updateWaitlistStatus(id: string, status: 'APPROVED' | 'REJ
   const randomString = Math.random().toString(36).substring(2, 8).toUpperCase();
   const code = `BETA-${randomString}`;
 
-  await db.$transaction([
+  const [,{ email, name }] = await db.$transaction([
     db.inviteCode.create({
       data: {
         code,
@@ -46,12 +50,33 @@ export async function updateWaitlistStatus(id: string, status: 'APPROVED' | 'REJ
       data: { 
         status: 'APPROVED',
         inviteCode: code
-      }
+      },
+      select: { email: true, name: true }
     })
   ]);
 
-  // In a real app, we'd trigger the Resend email here too.
-  // For now we've updated the DB state.
+  // Trigger the Welcome Email
+  try {
+    const appUrl = getAppUrl();
+    const registrationUrl = `${appUrl}/auth/register?invite=${code}`;
+    
+    const html = await render(
+        BetaWelcomeEmail({ 
+            name, 
+            inviteCode: code, 
+            registrationUrl 
+        })
+    );
+
+    await sendEmail({
+      to: email,
+      subject: "Welcome to the RevTray Beta Vault",
+      html
+    });
+  } catch (err) {
+    console.error("Failed to send beta welcome email:", err);
+    // We don't fail the whole action if email fails, but we log it
+  }
 
   return { success: true, code };
 }

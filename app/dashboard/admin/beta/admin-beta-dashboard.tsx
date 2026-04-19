@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Users, Mail, Globe, Zap, KeyRound, MessageSquare, Star, Trash2, Edit2, CheckCircle2, ShieldAlert, Clock, Check, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { generateInviteCode, updateWaitlistStatus } from './actions';
 import toast from 'react-hot-toast';
@@ -284,7 +284,7 @@ export function AdminBetaDashboard({ initialData }: { initialData: any }) {
 
                     <div className="flex items-center gap-6">
                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                         <Clock size={12} /> {formatDistanceToNow(new Date(w.createdAt), { addSuffix: true })}
+                         <Clock size={12} /> {w.createdAt ? formatDistanceToNow(new Date(w.createdAt), { addSuffix: true }) : 'Just now'}
                        </div>
                        {isPending && (
                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>

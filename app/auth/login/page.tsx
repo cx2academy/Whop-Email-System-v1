@@ -84,12 +84,21 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <LoginForm callbackUrl={callbackUrl} />
           </div>
 
-          <p className="mt-8 text-center text-sm text-gray-600">
-            New to RevTray?{' '}
-            <Link href="/auth/register" className="text-[#22C55E] font-semibold hover:underline">
-              Create an account
-            </Link>
-          </p>
+          {!process.env.NEXT_PUBLIC_BETA_MODE || process.env.NEXT_PUBLIC_BETA_MODE !== 'true' ? (
+            <p className="mt-8 text-center text-sm text-gray-600">
+              New to RevTray?{' '}
+              <Link href="/auth/register" className="text-[#22C55E] font-semibold hover:underline">
+                Create an account
+              </Link>
+            </p>
+          ) : (
+            <p className="mt-8 text-center text-sm text-gray-600">
+              Private Beta access only.{' '}
+              <Link href="/" className="text-zinc-400 font-medium hover:text-white transition-colors">
+                Join waitlist
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </main>
