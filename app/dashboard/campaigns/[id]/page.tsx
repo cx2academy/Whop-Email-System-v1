@@ -74,7 +74,7 @@ export default async function CampaignPage(props: CampaignPageProps) {
 
       {/* Analytics stats */}
       {analytics && campaign.status !== "DRAFT" && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <div id="tour-campaign-analytics-stats" className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <StatCard
             label="Recipients"
             value={formatNumber(analytics.totalRecipients)}

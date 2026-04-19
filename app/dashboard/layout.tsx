@@ -45,11 +45,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <main className="flex-1 overflow-auto animate-fade-up">
               <div className="mx-auto max-w-5xl px-8 py-8">
                 {children}
-                {process.env.NEXT_PUBLIC_BETA_MODE === 'true' && <BetaQuestEngine unlockedQuests={[]} />}
               </div>
             </main>
           </div>
           <CommandPalette />
+          {process.env.NEXT_PUBLIC_BETA_MODE === 'true' && <BetaQuestEngine unlockedQuests={[]} />}
         </div>
       </ClientProviders>
     );
@@ -66,7 +66,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }),
     db.user.findUnique({
       where: { id: userId },
-      select: { onboardingDismissedAt: true, hasAchievedFirstSend: true },
+      select: { onboardingDismissedAt: true, hasAchievedFirstSend: true, hasCompletedTour: true },
     }),
   ]);
 
@@ -127,11 +127,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <main className="flex-1 overflow-auto animate-fade-up">
             <div className="mx-auto max-w-5xl px-8 py-8">
               {children}
-              {process.env.NEXT_PUBLIC_BETA_MODE === 'true' && <BetaQuestEngine unlockedQuests={unlockedQuests} />}
             </div>
           </main>
         </div>
         <CommandPalette />
+        {process.env.NEXT_PUBLIC_BETA_MODE === 'true' && user?.hasCompletedTour && <BetaQuestEngine unlockedQuests={unlockedQuests} />}
       </div>
     </ClientProviders>
   );

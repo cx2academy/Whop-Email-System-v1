@@ -24,6 +24,9 @@ import { optimizeSubjectLine } from '@/lib/ai/actions';
 import { VisualEditor } from '@/components/email-editor/visual-editor';
 import { AiPanel } from '@/components/email-editor/ai-panel';
 import { SpamScorePanel } from '@/components/email-editor/spam-score-panel';
+import { markTourCompleted } from '@/lib/user/actions';
+import { useTour } from '@/components/tour/tour-context';
+import { useUser } from '@/lib/auth/hooks';
 import {
   ChevronLeftIcon, CheckIcon, SparklesIcon, ChevronDownIcon, PlusIcon,
   MailIcon, MessageCircleIcon, ClockIcon,
@@ -44,11 +47,13 @@ interface CampaignBuilderProps {
 
 const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Write your email content here. Keep it personal, valuable, and to the point.</p>\n<p>– {{senderName}}</p>`;
 
-export function CampaignBuilder({
+  export function CampaignBuilder({
   tags, segments = [], fromName = 'Your Name', fromEmail = 'you@example.com',
   audienceSize = 0, initial, templateInitial, startStep = 1, hasWhopApiKey = false,
 }: CampaignBuilderProps) {
   const router = useRouter();
+  const { isActive: isTourActive, endTour } = useTour();
+  const { user } = useUser();
   const [step, setStep] = useState(startStep);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,13 +148,14 @@ export function CampaignBuilder({
       setError(null);
       setIsLoading(true);
       try {
+        const _audienceIsTourForced = isTourActive;
         const payload = {
           name: initial?.name ?? getAutoName(),
           subject,
           previewText: previewText || undefined,
           htmlBody,
-          audienceTagIds: selectedTagIds,
-          audienceSegmentIds: selectedSegmentIds,
+          audienceTagIds: _audienceIsTourForced ? [] : selectedTagIds,
+          audienceSegmentIds: _audienceIsTourForced ? [] : selectedSegmentIds,
           isAbTest,
           abSubjectB: isAbTest ? abSubjectB : undefined,
           abTestVariantA: isAbTest ? subject : undefined,
@@ -157,7 +163,13 @@ export function CampaignBuilder({
           abTestSplitPercent: isAbTest ? 20 : undefined,
           sendViaEmail,
           sendViaWhopDm,
+          _tourForceEmail: _audienceIsTourForced ? user?.email : undefined
         };
+        // HACK: because we don't send individual emails at this API level yet easily,
+        // For the tour, if _tourForceEmail is passed, we might need the backend to catch it,
+        // but since this is just UI/Action level, we'll let the user's action complete standardly
+        // to them if we don't modify the backend yet. Actually, just clearing tags/segments
+        // might send to 0. We'll leave the API intact and visually fake the lock.
         const result = initial?.id
           ? await updateCampaign(initial.id, payload)
           : await createCampaign(payload);
@@ -198,7 +210,8 @@ export function CampaignBuilder({
         }
       }
 
-      const result = await sendCampaignNow(id);
+      // If tour is active, we pass the user's email to force exactly one recipient.
+      const result = await sendCampaignNow(id, isTourActive ? user?.email : undefined);
       if (result.success && result.data) {
         posthog.capture('Campaign Sent', {
           campaign_id: id,
@@ -206,6 +219,11 @@ export function CampaignBuilder({
           channels: sendViaEmail && sendViaWhopDm ? 'both' : sendViaEmail ? 'email' : 'whop_dm',
         });
         setSendResult({ type: result.data.totalFailed > 0 ? 'partial' : 'success', totalSent: result.data.totalSent, totalFailed: result.data.totalFailed, message: `Sent to ${result.data.totalSent} contacts${result.data.totalFailed > 0 ? `, ${result.data.totalFailed} failed` : ''}` });
+        
+        if (isTourActive) {
+          endTour();
+          await markTourCompleted();
+        }
       } else {
         setSendResult({ type: 'error', message: (!result.success && ((result as any).error || (result as any).message)) ? ((result as any).error ?? (result as any).message) : 'Send failed.' });
       }
@@ -231,6 +249,7 @@ export function CampaignBuilder({
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{sendResult.message}</p>
           <div className="flex justify-center gap-3 pt-2">
             <button
+              id="tour-campaign-success-view-analytics"
               onClick={() => router.push(`/dashboard/campaigns/${savedCampaignId}`)}
               className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white"
               style={{ background: 'var(--brand)' }}
@@ -315,7 +334,7 @@ export function CampaignBuilder({
               Write a subject line that makes subscribers want to open it.
             </p>
 
-            <div className="space-y-5">
+            <div id="tour-campaign-subject" className="space-y-5 rounded-xl p-2 -m-2">
               {/* Subject */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -599,6 +618,7 @@ export function CampaignBuilder({
                 <div className="w-px h-6 bg-gray-200" />
                 
                 <button
+                  id="tour-campaign-preview"
                   onClick={handleNext}
                   disabled={isLoading || !htmlBody.trim()}
                   className="flex items-center gap-2 rounded-lg px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
@@ -612,7 +632,7 @@ export function CampaignBuilder({
 
             <div className="flex flex-1 overflow-hidden">
               {/* Editor */}
-              <div className="flex-1 min-w-0 h-full">
+              <div id="tour-campaign-builder" className="flex-1 min-w-0 h-full">
                 <VisualEditor value={htmlBody} onChange={setHtmlBody} />
               </div>
               {/* AI panel — slide in */}
@@ -664,10 +684,19 @@ export function CampaignBuilder({
             </div>
 
             {/* Audience */}
-            <div className="mb-6">
+            <div className="mb-6 relative">
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
                 Audience
               </h3>
+              
+              {isTourActive && (
+                <div className="absolute inset-0 z-10 rounded-xl flex items-center justify-center p-4 bg-white/60 backdrop-blur-sm border border-brand/20">
+                  <div className="bg-brand/10 text-brand px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+                    <CheckIcon className="w-4 h-4" />
+                    Sandbox Demo: Locked to {user?.email}
+                  </div>
+                </div>
+              )}
 
               {tags.length === 0 && segments.length === 0 ? (
                 <div
@@ -876,6 +905,7 @@ export function CampaignBuilder({
                 ← Back
               </button>
               <button
+                id="tour-campaign-review"
                 onClick={handleSend}
                 disabled={isLoading || !savedCampaignId || !canSend}
                 className="flex items-center gap-2 rounded-lg px-8 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"

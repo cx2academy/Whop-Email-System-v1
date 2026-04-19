@@ -13,6 +13,7 @@ export function CreationModal() {
   return (
     <>
       <button
+        id="tour-new-campaign-btn"
         onClick={() => setIsOpen(true)}
         className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
         style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.25)' }}
@@ -75,6 +76,7 @@ export function CreationModal() {
                       </Link>
 
                       <Link 
+                        id="tour-ai-popup-use-template"
                         href="/dashboard/templates"
                         className="group flex items-start gap-4 rounded-xl border border-border bg-card p-5 transition-all hover:border-foreground/20 hover:shadow-md"
                       >

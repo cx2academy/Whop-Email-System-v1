@@ -242,6 +242,7 @@ export function TemplateCard({ template, isAdmin, isProUser = false }: { templat
       )}
 
       <motion.div
+        id={template.id === 'course-launch-main' ? 'tour-template-course-launch' : undefined}
         layout
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

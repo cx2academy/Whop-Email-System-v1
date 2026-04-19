@@ -39,7 +39,7 @@ export default async function RevenuePage() {
   // ── Empty state ────────────────────────────────────────────────────────
   if (!hasData) {
     return (
-      <div className="space-y-6">
+      <div id="tour-revenue-overview" className="space-y-6">
         <div>
           <h1
             className="text-2xl font-bold"
@@ -140,7 +140,7 @@ export default async function RevenuePage() {
   const summary         = 'error' in summaryRaw         ? null : summaryRaw;
 
   return (
-    <div className="space-y-6">
+    <div id="tour-revenue-overview" className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

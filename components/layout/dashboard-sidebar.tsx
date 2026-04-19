@@ -146,7 +146,7 @@ export function DashboardSidebar({ isAdmin: isAdminProp, hasGraduated }: { isAdm
         isCollapsed ? "px-2" : "px-4"
       )}>
         {groups.map((group) => (
-          <div key={group.label}>
+          <div key={group.label} id={`tour-sidebar-${group.label.toLowerCase()}`}>
             {!isCollapsed && (
               <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70" style={{ color: 'var(--text-tertiary)' }}>
                 {group.label}
@@ -156,10 +156,15 @@ export function DashboardSidebar({ isAdmin: isAdminProp, hasGraduated }: { isAdm
               {group.items.map((item) => {
                 const Icon   = item.icon;
                 const active = isActive(item.href, 'exact' in item ? item.exact : false);
+                
+                let tourId = undefined;
+                if (item.label === 'Contacts') tourId = 'tour-sidebar-nav-contacts';
+                if (item.label === 'Campaigns') tourId = 'tour-sidebar-nav-campaigns';
 
                 return (
                   <li key={item.href}>
                     <Link
+                      id={tourId}
                       href={item.href}
                       title={isCollapsed ? item.label : undefined}
                       className={cn(

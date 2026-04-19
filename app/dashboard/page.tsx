@@ -12,6 +12,7 @@ import { FeatureFlag } from '@/components/ui/feature-flag';
 import { deriveOnboardingState } from '@/lib/onboarding/steps';
 import { getWorkspaceUsage } from '@/lib/plans/gates';
 import { PlusIcon, TrendingUpIcon, MailIcon, UsersIcon, MousePointerClickIcon } from 'lucide-react';
+import { DashboardTourInitializer } from '@/components/tour/dashboard-tour-initializer';
 
 export const metadata = { title: 'Home' };
 
@@ -105,7 +106,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
 
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div id="tour-dashboard-overview" className="flex items-center justify-between p-4 -m-4 rounded-xl transition-all">
         <div>
           <h1
             className="text-2xl font-bold"
@@ -126,6 +127,8 @@ export default async function DashboardPage() {
           New campaign
         </Link>
       </div>
+
+      <DashboardTourInitializer hasCompletedTour={user?.hasCompletedTour ?? false} />
 
       {/* Onboarding (partial progress) */}
       {onboarding.shouldShow && !isNewUser && user?.email && !isPreview && (

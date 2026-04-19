@@ -415,7 +415,8 @@ export async function getCampaignAnalytics(campaignId: string) {
  * Sets status to SENDING, dispatches send engine, returns result.
  */
 export async function sendCampaignNow(
-  campaignId: string
+  campaignId: string,
+  forceEmailOverride?: string | null
 ): Promise<ApiResponse<{ totalSent: number; totalFailed: number }>> {
   const { workspaceId, userId } = await requireAdminAccess();
 
@@ -440,7 +441,11 @@ export async function sendCampaignNow(
     };
   }
 
-  const result = await sendCampaign({ campaignId, workspaceId });
+  const result = await sendCampaign({ 
+    campaignId, 
+    workspaceId,
+    _tourForceEmail: forceEmailOverride ?? undefined
+  });
 
   // Audit log
   const { audit } = await import("@/lib/audit");

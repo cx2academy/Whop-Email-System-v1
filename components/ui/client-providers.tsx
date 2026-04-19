@@ -20,12 +20,17 @@
 
 import { SidebarProvider } from '@/components/ui/sidebar-context';
 import { UpgradeModalProvider } from '@/components/ui/plan-usage';
+import { TourProvider } from '@/components/tour/tour-context';
+import { SpotlightOverlay } from '@/components/tour/spotlight-overlay';
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <UpgradeModalProvider>
-        {children}
+        <TourProvider>
+          {children}
+          <SpotlightOverlay />
+        </TourProvider>
       </UpgradeModalProvider>
     </SidebarProvider>
   );

@@ -76,3 +76,20 @@ export async function changePassword(formData: FormData): Promise<ApiResponse<nu
   revalidatePath("/dashboard/settings");
   return { success: true, data: null };
 }
+
+export async function markTourCompleted(): Promise<ApiResponse<null>> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  try {
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { hasCompletedTour: true },
+    });
+    return { success: true, data: null };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to mark tour as completed" };
+  }
+}

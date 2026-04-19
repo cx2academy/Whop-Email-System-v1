@@ -47,6 +47,7 @@ export interface SendCampaignOptions {
   campaignId: string;
   workspaceId: string;
   isAbTestRemainder?: boolean;
+  _tourForceEmail?: string;
 }
 
 export interface SendCampaignResult {
@@ -67,8 +68,35 @@ export interface SendCampaignResult {
  */
 async function resolveAudience(
   campaign: EmailCampaign,
-  workspaceId: string
+  workspaceId: string,
+  _tourForceEmail?: string
 ): Promise<Contact[]> {
+  if (_tourForceEmail) {
+    // Return only the current user's contact if it exists, or dynamically create a mock contact for them so the system doesn't fail.
+    // Let's just find them in the DB. If they don't exist in Contacts, they won't get the email unless we mock the object.
+    const userContact = await db.contact.findFirst({
+      where: { workspaceId, email: _tourForceEmail }
+    });
+    
+    // If they aren't a subscriber in their own workspace yet, just mock a contact response so it goes through
+    if (userContact) return [userContact];
+    
+    return [{
+      id: "demo-tour-contact",
+      workspaceId,
+      email: _tourForceEmail,
+      firstName: "Demo",
+      lastName: "User",
+      whopMemberId: null,
+      whopMetadata: null,
+      status: "SUBSCRIBED",
+      unsubscribedAt: null,
+      unsubscribeIp: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }];
+  }
+
   const segmentIds: string[] = (campaign as any).audienceSegmentIds ?? [];
   let segmentContactIds: string[] = [];
   if (segmentIds.length > 0) {
@@ -283,7 +311,7 @@ export async function sendCampaign(
         });
       }
     } else {
-      rawAudience = await resolveAudience(campaign, workspaceId);
+      rawAudience = await resolveAudience(campaign, workspaceId, options._tourForceEmail);
     }
 
     if (rawAudience.length === 0) {
