@@ -22,16 +22,19 @@ import { SidebarProvider } from '@/components/ui/sidebar-context';
 import { UpgradeModalProvider } from '@/components/ui/plan-usage';
 import { TourProvider } from '@/components/tour/tour-context';
 import { SpotlightOverlay } from '@/components/tour/spotlight-overlay';
+import { SessionProvider } from 'next-auth/react';
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <UpgradeModalProvider>
-        <TourProvider>
-          {children}
-          <SpotlightOverlay />
-        </TourProvider>
-      </UpgradeModalProvider>
-    </SidebarProvider>
+    <SessionProvider>
+      <SidebarProvider>
+        <UpgradeModalProvider>
+          <TourProvider>
+            {children}
+            <SpotlightOverlay />
+          </TourProvider>
+        </UpgradeModalProvider>
+      </SidebarProvider>
+    </SessionProvider>
   );
 }
