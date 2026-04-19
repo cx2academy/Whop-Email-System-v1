@@ -39,8 +39,7 @@ export async function validateResendKey(apiKey: string) {
 
   try {
     const resend = new Resend(apiKey);
-    const { data, error } = await resend.apiKeys.get(apiKey);
-    // Actually we can just do a simple domains list fetch to validate
+    // We do a simple domains list fetch to validate the API key
     const domains = await resend.domains.list();
     if (domains.error) {
       return { valid: false };
