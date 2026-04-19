@@ -79,6 +79,7 @@ model User {
   memberships WorkspaceMembership[]
   notifications Notification[]
   auditLogs   AuditLog[]
+  betaFeedbacks BetaFeedback[]
 
   @@index([email])
   @@map("users")
@@ -106,6 +107,19 @@ model Account {
   @@unique([provider, providerAccountId])
   @@index([userId])
   @@map("accounts")
+}
+
+model InviteCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  maxUses     Int       @default(1)
+  currentUses Int       @default(0)
+  expiresAt   DateTime?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("invite_codes")
 }
 
 model Session {
@@ -157,12 +171,21 @@ model Workspace {
   fromName  String?
   physicalAddress String? // ← NEW: Required for CAN-SPAM compliance
   unsubscribeRedirectUrl String? // ← NEW: Optional custom redirect after unsubscribe
+  
+  // Custom API Keys (BYOK Beta)
+  resendApiKey String?
 
   // Plan / limits
   plan            WorkspacePlan @default(FREE)
   monthlyEmailCap Int           @default(1000)
   aiCredits       Int           @default(10)
   aiCreditsLastReset DateTime   @default(now())
+
+  // BYOK Beta Quest Flags
+  questDomainSetup   Boolean @default(false)
+  questImportedLeads Boolean @default(false)
+  questUsedAi        Boolean @default(false)
+  questSentCampaign  Boolean @default(false)
 
   // Whop billing fields
   whopMembershipId   String?
@@ -213,6 +236,7 @@ model Workspace {
   addons              WorkspaceAddon[]
   campaignInsights    CampaignInsight[]
   webhookLogs         WebhookLog[]
+  betaFeedbacks       BetaFeedback[]
 
   @@index([slug])
   @@map("workspaces")
@@ -247,6 +271,26 @@ model WorkspaceMembership {
   @@index([workspaceId])
   @@index([userId])
   @@map("workspace_memberships")
+}
+
+// ---------------------------------------------------------------------------
+// BETA FEEDBACK
+// ---------------------------------------------------------------------------
+model BetaFeedback {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  feature     String
+  rating      Int
+  feedback    String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("beta_feedback")
 }
 
 enum WorkspaceMemberRole {

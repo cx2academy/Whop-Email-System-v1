@@ -10,6 +10,7 @@ export function AdminNav() {
       <AdminNavLink href="/dashboard/admin/users" label="Users & Workspaces" />
       <AdminNavLink href="/dashboard/admin/health" label="System Health" />
       <AdminNavLink href="/dashboard/admin/broadcast" label="Broadcast" />
+      <AdminNavLink href="/dashboard/admin/beta" label="Beta Vault" />
     </div>
   );
 }

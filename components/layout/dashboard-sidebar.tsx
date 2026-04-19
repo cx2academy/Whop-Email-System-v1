@@ -13,7 +13,8 @@ import {
   BarChart2Icon, SettingsIcon, ShieldCheckIcon,
   FormInputIcon, LayoutTemplateIcon,
   ChevronLeft, ChevronRight, ZapIcon, XIcon,
-  FilterIcon, CircleDollarSignIcon, Globe
+  FilterIcon, CircleDollarSignIcon, Globe,
+  GiftIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/ui/sidebar-context';
@@ -52,12 +53,22 @@ const BOTTOM_NAV = [
   { href: '/dashboard/settings',         label: 'Settings',     icon: SettingsIcon,        exact: true },
 ];
 
-export function DashboardSidebar({ isAdmin: isAdminProp }: { isAdmin?: boolean }) {
+export function DashboardSidebar({ isAdmin: isAdminProp, hasGraduated }: { isAdmin?: boolean, hasGraduated?: boolean }) {
   const pathname = usePathname();
   const { isCollapsed, toggleSidebar } = useSidebar();
   const [isPlanDismissed, setIsPlanDismissed] = useState(true); // Default true to prevent hydration mismatch, then set false
 
   const groups = [...NAV_GROUPS];
+
+  if (hasGraduated) {
+    groups.unshift({
+      label: 'Beta',
+      items: [
+        { href: '/dashboard/beta-rewards', label: 'Beta Rewards', icon: GiftIcon },
+      ]
+    });
+  }
+
   if (isAdminProp) {
     groups.push({
       label: 'System',

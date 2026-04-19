@@ -186,7 +186,8 @@ export type UsageLimitType =
   | 'contacts'
   | 'ai_credits'
   | 'automations'
-  | 'campaigns';
+  | 'campaigns'
+  | 'domains'; // ← NEW
 
 interface CheckUsageOptions {
   workspaceId: string;
@@ -227,6 +228,24 @@ export async function checkUsageLimit(
 
     // -----------------------------------------------------------------------
     case 'contacts': {
+      // BETA OVERRIDE
+      if (process.env.NEXT_PUBLIC_BETA_MODE === 'true') {
+        const betaLimit = 1000;
+        if (ctx.contactCount + requested <= betaLimit) {
+          return { allowed: true, currentUsage: ctx.contactCount, limit: betaLimit };
+        }
+        return new PlanLimitError({
+          upgradeRequired: true,
+          message: `Beta Limit: Maximum ${betaLimit} contacts allowed.`,
+          feature: 'Contacts',
+          currentPlan: 'Beta',
+          suggestedPlan: 'Pro',
+          suggestedPlanPrice: 0,
+          currentUsage: ctx.contactCount,
+          limit: betaLimit,
+        });
+      }
+
       const base = plan.limits.contacts;
       if (base === null) return { allowed: true };
       const effectiveLimit = base + ctx.addonContacts;
@@ -302,6 +321,27 @@ export async function checkUsageLimit(
 
     // -----------------------------------------------------------------------
     case 'campaigns': {
+      // BETA OVERRIDE
+      if (process.env.NEXT_PUBLIC_BETA_MODE === 'true') {
+        const betaLimit = 3;
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const campaignsThisMonth = await db.emailCampaign.count({
+          where: { workspaceId: opts.workspaceId, createdAt: { gte: monthStart } },
+        });
+        if (campaignsThisMonth + requested <= betaLimit) return { allowed: true, currentUsage: campaignsThisMonth, limit: betaLimit };
+        return new PlanLimitError({
+          upgradeRequired: true,
+          message: `Beta limit: Only ${betaLimit} campaigns allowed during the beta.`,
+          feature: 'Campaigns',
+          currentPlan: 'Beta',
+          suggestedPlan: 'Pro',
+          suggestedPlanPrice: 0,
+          currentUsage: campaignsThisMonth,
+          limit: betaLimit,
+        });
+      }
+
       const base = plan.limits.campaigns;
       if (base === null) return { allowed: true };
       const now = new Date();
@@ -322,6 +362,36 @@ export async function checkUsageLimit(
         suggestedPlanPrice: next?.monthlyUsd ?? 29,
         currentUsage:       campaignsThisMonth,
         limit:              base,
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    case 'domains': {
+      // BETA OVERRIDE
+      const baseLimit = process.env.NEXT_PUBLIC_BETA_MODE === 'true' ? 1 : (plan.name === 'Free' ? 1 : null); 
+      // Replace with actual plan limit logic if applicable when expanding beyond Free.
+      if (baseLimit === null) return { allowed: true };
+
+      const domainsCount = await db.sendingDomain.count({
+        where: { workspaceId: opts.workspaceId },
+      });
+
+      if (domainsCount + requested <= baseLimit) {
+        return { allowed: true, currentUsage: domainsCount, limit: baseLimit };
+      }
+
+      const isBeta = process.env.NEXT_PUBLIC_BETA_MODE === 'true';
+      return new PlanLimitError({
+        upgradeRequired: true,
+        message: isBeta 
+          ? `Beta Limit: Only ${baseLimit} sending domain allowed.`
+          : `You've reached your domain limit (${baseLimit}). Upgrade to reconnect more.`,
+        feature: 'Sending Domains',
+        currentPlan: isBeta ? 'Beta' : plan.name,
+        suggestedPlan: 'Pro',
+        suggestedPlanPrice: 20,
+        currentUsage: domainsCount,
+        limit: baseLimit,
       });
     }
 

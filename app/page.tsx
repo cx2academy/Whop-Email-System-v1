@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { BetaVaultPage } from '@/components/beta/beta-vault-page';
 import { Logo } from '@/components/ui/logo';
 import { 
   LineChart, Zap, Users, Sparkles, Check, ArrowRight, 
@@ -18,7 +19,13 @@ export default function HomePage() {
     // Check if we have the staging bypass cookie
     const hasStagingCookie = document.cookie.includes('staging_bypass=');
     
-    if (process.env.NEXT_PUBLIC_PREVIEW_MODE === "true" || hasStagingCookie) {
+    // In strict non-beta preview mode, push to dashboard.
+    // Allow beta preview to actually see the beta page
+    if (process.env.NEXT_PUBLIC_PREVIEW_MODE === "true" && process.env.NEXT_PUBLIC_BETA_MODE !== "true") {
+      router.push('/dashboard');
+      return;
+    }
+    if (hasStagingCookie) {
       router.push('/dashboard');
       return;
     }
@@ -28,6 +35,11 @@ export default function HomePage() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [router]);
+
+  // BETA VAULT MODE OVERRIDE
+  if (process.env.NEXT_PUBLIC_BETA_MODE === 'true') {
+    return <BetaVaultPage />;
+  }
 
   return (
     <div className="min-h-screen bg-[#09090B] text-zinc-300 font-body selection:bg-green-500/30">

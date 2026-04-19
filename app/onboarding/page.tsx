@@ -13,9 +13,10 @@ import { OnboardingWizard } from './onboarding-wizard';
 
 export const metadata: Metadata = { title: 'Get started — RevTray' };
 
-export default async function OnboardingPage(props: { searchParams: Promise<{ force?: string }> }) {
+export default async function OnboardingPage(props: { searchParams: Promise<{ force?: string, invite?: string }> }) {
   const searchParams = await props.searchParams;
   const isForce = searchParams.force === 'true';
+  const inviteCode = searchParams.invite;
 
   const session = await auth();
   if (!session?.user?.id) redirect('/auth/login');
@@ -66,6 +67,7 @@ export default async function OnboardingPage(props: { searchParams: Promise<{ fo
         brandColor: workspace.brandColor ?? '#22C55E',
         companyName: workspace.whopCompanyName ?? '',
       }}
+      inviteCode={inviteCode}
     />
   );
 }

@@ -33,6 +33,25 @@ export async function validateWhopKey(apiKey: string) {
   }
 }
 
+export async function validateResendKey(apiKey: string) {
+  const session = await getSession();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  try {
+    const resend = new Resend(apiKey);
+    const { data, error } = await resend.apiKeys.get(apiKey);
+    // Actually we can just do a simple domains list fetch to validate
+    const domains = await resend.domains.list();
+    if (domains.error) {
+      return { valid: false };
+    }
+    return { valid: true };
+  } catch (error) {
+    console.error('Resend Validation error:', error);
+    return { valid: false };
+  }
+}
+
 export async function saveOnboardingData(data: {
   name: string;
   slug: string;
@@ -41,6 +60,7 @@ export async function saveOnboardingData(data: {
   logoUrl?: string;
   whopApiKey?: string;
   whopCompanyName?: string;
+  resendApiKey?: string;
 }) {
   const { workspaceId } = await requireWorkspaceAccessOrThrow();
 
@@ -55,6 +75,7 @@ export async function saveOnboardingData(data: {
         logoUrl: data.logoUrl,
         whopApiKey: data.whopApiKey,
         whopCompanyName: data.whopCompanyName,
+        resendApiKey: data.resendApiKey,
       },
     });
   } catch (error: any) {
@@ -117,6 +138,27 @@ export async function completeOnboarding() {
     console.error('Failed to send welcome email:', error);
   }
 
-  revalidatePath('/dashboard');
+ revalidatePath('/dashboard');
   return { success: true };
+}
+
+export async function consumeInviteCode(code: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const invite = await db.inviteCode.findUnique({
+    where: { code: code.toUpperCase() }
+  });
+
+  if (!invite) return { success: false };
+
+  if (invite.currentUses < invite.maxUses) {
+    await db.inviteCode.update({
+      where: { id: invite.id },
+      data: { currentUses: { increment: 1 } }
+    });
+    return { success: true };
+  }
+
+  return { success: false };
 }

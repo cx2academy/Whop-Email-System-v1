@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronRight, Loader2, Rocket, ShieldCheck, Zap, Palette, Globe, Search, ExternalLink, AlertCircle } from 'lucide-react';
-import { saveOnboardingData, validateWhopKey, completeOnboarding, checkDomainAvailability } from './actions';
+import { saveOnboardingData, validateWhopKey, validateResendKey, completeOnboarding, checkDomainAvailability, consumeInviteCode } from './actions';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Logo } from '@/components/ui/logo';
@@ -15,9 +15,10 @@ interface OnboardingWizardProps {
     brandColor: string;
     companyName: string;
   };
+  inviteCode?: string;
 }
 
-export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
+export function OnboardingWizard({ initialData, inviteCode }: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +38,13 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
   const [domainStatus, setDomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const [domainPrice, setDomainPrice] = useState<string | null>(null);
 
-  const totalSteps = 5;
+  // BYOK State
+  const [resendApiKey, setResendApiKey] = useState('');
+  const [resendCompanyInfo, setResendCompanyInfo] = useState<{name?: string, email?: string}|null>(null);
+  const [isResendingValidating, setIsResendValidating] = useState(false);
+  const [isResendKeyValid, setIsResendKeyValid] = useState(false);
+
+  const totalSteps = 6;
 
   const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
@@ -122,9 +129,44 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
     }
   }
 
+  async function handleResendValidation() {
+    if (!resendApiKey) return;
+    setIsResendValidating(true);
+    try {
+      const result = await validateResendKey(resendApiKey);
+      if (result.valid) {
+        setIsResendKeyValid(true);
+        toast.success('Resend API Key validated!');
+      } else {
+        setIsResendKeyValid(false);
+        toast.error('Invalid API Key');
+      }
+    } catch (error) {
+      toast.error('Validation failed');
+    } finally {
+      setIsResendValidating(false);
+    }
+  }
+
+  async function handleBYOKSubmit() {
+    if (!isResendKeyValid) return toast.error('Please validate your Resend key first');
+    setIsLoading(true);
+    try {
+      await saveOnboardingData({ name, slug, niche, brandColor, whopApiKey, whopCompanyName, resendApiKey });
+      nextStep();
+    } catch (error) {
+      toast.error('Failed to save BYOK connection');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleFinish() {
     setIsLoading(true);
     try {
+      if (inviteCode) {
+        await consumeInviteCode(inviteCode);
+      }
       await completeOnboarding();
       toast.success('Welcome to RevTray!');
       router.push('/dashboard');
@@ -390,6 +432,91 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
 
           {step === 4 && (
             <motion.div
+              key="step3_5"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-8"
+            >
+              <div>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                  <ShieldCheck className="h-3 w-3" /> Private Beta
+                </div>
+                <h1 className="text-3xl font-bold font-display mb-3">Bring Your Own Key</h1>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  During our private beta, emails are sent through your own Resend account. We don't mark up email sending costs.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                    Resend API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={resendApiKey}
+                      onChange={(e) => {
+                         setResendApiKey(e.target.value);
+                         setIsResendKeyValid(false);
+                      }}
+                      placeholder="re_..."
+                      className="w-full rounded-xl px-4 py-3.5 text-sm bg-white/5 border border-white/10 text-white placeholder:text-gray-700 focus:outline-none focus:border-[#22C55E]/50 transition-all pr-24"
+                    />
+                    <button
+                      onClick={handleResendValidation}
+                      disabled={isResendingValidating || !resendApiKey || isResendKeyValid}
+                      className="absolute right-2 top-2 bottom-2 px-3 rounded-lg bg-white/10 text-xs font-bold hover:bg-white/20 transition-all disabled:opacity-50"
+                    >
+                      {isResendingValidating ? <Loader2 className="h-3 w-3 animate-spin" /> : isResendKeyValid ? <Check className="h-3 w-3 text-[#22C55E]" /> : 'Validate'}
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[10px] text-gray-400 font-medium">
+                    1. Create a free account at <a href="https://resend.com" target="_blank" className="text-[#22C55E] hover:underline">resend.com</a><br/>
+                    2. Go to API Keys &rarr; Create Key<br/>
+                    3. Ensure it has "Full access" permissions to manage your domains.
+                  </p>
+                </div>
+
+                {isResendKeyValid && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 p-4 rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/20"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-[#22C55E]/20 flex items-center justify-center">
+                      <Zap className="h-4 w-4 text-[#22C55E]" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">Connected to Resend</div>
+                      <div className="text-[10px] text-[#22C55E]">API Key is valid</div>
+                    </div>
+                  </motion.div>
+                 )}
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={prevStep}
+                  className="flex-1 rounded-xl py-4 text-sm font-bold bg-white/5 text-gray-400 hover:bg-white/10 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleBYOKSubmit}
+                  disabled={isLoading || !isResendKeyValid}
+                  className="flex-[2] flex items-center justify-center gap-2 rounded-xl py-4 text-sm font-bold bg-[#22C55E] text-white hover:bg-[#16A34A] transition-all disabled:opacity-50"
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue'}
+                  {!isLoading && <ChevronRight className="h-4 w-4" />}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 5 && (
+            <motion.div
               key="step4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -489,9 +616,9 @@ export function OnboardingWizard({ initialData }: OnboardingWizardProps) {
             </motion.div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <motion.div
-              key="step4"
+              key="step6"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="text-center space-y-8"
