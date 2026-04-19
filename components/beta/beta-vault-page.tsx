@@ -93,12 +93,18 @@ export function BetaVaultPage() {
             </button>
           </form>
 
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center space-y-4">
              <button 
                onClick={() => setIsWaitlistOpen(true)}
-               className="text-xs text-zinc-600 hover:text-zinc-400 border-b border-transparent hover:border-zinc-500 transition-all pb-0.5"
+               className="text-xs text-zinc-400 hover:text-white border-b border-transparent hover:border-zinc-500 transition-all pb-0.5 block w-fit mx-auto"
              >
                Need an invite? Join the waitlist
+             </button>
+             <button 
+               onClick={() => router.push('/auth/login')}
+               className="text-[10px] text-zinc-700 hover:text-zinc-500 transition-colors block w-fit mx-auto"
+             >
+               Already a tester? Sign in
              </button>
           </div>
         </motion.div>

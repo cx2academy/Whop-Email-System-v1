@@ -5,8 +5,10 @@ import { db } from '@/lib/db/client';
 export async function validateBetaCode(code: string) {
   if (!code) throw new Error('Invite code is required.');
 
+  const upperCode = code.trim().toUpperCase();
+
   const invite = await db.inviteCode.findUnique({
-    where: { code: code.trim().toUpperCase() }
+    where: { code: upperCode }
   });
 
   if (!invite) {
