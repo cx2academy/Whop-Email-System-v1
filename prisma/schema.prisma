@@ -122,6 +122,26 @@ model InviteCode {
   @@map("invite_codes")
 }
 
+model BetaWaitlist {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  reason          String   @db.Text
+  acceptedPledge  Boolean  @default(false)
+  status          BetaWaitlistStatus @default(PENDING)
+  inviteCode      String?  // The code generated upon approval
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("beta_waitlist")
+}
+
+enum BetaWaitlistStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique

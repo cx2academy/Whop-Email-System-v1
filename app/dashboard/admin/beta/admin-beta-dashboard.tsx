@@ -2,29 +2,42 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, Mail, Globe, Zap, KeyRound, MessageSquare, Star, Trash2, Edit2, CheckCircle2, ShieldAlert } from 'lucide-react';
-import { generateInviteCode } from './actions';
+import { Plus, Users, Mail, Globe, Zap, KeyRound, MessageSquare, Star, Trash2, Edit2, CheckCircle2, ShieldAlert, Clock, Check, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { generateInviteCode, updateWaitlistStatus } from './actions';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 
 export function AdminBetaDashboard({ initialData }: { initialData: any }) {
-  const [activeTab, setActiveTab] = useState<'matrix' | 'feedback' | 'codes'>('matrix');
+  const [activeTab, setActiveTab] = useState<'matrix' | 'feedback' | 'codes' | 'waitlist'>('matrix');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [expandedWaitlist, setExpandedWaitlist] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const { workspaces, feedback, inviteCodes } = initialData;
+  const { workspaces, feedback, inviteCodes, waitlist } = initialData;
 
   const handleGenerateCode = async () => {
     setIsGenerating(true);
     try {
       await generateInviteCode(1, 'BETA');
       toast.success('Generated new code!');
-      // Assuming parent component or revalidation handles the refresh in a real app
-      // For this static view, we'll just reload
       window.location.reload();
     } catch {
       toast.error('Failed to generate code');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: 'APPROVED' | 'REJECTED') => {
+    setIsProcessing(id);
+    try {
+      const result = await updateWaitlistStatus(id, status);
+      toast.success(status === 'APPROVED' ? `Approved! Code: ${result.code}` : 'Rejected Application');
+      window.location.reload();
+    } catch {
+      toast.error('Failed to update status');
+    } finally {
+      setIsProcessing(null);
     }
   };
 
@@ -75,6 +88,12 @@ export function AdminBetaDashboard({ initialData }: { initialData: any }) {
           className={`pb-3 text-sm font-medium transition-colors ${activeTab === 'codes' ? 'text-foreground border-b-2 border-brand' : 'text-muted-foreground hover:text-foreground'}`}
         >
           Invite Codes
+        </button>
+        <button
+          onClick={() => setActiveTab('waitlist')}
+          className={`pb-3 text-sm font-medium transition-colors ${activeTab === 'waitlist' ? 'text-foreground border-b-2 border-brand' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Pending Access ({waitlist.filter((w: any) => w.status === 'PENDING').length})
         </button>
       </div>
 
@@ -233,6 +252,104 @@ export function AdminBetaDashboard({ initialData }: { initialData: any }) {
                  </tbody>
                </table>
             </div>
+          </div>
+        )}
+
+        {/* === WAITLIST === */}
+        {activeTab === 'waitlist' && (
+          <div className="space-y-4">
+            {waitlist.map((w: any) => {
+              const isExpanded = expandedWaitlist === w.id;
+              const isPending = w.status === 'PENDING';
+              
+              return (
+                <div key={w.id} className="bg-card border border-border rounded-xl overflow-hidden">
+                  <div 
+                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-muted/5 transition-colors"
+                    onClick={() => setExpandedWaitlist(isExpanded ? null : w.id)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-lg ${w.status === 'APPROVED' ? 'bg-green-500/10 text-green-500' : w.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' : 'bg-brand/10 text-brand'}`}>
+                        {w.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-bold text-foreground flex items-center gap-2">
+                          {w.name} 
+                          {w.status === 'APPROVED' && <Check size={14} className="text-green-500" />}
+                          {w.status === 'REJECTED' && <X size={14} className="text-red-500" />}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono">{w.email}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                       <div className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+                         <Clock size={12} /> {formatDistanceToNow(new Date(w.createdAt), { addSuffix: true })}
+                       </div>
+                       {isPending && (
+                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                           <button 
+                             disabled={isProcessing === w.id}
+                             onClick={() => handleUpdateStatus(w.id, 'REJECTED')}
+                             className="p-2 hover:bg-red-500/10 text-muted-foreground hover:text-red-500 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
+                             title="Deny"
+                           >
+                             {isProcessing === w.id ? <Loader2 size={16} className="animate-spin" /> : <X size={18} />}
+                           </button>
+                           <button 
+                             disabled={isProcessing === w.id}
+                             onClick={() => handleUpdateStatus(w.id, 'APPROVED')}
+                             className="p-2 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg transition-colors border border-green-500/20"
+                             title="Approve"
+                           >
+                              {isProcessing === w.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />}
+                           </button>
+                         </div>
+                       )}
+                       {w.status === 'APPROVED' && (
+                         <div className="text-xs font-bold text-green-500 bg-green-500/10 px-2.5 py-1 rounded-md">
+                           CODE: {w.inviteCode}
+                         </div>
+                       )}
+                       <div className="text-muted-foreground">
+                         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                       </div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: 'auto' }}
+                        exit={{ height: 0 }}
+                        className="overflow-hidden border-t border-border"
+                      >
+                         <div className="p-6 bg-muted/5 space-y-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Why they want access</label>
+                              <div className="text-sm text-zinc-300 leading-relaxed bg-black/20 p-4 rounded-xl border border-white/5 whitespace-pre-wrap">
+                                {w.reason}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Beta Pledge:</label>
+                               <span className={`text-[10px] font-bold uppercase ${w.acceptedPledge ? 'text-green-500' : 'text-zinc-600'}`}>
+                                 {w.acceptedPledge ? 'Accepted' : 'Declined'}
+                               </span>
+                            </div>
+                         </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+            {waitlist.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground border border-border border-dashed rounded-xl">
+                 No waitlist applications found.
+              </div>
+            )}
           </div>
         )}
 

@@ -42,6 +42,11 @@ export default async function AdminBetaPage() {
     orderBy: { createdAt: 'desc' }
   });
 
+  // 4. Gather waitlist
+  const waitlist = await db.betaWaitlist.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -53,7 +58,8 @@ export default async function AdminBetaPage() {
         initialData={{
           workspaces,
           feedback,
-          inviteCodes
+          inviteCodes,
+          waitlist
         }} 
       />
     </div>

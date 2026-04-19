@@ -6,11 +6,13 @@ import { Logo } from '@/components/ui/logo';
 import { ArrowRight, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { validateBetaCode } from './actions';
+import { WaitlistDialog } from './waitlist-dialog';
 
 export function BetaVaultPage() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -92,12 +94,17 @@ export function BetaVaultPage() {
           </form>
 
           <div className="mt-8 text-center">
-             <a href="#" className="text-xs text-zinc-600 hover:text-zinc-400 border-b border-transparent hover:border-zinc-500 transition-all pb-0.5">
+             <button 
+               onClick={() => setIsWaitlistOpen(true)}
+               className="text-xs text-zinc-600 hover:text-zinc-400 border-b border-transparent hover:border-zinc-500 transition-all pb-0.5"
+             >
                Need an invite? Join the waitlist
-             </a>
+             </button>
           </div>
         </motion.div>
       </main>
+
+      <WaitlistDialog isOpen={isWaitlistOpen} onClose={() => setIsWaitlistOpen(false)} />
 
       <footer className="h-[60px] flex items-center justify-center border-t border-white/5 text-xs text-zinc-600">
         &copy; {new Date().getFullYear()} RevTray Beta Built by Whop Creators

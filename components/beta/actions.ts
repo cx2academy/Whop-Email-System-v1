@@ -23,3 +23,32 @@ export async function validateBetaCode(code: string) {
 
   return { success: true };
 }
+
+export async function joinWaitlist(data: { name: string, email: string, reason: string, acceptedPledge: boolean }) {
+  if (!data.name || !data.email || !data.reason) {
+    throw new Error('All fields are required.');
+  }
+
+  try {
+    const existing = await db.betaWaitlist.findUnique({
+      where: { email: data.email.toLowerCase() }
+    });
+
+    if (existing) {
+      throw new Error('You are already on the waitlist!');
+    }
+
+    await db.betaWaitlist.create({
+      data: {
+        name: data.name,
+        email: data.email.toLowerCase(),
+        reason: data.reason,
+        acceptedPledge: data.acceptedPledge
+      }
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    throw new Error(err.message || 'Failed to join waitlist.');
+  }
+}
