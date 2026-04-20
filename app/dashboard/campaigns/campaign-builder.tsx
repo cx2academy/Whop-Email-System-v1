@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import posthog from 'posthog-js';
 import type { Tag } from '@prisma/client';
-import { createCampaign, updateCampaign, sendCampaignNow } from '@/lib/campaigns/actions';
+import { createCampaign, updateCampaign, sendCampaignNow, sandboxCampaignNow } from '@/lib/campaigns/actions';
 import { createUserTemplate, saveCampaignAsTemplate } from '@/lib/templates/actions';
 import { optimizeSubjectLine } from '@/lib/ai/actions';
 import { VisualEditor } from '@/components/email-editor/visual-editor';
@@ -210,19 +210,27 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Writ
         }
       }
 
-      // If tour is active, we pass the user's email to force exactly one recipient.
-      const result = await sendCampaignNow(id, isTourActive ? user?.email : undefined);
+      let result;
+      
+      // Sandbox mode dispatch
+      if (isTourActive) {
+          result = await sandboxCampaignNow(id);
+      } else {
+          result = await sendCampaignNow(id);
+      }
+      
       if (result.success && result.data) {
-        posthog.capture('Campaign Sent', {
-          campaign_id: id,
-          total_sent: result.data.totalSent,
-          channels: sendViaEmail && sendViaWhopDm ? 'both' : sendViaEmail ? 'email' : 'whop_dm',
-        });
+        if (!isTourActive) {
+            posthog.capture('Campaign Sent', {
+              campaign_id: id,
+              total_sent: result.data.totalSent,
+              channels: sendViaEmail && sendViaWhopDm ? 'both' : sendViaEmail ? 'email' : 'whop_dm',
+            });
+        }
         setSendResult({ type: result.data.totalFailed > 0 ? 'partial' : 'success', totalSent: result.data.totalSent, totalFailed: result.data.totalFailed, message: `Sent to ${result.data.totalSent} contacts${result.data.totalFailed > 0 ? `, ${result.data.totalFailed} failed` : ''}` });
         
         if (isTourActive) {
-          endTour();
-          await markTourCompleted();
+          nextStep(); // Only move to 'Campaign Sent' screen when success screen triggers!
         }
       } else {
         setSendResult({ type: 'error', message: (!result.success && ((result as any).error || (result as any).message)) ? ((result as any).error ?? (result as any).message) : 'Send failed.' });

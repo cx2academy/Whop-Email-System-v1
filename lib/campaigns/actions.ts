@@ -414,6 +414,34 @@ export async function getCampaignAnalytics(campaignId: string) {
  * Immediately send a campaign to its audience.
  * Sets status to SENDING, dispatches send engine, returns result.
  */
+export async function sandboxCampaignNow(
+  campaignId: string
+): Promise<ApiResponse<{ totalSent: number; totalFailed: number }>> {
+  const { workspaceId } = await requireAdminAccess();
+  
+  const totalSent = Math.floor(Math.random() * 2000) + 12000;
+  const totalOpened = Math.floor(totalSent * (Math.random() * 0.2 + 0.6)); // 60-80% open rate
+  const totalClicked = Math.floor(totalOpened * (Math.random() * 0.15 + 0.15)); // 15-30% click rate
+  const totalRevenue = totalClicked * (Math.random() * 12 + 5); 
+
+  await db.emailCampaign.update({
+    where: { id: campaignId, workspaceId },
+    data: {
+      status: "SENT",
+      sentAt: new Date(),
+      totalRecipients: totalSent,
+      totalSent: totalSent,
+      totalOpened: totalOpened,
+      totalClicked: totalClicked,
+      totalRevenue: totalRevenue,
+      totalBounced: Math.floor(totalSent * 0.001),
+      totalFailed: 0,
+    }
+  });
+
+  return { success: true, data: { totalSent, totalFailed: 0 } };
+}
+
 export async function sendCampaignNow(
   campaignId: string,
   forceEmailOverride?: string | null

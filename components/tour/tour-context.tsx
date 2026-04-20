@@ -9,7 +9,7 @@ export interface TourStep {
   title: string;
   description: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
-  actionType?: 'click' | 'navigate' | 'view'; 
+  actionType?: 'click' | 'navigate' | 'view' | 'async-click'; 
 }
 
 interface TourContextType {
@@ -49,6 +49,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setIsActive(false);
     setStepIndex(0);
     await markTourCompleted();
+    
+    // Clear the demo campaign from local DB
+    try {
+        await fetch('/api/tour/cleanup', { method: 'POST' });
+    } catch (e) {
+        // ignore
+    }
+    
     router.push('/dashboard');
   };
 
