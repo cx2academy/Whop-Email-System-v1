@@ -16,6 +16,7 @@ export function SpotlightOverlay() {
   const { isActive, stepIndex, steps, nextStep, skipTour } = useTour();
   const [rect, setRect] = useState<ElementRect | null>(null);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
+  const maskId = React.useId().replace(/:/g, '');
 
   const activeStep = isActive && steps.length > 0 ? steps[stepIndex] : null;
 
@@ -30,6 +31,9 @@ export function SpotlightOverlay() {
       const element = document.getElementById(activeStep.id);
       if (element) {
         const bounds = element.getBoundingClientRect();
+        // If element is hidden or zero size, don't set a rect but return false to continue polling
+        if (bounds.width === 0 && bounds.height === 0) return false;
+
         setRect({
           top: bounds.top,
           left: bounds.left,
@@ -38,20 +42,21 @@ export function SpotlightOverlay() {
         });
         return true;
       }
+      setRect(null);
       return false;
     };
 
     if (!updateRect()) {
-      // Element not found - repeatedly poll until it appears (for page navigations)
+      // Element not found - repeatedly poll until it appears
       const poll = () => {
         retryCount++;
-        if (!updateRect() && retryCount < 20) { // 20 * 100ms = 2 seconds
+        // If we still can't find it after 5 seconds, we might just stay in fallback mode
+        if (!updateRect() && retryCount < 50) { 
           fallbackTimeout = setTimeout(poll, 100);
         }
       };
       fallbackTimeout = setTimeout(poll, 100);
 
-      // Also attach a mutation observer if DOM is shifting
       observer = new MutationObserver(() => {
         if (updateRect()) {
             observer?.disconnect();
@@ -79,6 +84,8 @@ export function SpotlightOverlay() {
 
     if (activeStep.actionType === 'click' || activeStep.actionType === 'navigate') {
       const handleClick = (e: MouseEvent) => {
+        if (showSkipConfirm) return;
+
         const padding = 8;
         const spotlightX = rect.left - padding;
         const spotlightY = rect.top - padding;
@@ -95,80 +102,106 @@ export function SpotlightOverlay() {
         }
       };
 
-      // Use capture to catch the click before it navigates/triggers
-      document.addEventListener('click', handleClick, { capture: true });
-      return () => document.removeEventListener('click', handleClick, { capture: true });
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
     }
-  }, [isActive, activeStep, rect, nextStep]);
+  }, [isActive, activeStep, rect, nextStep, showSkipConfirm]);
 
-  if (!isActive || !activeStep || !rect) return null;
+  if (!isActive || !activeStep) return null;
 
-  // Add some padding to the spotlight area
+  // spotlight coordinates
   const padding = 8;
-  const spotlightX = rect.left - padding;
-  const spotlightY = rect.top - padding;
-  const spotlightWidth = rect.width + padding * 2;
-  const spotlightHeight = rect.height + padding * 2;
+  const spotlightX = rect ? rect.left - padding : 0;
+  const spotlightY = rect ? rect.top - padding : 0;
+  const spotlightWidth = rect ? rect.width + padding * 2 : 0;
+  const spotlightHeight = rect ? rect.height + padding * 2 : 0;
 
   // Determine modal position
   const position = activeStep.position || 'bottom';
   let modalTop = 0;
   let modalLeft = 0;
 
-  if (position === 'bottom') {
-    modalTop = spotlightY + spotlightHeight + 16;
-    modalLeft = spotlightX + (spotlightWidth / 2) - 150;
-  } else if (position === 'top') {
-    modalTop = spotlightY - 150 - 16; // approx height
-    modalLeft = spotlightX + (spotlightWidth / 2) - 150;
-  } else if (position === 'right') {
-    modalTop = spotlightY + (spotlightHeight / 2) - 75; // approx height
-    modalLeft = spotlightX + spotlightWidth + 16;
-  } else if (position === 'left') {
-    modalTop = spotlightY + (spotlightHeight / 2) - 75; // approx height
-    modalLeft = spotlightX - 300 - 16;
-  }
-
-  // Bound to screen
-  if (typeof window !== 'undefined') {
-    modalLeft = Math.max(16, Math.min(modalLeft, window.innerWidth - 316));
-    modalTop = Math.max(16, Math.min(modalTop, window.innerHeight - 150));
+  if (!rect) {
+    // Fallback: Center of screen
+    if (typeof window !== 'undefined') {
+        modalTop = (window.innerHeight / 2) - 100;
+        modalLeft = (window.innerWidth / 2) - 150;
+    }
+  } else {
+    if (position === 'bottom') {
+        modalTop = spotlightY + spotlightHeight + 16;
+        modalLeft = spotlightX + (spotlightWidth / 2) - 150;
+      } else if (position === 'top') {
+        modalTop = spotlightY - 150 - 16; 
+        modalLeft = spotlightX + (spotlightWidth / 2) - 150;
+      } else if (position === 'right') {
+        modalTop = spotlightY + (spotlightHeight / 2) - 75; 
+        modalLeft = spotlightX + spotlightWidth + 16;
+      } else if (position === 'left') {
+        modalTop = spotlightY + (spotlightHeight / 2) - 75; 
+        modalLeft = spotlightX - 300 - 16;
+      }
+    
+      // Bound to screen
+      if (typeof window !== 'undefined') {
+        modalLeft = Math.max(16, Math.min(modalLeft, window.innerWidth - 316));
+        modalTop = Math.max(16, Math.min(modalTop, window.innerHeight - 200));
+      }
   }
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none">
-      <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <mask id="spotlight-mask">
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            <rect
-              x={spotlightX}
-              y={spotlightY}
-              width={spotlightWidth}
-              height={spotlightHeight}
-              rx="8"
-              fill="black"
+    <div className="fixed inset-0 z-[100] pointer-events-none">
+      <AnimatePresence>
+        {rect && (
+           <motion.svg 
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             exit={{ opacity: 0 }}
+             className="absolute inset-0 w-full h-full" 
+             xmlns="http://www.w3.org/2000/svg"
+           >
+             <defs>
+               <mask id={maskId}>
+                 <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                 <rect
+                   x={spotlightX}
+                   y={spotlightY}
+                   width={spotlightWidth}
+                   height={spotlightHeight}
+                   rx="8"
+                   fill="black"
+                 />
+               </mask>
+             </defs>
+             <rect
+               x="0"
+               y="0"
+               width="100%"
+               height="100%"
+               fill="rgba(0, 0, 0, 0.7)"
+               mask={`url(#${maskId})`}
+               className="backdrop-blur-sm"
+               style={{ backdropFilter: 'blur(4px)' }}
+             />
+           </motion.svg>
+        )}
+        
+        {/* Full screen dark if no rect */}
+        {!rect && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
-          </mask>
-        </defs>
-        <rect
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="rgba(0, 0, 0, 0.7)"
-          mask="url(#spotlight-mask)"
-          className="backdrop-blur-sm"
-          style={{ backdropFilter: 'blur(4px)' }}
-        />
-      </svg>
+        )}
+      </AnimatePresence>
 
-      {/* Invisible overlay over the rest of screen to prevent clicks outside, 
-          but we leave the spotlight area clickable */}
+      {/* Invisible overlay over the rest of screen to prevent clicks outside */}
       <div 
         className="absolute inset-0 pointer-events-auto"
         style={{
-          clipPath: `polygon(
+          clipPath: rect ? `polygon(
             0% 0%, 100% 0%, 100% 100%, 0% 100%, 
             0% ${spotlightY}px, 
             ${spotlightX}px ${spotlightY}px, 
@@ -176,7 +209,7 @@ export function SpotlightOverlay() {
             ${spotlightX + spotlightWidth}px ${spotlightY + spotlightHeight}px, 
             ${spotlightX + spotlightWidth}px ${spotlightY}px, 
             0% ${spotlightY}px
-          )`
+          )` : 'none'
         }}
       />
 
