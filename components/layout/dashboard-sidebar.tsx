@@ -158,9 +158,10 @@ export function DashboardSidebar({ isAdmin: isAdminProp, hasGraduated }: { isAdm
                 const active = isActive(item.href, 'exact' in item ? item.exact : false);
                 
                 let tourId = undefined;
-                if (item.label === 'Contacts') tourId = 'tour-sidebar-nav-contacts';
-                if (item.label === 'Campaigns') tourId = 'tour-sidebar-nav-campaigns';
-                if (item.label === 'Revenue') tourId = 'tour-sidebar-nav-revenue';
+                const normalizedLabel = item.label.trim();
+                if (normalizedLabel === 'Contacts') tourId = 'tour-sidebar-nav-contacts';
+                if (normalizedLabel === 'Campaigns') tourId = 'tour-sidebar-nav-campaigns';
+                if (normalizedLabel === 'Revenue') tourId = 'tour-sidebar-nav-revenue';
 
                 return (
                   <li key={item.href}>
