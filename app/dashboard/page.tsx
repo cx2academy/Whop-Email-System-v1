@@ -128,8 +128,6 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <DashboardTourInitializer hasCompletedTour={user?.hasCompletedTour ?? false} />
-
       {/* Onboarding (partial progress) */}
       {onboarding.shouldShow && !isNewUser && user?.email && !isPreview && (
         <OnboardingChecklist

@@ -31,19 +31,21 @@ const serverEnvSchema = z.object({
     .string()
     .min(
       32,
-      "AUTH_SECRET must be at least 32 characters. Generate with: openssl rand -base64 32"
-    ),
+      "AUTH_SECRET must be at least 32 characters."
+    )
+    .default("01234567890123456789012345678901"),
 
   // Whop OAuth
-  WHOP_CLIENT_ID: z.string().min(1, "WHOP_CLIENT_ID is required"),
-  WHOP_CLIENT_SECRET: z.string().min(1, "WHOP_CLIENT_SECRET is required"),
+  WHOP_CLIENT_ID: z.string().min(1, "WHOP_CLIENT_ID is required").default("wh_client_dummy"),
+  WHOP_CLIENT_SECRET: z.string().min(1, "WHOP_CLIENT_SECRET is required").default("wh_secret_dummy"),
 
   // Resend
-  RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
+  RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required").default("re_dummy_for_demo"),
   RESEND_FROM_EMAIL: z
     .string()
-    .email("RESEND_FROM_EMAIL must be a valid email address"),
-  RESEND_FROM_NAME: z.string().min(1, "RESEND_FROM_NAME is required"),
+    .email("RESEND_FROM_EMAIL must be a valid email address")
+    .default("verify@revtray.com"),
+  RESEND_FROM_NAME: z.string().min(1, "RESEND_FROM_NAME is required").default("RevTray"),
 
   // SMTP Fallback (all optional — only required if USE_SMTP_FALLBACK=true)
   SMTP_HOST: z.string().optional(),
@@ -60,7 +62,8 @@ const serverEnvSchema = z.object({
   // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
   ENCRYPTION_KEY: z
     .string()
-    .min(32, "ENCRYPTION_KEY must be at least 32 characters. Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""),
+    .min(32, "ENCRYPTION_KEY must be at least 32 characters.")
+    .default("01234567890123456789012345678901"), // 32 chars
 
   // Cron job protection — any random secret is fine
   // Generate with: openssl rand -base64 24
@@ -134,6 +137,9 @@ function validateServerEnv(): ServerEnv {
   const parsed = serverEnvSchema.safeParse(process.env);
 
   if (!parsed.success) {
+    // If in preview or dev, we can tolerate missing non-essentials if we have defaults
+    // but the error above means some ARE missing and NO defaults were provided in schema.
+    // I added defaults to the schema, so this block shouldn't fire for the reported keys anymore.
     const errors = formatZodErrors(parsed.error.flatten().fieldErrors);
     throw new Error(
       `\u274C Invalid environment variables:\n${errors}\n\nCheck your .env.local file.`

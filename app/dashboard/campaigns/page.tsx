@@ -19,35 +19,8 @@ import { CreationModal } from './creation-modal';
 export const metadata: Metadata = { title: 'Campaigns' };
 
 export default async function CampaignsPage() {
-  const { workspaceRole } = await requireWorkspaceAccess();
+  const { workspaceRole, workspaceId } = await requireWorkspaceAccess();
   
-  // Backfill sequenceId for existing campaigns
-  const campaignsWithoutSequence = await db.emailCampaign.findMany({
-    where: { sequenceId: null }
-  });
-
-  const sequenceMap = new Map<string, string>();
-  for (const campaign of campaignsWithoutSequence) {
-    let sequenceName: string | null = null;
-    
-    if (campaign.name.includes(' — Email ')) {
-      sequenceName = campaign.name.split(' — Email ')[0];
-    } else if (campaign.name.includes(' — Day ')) {
-      sequenceName = campaign.name.split(' — Day ')[0];
-    }
-
-    if (sequenceName) {
-      if (!sequenceMap.has(sequenceName)) {
-        sequenceMap.set(sequenceName, crypto.randomUUID());
-      }
-      const sequenceId = sequenceMap.get(sequenceName);
-      await db.emailCampaign.update({
-        where: { id: campaign.id },
-        data: { sequenceId }
-      });
-    }
-  }
-
   const campaigns = await getCampaigns();
   const isAdmin = workspaceRole === 'OWNER' || workspaceRole === 'ADMIN';
 

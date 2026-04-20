@@ -17,6 +17,7 @@ import { requireWorkspaceAccess, requireAdminAccess } from "@/lib/auth/session";
 import type { ApiResponse } from "@/types";
 import { track } from "@/lib/telemetry";
 import { checkUsageLimit, checkPlanLimit } from "@/lib/plans/gates";
+import type { AttributionModel } from "@/lib/attribution/constants";
 import type { EmailCampaign, CampaignStatus, CampaignType } from "@prisma/client";
 
 // ---------------------------------------------------------------------------
@@ -425,22 +426,88 @@ export async function sandboxCampaignNow(
   const totalSent = Math.floor(Math.random() * 2000) + 12000;
   const totalOpened = Math.floor(totalSent * (Math.random() * 0.2 + 0.6)); // 60-80% open rate
   const totalClicked = Math.floor(totalOpened * (Math.random() * 0.15 + 0.15)); // 15-30% click rate
-  const totalRevenue = totalClicked * (Math.random() * 12 + 5); 
+  const totalRevenue = Math.floor(totalClicked * (Math.random() * 12 + 5)); 
 
   await db.emailCampaign.update({
     where: { id: campaignId, workspaceId },
     data: {
-      status: "SENT",
+      status: "COMPLETED",
       sentAt: new Date(),
       totalRecipients: totalSent,
       totalSent: totalSent,
       totalOpened: totalOpened,
       totalClicked: totalClicked,
-      totalRevenue: totalRevenue,
+      totalRevenue: totalRevenue * 100, // Store in cents
       totalBounced: Math.floor(totalSent * 0.001),
       totalFailed: 0,
     }
   });
+
+  // Create fake purchases and attributions for the tour
+  const models: AttributionModel[] = ['last_click', 'first_touch', 'linear', 'time_decay'];
+  const fakePurchases = 5;
+  const earningsPerPurchase = Math.floor((totalRevenue * 100) / fakePurchases);
+
+  // Create a demo contact if not exists
+  const demoContact = await db.contact.upsert({
+    where: { workspaceId_email: { workspaceId, email: 'demo-buyer@example.com' } },
+    update: {},
+    create: {
+      workspaceId,
+      email: 'demo-buyer@example.com',
+      firstName: 'Demo',
+      lastName: 'Buyer',
+      status: 'SUBSCRIBED'
+    }
+  });
+
+  for (let i = 0; i < fakePurchases; i++) {
+    const purchase = await db.purchase.create({
+      data: {
+        workspaceId,
+        contactId: demoContact.id,
+        email: demoContact.email,
+        amount: earningsPerPurchase,
+        productName: i % 2 === 0 ? "Premium Community Pass" : "Creator Masterclass",
+        source: "demo",
+        externalId: `demo-purchase-${campaignId}-${i}-${Date.now()}`,
+        metadata: { isTour: true }
+      }
+    });
+
+    // We also need some EmailSend records with clickedAt for on-the-fly models (linear, time_decay)
+    // Using a more robust idempotency key to avoid collisions
+    await db.emailSend.upsert({
+      where: { idempotencyKey: `demo-send-${campaignId}-${i}` },
+      update: {
+        status: 'CLICKED',
+        clickedAt: new Date(Date.now() - (i + 1) * 3600000),
+      },
+      create: {
+        workspaceId,
+        campaignId,
+        contactId: demoContact.id,
+        status: 'CLICKED',
+        clickedAt: new Date(Date.now() - (i + 1) * 3600000), // clicked 1-5 hours ago
+        sentAt: new Date(Date.now() - 24 * 3600000),
+        idempotencyKey: `demo-send-${campaignId}-${i}`,
+      }
+    });
+
+    // Attribute to all models so the switcher works instantly
+    await Promise.all(models.map(m => 
+      db.revenueAttribution.create({
+        data: {
+          workspaceId,
+          purchaseId: purchase.id,
+          contactId: demoContact.id,
+          campaignId,
+          attributionModel: m,
+          revenue: earningsPerPurchase,
+        }
+      })
+    ));
+  }
 
   return { success: true, data: { totalSent, totalFailed: 0 } };
 }

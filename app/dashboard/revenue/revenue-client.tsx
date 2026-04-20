@@ -9,8 +9,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { AttributionModel, CampaignRevRow } from '@/lib/attribution/models';
-import { MODEL_LABELS, MODEL_DESCRIPTIONS } from '@/lib/attribution/models';
+import type { AttributionModel, CampaignRevRow } from '@/lib/attribution/constants';
+import { MODEL_LABELS, MODEL_DESCRIPTIONS } from '@/lib/attribution/constants';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -71,6 +71,7 @@ export function RevenueClient({
 
       {/* ── Attribution model card ─────────────────────────────────────── */}
       <div
+        id="tour-revenue-models"
         className="rounded-xl p-5 space-y-4"
         style={{ background: 'var(--surface-card)', border: '1px solid var(--sidebar-border)' }}
       >

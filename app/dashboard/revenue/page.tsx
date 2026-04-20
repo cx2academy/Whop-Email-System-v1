@@ -18,8 +18,8 @@ import {
 import {
   getTopCampaignsByModel,
   getRevenueSummaryForModel,
-  type AttributionModel,
 } from '@/lib/attribution/models';
+import { type AttributionModel } from '@/lib/attribution/constants';
 import { RevenueClient } from './revenue-client';
 
 export const metadata: Metadata = { title: 'Revenue' };

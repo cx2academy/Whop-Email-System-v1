@@ -83,7 +83,7 @@ export function SpotlightOverlay() {
     observer = new MutationObserver(() => {
       updateRect();
     });
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    observer.observe(document.body, { childList: true, subtree: true });
 
     const onScrollOrResize = () => {
         updateRect();

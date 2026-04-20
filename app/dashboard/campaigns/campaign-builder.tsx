@@ -221,6 +221,10 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Writ
       }
       
       if (result.success && result.data) {
+        if (isTourActive) {
+          nextStep(); 
+        }
+        
         if (!isTourActive) {
             posthog.capture('Campaign Sent', {
               campaign_id: id,
@@ -229,14 +233,14 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Writ
             });
         }
         setSendResult({ type: result.data.totalFailed > 0 ? 'partial' : 'success', totalSent: result.data.totalSent, totalFailed: result.data.totalFailed, message: `Sent to ${result.data.totalSent} contacts${result.data.totalFailed > 0 ? `, ${result.data.totalFailed} failed` : ''}` });
-        
-        if (isTourActive) {
-          nextStep(); // Only move to 'Campaign Sent' screen when success screen triggers!
-        }
       } else {
-        setSendResult({ type: 'error', message: (!result.success && ((result as any).error || (result as any).message)) ? ((result as any).error ?? (result as any).message) : 'Send failed.' });
+        const msg = (!result.success && ((result as any).error || (result as any).message)) ? ((result as any).error ?? (result as any).message) : 'Send failed.';
+        setError(msg);
       }
-    } catch { setSendResult({ type: 'error', message: 'An unexpected error occurred.' }); }
+    } catch (e) { 
+      console.error('Send error:', e);
+      setError('An unexpected error occurred during delivery.'); 
+    }
     finally { setIsLoading(false); setIsOptimizing(false); }
   }
 

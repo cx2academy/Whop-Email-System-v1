@@ -79,12 +79,19 @@ export function DashboardSidebar({ isAdmin: isAdminProp, hasGraduated }: { isAdm
   }
 
   useEffect(() => {
-    const dismissed = sessionStorage.getItem('planDismissed') === 'true';
-    setIsPlanDismissed(dismissed);
+    try {
+      const dismissed = sessionStorage.getItem('planDismissed') === 'true';
+      setIsPlanDismissed(dismissed);
+    } catch (e) {
+      // In some environments like iframes, sessionStorage might be blocked
+      setIsPlanDismissed(true);
+    }
   }, []);
 
   function dismissPlan() {
-    sessionStorage.setItem('planDismissed', 'true');
+    try {
+      sessionStorage.setItem('planDismissed', 'true');
+    } catch (e) {}
     setIsPlanDismissed(true);
   }
 

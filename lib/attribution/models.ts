@@ -13,22 +13,12 @@
  */
 
 import { db } from '@/lib/db/client';
-
-export type AttributionModel = 'last_click' | 'first_touch' | 'linear' | 'time_decay';
-
-export const MODEL_LABELS: Record<AttributionModel, string> = {
-  last_click:  'Last click',
-  first_touch: 'First touch',
-  linear:      'Linear',
-  time_decay:  'Time decay',
-};
-
-export const MODEL_DESCRIPTIONS: Record<AttributionModel, string> = {
-  last_click:  '100% credit to the last email clicked before purchase',
-  first_touch: '100% credit to the first email that introduced the buyer',
-  linear:      'Equal credit split across all clicked emails in the window',
-  time_decay:  'More credit to recent touches, less to older ones',
-};
+import {
+  type AttributionModel,
+  MODEL_LABELS,
+  MODEL_DESCRIPTIONS,
+  type CampaignRevRow,
+} from './constants';
 
 const ATTRIBUTION_WINDOW_DAYS = 7;
 const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`;
@@ -151,19 +141,6 @@ function allocateCredit(
 // ---------------------------------------------------------------------------
 // Top campaigns for UI
 // ---------------------------------------------------------------------------
-
-export interface CampaignRevRow {
-  campaignId:      string;
-  campaignName:    string;
-  subject:         string;
-  revenue:         string;
-  revenueCents:    number;
-  purchases:       number;
-  emailsSent:      number;
-  revenuePerEmail: string;
-  conversionRate:  string;
-  sentAt:          string | null;
-}
 
 export async function getTopCampaignsByModel(
   workspaceId: string,

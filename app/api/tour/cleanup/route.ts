@@ -19,12 +19,24 @@ export async function POST() {
     }
 
     const workspaceId = user.workspaces[0].workspaceId;
-
-    // Delete fake sent campaigns that have unrealistic totalRecipients
+    
+    // 1. Delete fake purchases (cascades to attributions)
+    try {
+      await db.purchase.deleteMany({
+        where: {
+          workspaceId,
+          source: 'demo',
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to delete demo purchases:', e);
+    }
+    
+    // 2. Delete fake sent campaigns that have unrealistic totalRecipients
     await db.emailCampaign.deleteMany({
       where: {
         workspaceId,
-        status: 'SENT',
+        status: 'COMPLETED',
         totalRecipients: { gt: 10000 },
       },
     });

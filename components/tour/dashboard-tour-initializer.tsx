@@ -64,7 +64,7 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     id: 'tour-creation-modal-overview',
     title: 'The AI Co-pilot',
     description: 'We give you two distinct paths. You can generate entire highly-optimized email sequences from a single prompt, or craft your message using the Artisan side.',
-    position: 'top',
+    position: 'bottom',
     actionType: 'view'
   },
   {
@@ -126,28 +126,35 @@ export const CORE_TOUR_STEPS: TourStep[] = [
   {
     id: 'tour-campaign-success-view-analytics',
     title: 'Campaign Sent!',
-    description: 'It\'s on the way! Now lets check out the post-send reporting. Click "View analytics".',
+    description: 'It\'s on the way! Your community is about to get a great email. Now let\'s check out the post-send reporting. Click "View analytics".',
     position: 'bottom',
     actionType: 'navigate'
   },
   {
     id: 'tour-campaign-analytics-stats',
-    title: 'Performance Tracking',
-    description: 'Watch opens, clicks, and attributed revenue roll in. You can also monitor your bounce rate and A/B test results here.',
+    title: 'Precision Analytics',
+    description: 'We track every open and click in real-time. Since this is a demo, we\'ve simulated some impressive results for you!',
     position: 'bottom',
     actionType: 'view'
   },
   {
     id: 'tour-sidebar-nav-revenue',
-    title: 'Revenue Tracking',
-    description: 'Click here to see how your campaigns influence actual subscription payments and product sales.',
+    title: 'The Revenue Engine',
+    description: 'This is the most powerful part of RevTray. Click here to see how your emails translated into actual dollars and cents.',
     position: 'right',
     actionType: 'navigate'
   },
   {
+    id: 'tour-revenue-models',
+    title: 'Multi-Touch Attribution',
+    description: 'RevTray automatically tracks Last Click, First Touch, and even Linear attribution. Switch models to see which strategy drives the most sales.',
+    position: 'top',
+    actionType: 'view'
+  },
+  {
     id: 'tour-revenue-overview',
     title: 'You\'re Ready!',
-    description: 'You\'ve completed the onboarding tour! From here, you can watch Revenue metrics from Whop flow in. Let\'s head back to the dashboard.',
+    description: 'Onboarding complete! From here, you can watch real Revenue metrics from Whop flow in. Let\'s head back to the dashboard.',
     position: 'bottom',
     actionType: 'view'
   }

@@ -16,6 +16,7 @@ import { DashboardTopbar } from '@/components/layout/dashboard-topbar';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { ClientProviders } from '@/components/ui/client-providers';
 import { isEmailAdmin } from '@/lib/admin/utils';
+import { DashboardTourInitializer } from '@/components/tour/dashboard-tour-initializer';
 
 import { checkDomainAvailability } from '@/app/onboarding/actions'; // not needed just a ref
 import { BetaQuestEngine } from '@/components/beta/beta-quest-engine';
@@ -49,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </main>
           </div>
           <CommandPalette />
+          <DashboardTourInitializer hasCompletedTour={false} />
           {process.env.NEXT_PUBLIC_BETA_MODE === 'true' && <BetaQuestEngine unlockedQuests={[]} />}
         </div>
       </ClientProviders>
@@ -131,6 +133,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </main>
         </div>
         <CommandPalette />
+        <DashboardTourInitializer hasCompletedTour={user?.hasCompletedTour ?? false} />
         {process.env.NEXT_PUBLIC_BETA_MODE === 'true' && user?.hasCompletedTour && <BetaQuestEngine unlockedQuests={unlockedQuests} />}
       </div>
     </ClientProviders>
