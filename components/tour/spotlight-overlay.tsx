@@ -16,7 +16,6 @@ export function SpotlightOverlay() {
   const { isActive, stepIndex, steps, nextStep, skipTour } = useTour();
   const [rect, setRect] = useState<ElementRect | null>(null);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
-  const maskId = React.useId().replace(/:/g, '');
 
   const activeStep = isActive && steps.length > 0 ? steps[stepIndex] : null;
 
@@ -27,6 +26,7 @@ export function SpotlightOverlay() {
     let observer: MutationObserver | null = null;
     let fallbackTimeout: NodeJS.Timeout | null = null;
 
+    let hasScrolled = false;
     const updateRect = () => {
       const element = document.getElementById(activeStep.id);
       if (element) {
@@ -39,6 +39,13 @@ export function SpotlightOverlay() {
           width: bounds.width,
           height: bounds.height,
         });
+
+        if (!hasScrolled) {
+            // Scroll element into view smoothly in the center of the viewport
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            hasScrolled = true;
+        }
+
         return true;
       }
       return false;
@@ -50,7 +57,8 @@ export function SpotlightOverlay() {
 
     const poll = () => {
       retryCount++;
-      if (!updateRect() && retryCount < 50) { 
+      // Wait up to 10 seconds (100 retries * 100ms) for elements that take a while to appear
+      if (!updateRect() && retryCount < 100) { 
         fallbackTimeout = setTimeout(poll, 100);
       }
     };
@@ -167,7 +175,7 @@ export function SpotlightOverlay() {
     <div className="fixed inset-0 z-[999999] pointer-events-none">
       <div 
         className="absolute inset-0 pointer-events-auto"
-        style={{ clipPath: pointerPolygon }}
+        style={{ clipPath: pointerPolygon, zIndex: -1 }}
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -178,50 +186,30 @@ export function SpotlightOverlay() {
       />
 
       <AnimatePresence>
-        <motion.svg
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <defs>
-            <mask id={maskId}>
-              <rect x="0" y="0" width="100%" height="100%" fill="white" />
-              {rect && (
-                <motion.rect
-                  fill="black"
-                  rx="8"
-                  initial={{ x: sx, y: sy, width: sw, height: sh }}
-                  animate={{ x: sx, y: sy, width: sw, height: sh }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-                />
-              )}
-            </mask>
-          </defs>
-          <rect
-            x="0"
-            y="0"
-            width="100%"
-            height="100%"
-            fill="rgba(0,0,0,0.7)"
-            mask={`url(#${maskId})`}
-            className="backdrop-blur-sm"
-            style={{ backdropFilter: 'blur(3px)' }}
-          />
-
           {rect && (
-            <motion.rect
-              fill="none"
-              stroke="rgba(255,255,255,0.2)"
-              strokeWidth="1"
-              rx="8"
-              initial={{ x: sx, y: sy, width: sw, height: sh }}
-              animate={{ x: sx, y: sy, width: sw, height: sh }}
+            <motion.div
+              className="absolute pointer-events-none"
+              style={{
+                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}
+              initial={{ x: sx, y: sy, width: sw, height: sh, opacity: 0 }}
+              animate={{ x: sx, y: sy, width: sw, height: sh, opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 25 }}
             />
           )}
-        </motion.svg>
+
+          {!rect && (
+             <motion.div
+               className="absolute inset-0 pointer-events-none"
+               style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+             />
+          )}
       </AnimatePresence>
 
       <div className="absolute top-6 right-6 pointer-events-auto">
@@ -242,8 +230,8 @@ export function SpotlightOverlay() {
         style={{ top: modalTop, left: modalLeft }}
       >
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] font-bold tracking-widest uppercase text-brand flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+          <div className="text-[11px] font-bold tracking-widest uppercase text-green-500 flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
             Step {stepIndex + 1} of {steps.length}
           </div>
         </div>
@@ -260,7 +248,7 @@ export function SpotlightOverlay() {
         )}
         
         {(activeStep.actionType === 'click' || activeStep.actionType === 'navigate') && (
-          <div className="mt-auto flex text-[13px] items-center gap-2.5 text-brand bg-brand/10 border border-brand/20 px-4 py-3 rounded-xl font-medium shadow-inner">
+          <div className="mt-auto flex text-[13px] items-center gap-2.5 text-green-500 bg-green-500/10 border border-green-500/20 px-4 py-3 rounded-xl font-medium shadow-inner">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <circle cx="12" cy="12" r="2"/>
@@ -284,7 +272,7 @@ export function SpotlightOverlay() {
               exit={{ scale: 0.95, y: 20 }}
               className="bg-[#0f0f11] border border-white/10 rounded-[28px] p-8 max-w-sm w-full text-center shadow-2xl relative overflow-hidden"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand to-transparent opacity-50" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent opacity-50" />
               <h2 className="text-2xl font-bold text-white mb-3 tracking-tight">Skip the Demo?</h2>
               <p className="text-zinc-400 text-[15px] leading-relaxed mb-8">
                 Are you sure? This short walk-through showcases powerful growth tools designed to instantly boost your revenue. It's highly recommended!

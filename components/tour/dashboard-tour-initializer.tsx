@@ -40,6 +40,13 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     actionType: 'click'
   },
   {
+    id: 'tour-contacts-sync-status',
+    title: 'Live Sync',
+    description: 'Watch as your contacts are securely synced into RevTray. (If a sync error occurs, you can always try again later!)',
+    position: 'bottom',
+    actionType: 'view'
+  },
+  {
     id: 'tour-sidebar-nav-campaigns', // Need to add to campaigns list
     title: 'Time to Send',
     description: 'Now that we have contacts, let\'s build an email. Navigate to the Campaigns tab.',
@@ -57,7 +64,7 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     id: 'tour-creation-modal-overview',
     title: 'The AI Co-pilot',
     description: 'We give you two distinct paths. You can generate entire highly-optimized email sequences from a single prompt, or craft your message using the Artisan side.',
-    position: 'center',
+    position: 'top',
     actionType: 'view'
   },
   {
@@ -70,8 +77,15 @@ export const CORE_TOUR_STEPS: TourStep[] = [
   {
     id: 'tour-template-course-launch',
     title: 'Proven Structures',
-    description: 'We have pre-built layouts configured for maximum conversion. Select the "Course Launch" template.',
+    description: 'Scroll down and click the "Course Launch" template to preview its layout. We have pre-built layouts configured for maximum conversion.',
     position: 'bottom',
+    actionType: 'click'
+  },
+  {
+    id: 'tour-template-preview-use',
+    title: 'Preview & Use',
+    description: 'Preview how the email looks on desktop and mobile. Click "Use Template" to generate it in the builder.',
+    position: 'left',
     actionType: 'click'
   },
   {

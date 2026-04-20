@@ -78,6 +78,7 @@ export function SyncPanel({ latestSync }: SyncPanelProps) {
 
       {syncResult && (
         <p
+          id="tour-contacts-sync-status"
           className={`text-xs ${
             syncResult.type === "error"
               ? "text-destructive"

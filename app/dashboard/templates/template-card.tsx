@@ -174,6 +174,7 @@ function PreviewSidePanel({
               )}
               {isAdmin && (
                 <button
+                  id={template.id === 'course-launch-main' ? 'tour-template-preview-use' : undefined}
                   onClick={handleUse}
                   className="px-6 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
                 >
