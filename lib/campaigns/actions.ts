@@ -40,6 +40,7 @@ const createCampaignSchema = z.object({
   scheduledAt: z.string().datetime().optional().nullable(),
   sendViaEmail:  z.boolean().default(true),
   sendViaWhopDm: z.boolean().default(false),
+  isSandbox: z.boolean().default(false).optional(),
 });
 
 const updateCampaignSchema = createCampaignSchema.partial();
@@ -68,20 +69,22 @@ export async function createCampaign(
 
   // ── Plan gates ────────────────────────────────────────────────────────────
 
-  // 1. Monthly campaign count limit
-  const campaignGate = await checkUsageLimit({ workspaceId, type: 'campaigns' });
-  if (!campaignGate.allowed) return campaignGate.toActionError();
+  if (!data.isSandbox) {
+    // 1. Monthly campaign count limit
+    const campaignGate = await checkUsageLimit({ workspaceId, type: 'campaigns' });
+    if (!campaignGate.allowed) return campaignGate.toActionError();
 
-  // 2. A/B testing requires Growth or higher
-  if (data.isAbTest) {
-    const abGate = await checkPlanLimit({ workspaceId, feature: 'abTesting' });
-    if (!abGate.allowed) return abGate.toActionError();
-  }
+    // 2. A/B testing requires Growth or higher
+    if (data.isAbTest) {
+      const abGate = await checkPlanLimit({ workspaceId, feature: 'abTesting' });
+      if (!abGate.allowed) return abGate.toActionError();
+    }
 
-  // 3. Segment targeting requires Starter or higher
-  if (data.audienceSegmentIds && data.audienceSegmentIds.length > 0) {
-    const segGate = await checkPlanLimit({ workspaceId, feature: 'segments' });
-    if (!segGate.allowed) return segGate.toActionError();
+    // 3. Segment targeting requires Starter or higher
+    if (data.audienceSegmentIds && data.audienceSegmentIds.length > 0) {
+      const segGate = await checkPlanLimit({ workspaceId, feature: 'segments' });
+      if (!segGate.allowed) return segGate.toActionError();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

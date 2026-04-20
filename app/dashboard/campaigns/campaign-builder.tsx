@@ -163,6 +163,7 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Writ
           abTestSplitPercent: isAbTest ? 20 : undefined,
           sendViaEmail,
           sendViaWhopDm,
+          isSandbox: isTourActive,
           _tourForceEmail: _audienceIsTourForced ? user?.email : undefined
         };
         // HACK: because we don't send individual emails at this API level yet easily,
