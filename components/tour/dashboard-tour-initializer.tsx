@@ -54,15 +54,22 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     actionType: 'click'
   },
   {
-    id: 'tour-ai-popup-use-template', // To be added
+    id: 'tour-creation-modal-overview',
     title: 'The AI Co-pilot',
-    description: 'You can generate entire email sequences from a single prompt, but for now, click "Use a Template" to see the library.',
+    description: 'We give you two distinct paths. You can generate entire highly-optimized email sequences from a single prompt, or craft your message using the Artisan side.',
+    position: 'bottom',
+    actionType: 'view'
+  },
+  {
+    id: 'tour-ai-popup-use-template',
+    title: 'Template Library',
+    description: 'For now, let\'s manually choose a layout. Click "Use a Template" to see the library.',
     position: 'right',
     actionType: 'click'
   },
   {
-    id: 'tour-template-course-launch', // To be added
-    title: 'Template Library',
+    id: 'tour-template-course-launch',
+    title: 'Proven Structures',
     description: 'We have pre-built layouts configured for maximum conversion. Select the "Course Launch" template.',
     position: 'bottom',
     actionType: 'click'
