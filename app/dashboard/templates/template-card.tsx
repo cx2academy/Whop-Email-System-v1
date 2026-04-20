@@ -1,6 +1,6 @@
 'use client';
 
-import DOMPurify from 'isomorphic-dompurify';
+import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Monitor, Smartphone, X } from 'lucide-react';
@@ -127,7 +127,7 @@ function PreviewSidePanel({
                 )}
               </div>
               <h2 className="text-xl font-bold text-gray-900">{template.name}</h2>
-              <p className="text-sm text-gray-500 mt-1 font-mono" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewSubject) }} />
+              <SanitizedHtml html={previewSubject} tag="p" className="text-sm text-gray-500 mt-1 font-mono" />
             </div>
             <button
               onClick={onClose}
@@ -282,7 +282,7 @@ export function TemplateCard({ template, isAdmin, isProUser = false }: { templat
             {template.name}
           </h3>
 
-          <p className="text-xs text-gray-500 truncate font-mono bg-gray-50 px-2 py-1.5 rounded-md border border-gray-100" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewSubj) }} />
+          <SanitizedHtml html={previewSubj} tag="p" className="text-xs text-gray-500 truncate font-mono bg-gray-50 px-2 py-1.5 rounded-md border border-gray-100" />
 
           {isLocked && (
             <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px] z-10">

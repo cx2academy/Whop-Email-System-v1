@@ -1,6 +1,6 @@
 'use client';
 
-import DOMPurify from 'isomorphic-dompurify';
+import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SparklesIcon, ChevronLeftIcon, PlusIcon, TrashIcon } from 'lucide-react';
@@ -361,7 +361,7 @@ export function VariantBuilder({ tags, segments }: Props) {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground mb-1">Preview</p>
-                    <div className="text-sm text-muted-foreground line-clamp-4 prose prose-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(variant.htmlBody) }} />
+                    <SanitizedHtml html={variant.htmlBody} className="text-sm text-muted-foreground line-clamp-4 prose prose-sm" />
                   </div>
                 </div>
               </div>

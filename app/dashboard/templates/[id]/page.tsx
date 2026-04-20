@@ -6,7 +6,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ChevronLeftIcon } from 'lucide-react';
-import DOMPurify from 'isomorphic-dompurify';
+import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { notFound } from 'next/navigation';
 import { requireWorkspaceAccess } from '@/lib/auth/session';
 import { getTemplateById, CATEGORY_LABELS, estimateReadingTime } from '@/lib/templates/library';
@@ -102,7 +102,7 @@ export default async function TemplatePreviewPage(props: { params: Promise<{ id:
           <p className="text-xs font-medium text-muted-foreground">Email preview (with sample data)</p>
         </div>
         <div className="bg-white p-6">
-          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewHtml) }} />
+          <SanitizedHtml html={previewHtml} />
         </div>
       </div>
 

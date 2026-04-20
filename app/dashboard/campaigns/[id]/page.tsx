@@ -4,7 +4,6 @@
  * Campaign detail page — shows full analytics, status, and actions.
  */
 
-import DOMPurify from 'isomorphic-dompurify';
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,6 +13,7 @@ import { getCampaign, getCampaignAnalytics } from "@/lib/campaigns/actions";
 import { CampaignActions } from "./campaign-actions";
 import { CAMPAIGN_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatNumber } from "@/lib/utils";
+import { EmailPreview } from "./email-preview";
 
 interface CampaignPageProps {
   params: Promise<{ id: string }>;
@@ -185,10 +185,7 @@ export default async function CampaignPage(props: CampaignPageProps) {
           <h2 className="text-sm font-semibold text-foreground">Email preview</h2>
         </div>
         <div className="p-5">
-          <div
-            className="prose prose-sm max-w-none text-foreground"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(campaign.htmlBody) }}
-          />
+          <EmailPreview html={campaign.htmlBody} />
         </div>
       </div>
     </div>

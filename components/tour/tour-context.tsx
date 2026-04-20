@@ -50,7 +50,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     setStepIndex(0);
     await markTourCompleted();
     
-    // Clear the demo campaign from local DB
+    // Clear the demo data from local DB
     try {
         await fetch('/api/tour/cleanup', { method: 'POST' });
     } catch (e) {
@@ -63,6 +63,13 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const skipTour = async () => {
     setIsActive(false);
     await markTourCompleted();
+
+    // Also cleanup if skipped, just in case they reached a step that created data
+    try {
+        await fetch('/api/tour/cleanup', { method: 'POST' });
+    } catch (e) {
+        // ignore
+    }
   };
 
   return (

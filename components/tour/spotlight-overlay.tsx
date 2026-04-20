@@ -70,15 +70,16 @@ export function SpotlightOverlay() {
     connectResizeObserver();
 
     const poll = () => {
+      updateRect();
       retryCount++;
-      if (!updateRect() && retryCount < 100) { 
-        fallbackTimeout = setTimeout(() => {
-            poll();
-            connectResizeObserver();
-        }, 100);
+      if (retryCount < 200) { 
+        fallbackTimeout = setTimeout(poll, 100);
       }
     };
     fallbackTimeout = setTimeout(poll, 100);
+
+    // Continuous polling while active to catch any layout shifts not covered by observers
+    const interval = setInterval(updateRect, 500);
 
     observer = new MutationObserver(() => {
       updateRect();
@@ -95,6 +96,7 @@ export function SpotlightOverlay() {
       window.removeEventListener('resize', onScrollOrResize);
       window.removeEventListener('scroll', onScrollOrResize, true);
       if (fallbackTimeout) clearTimeout(fallbackTimeout);
+      if (interval) clearInterval(interval);
       if (observer) observer.disconnect();
       if (resizeObserver) resizeObserver.disconnect();
     };

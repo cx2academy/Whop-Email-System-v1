@@ -1,6 +1,6 @@
 'use client';
 
-import DOMPurify from 'isomorphic-dompurify';
+import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -308,7 +308,7 @@ const renderContentWithTags = (text: string, isPreview = false, onSelectVariable
         </span>
       );
     }
-    return <span key={i} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(part) }} />;
+    return <SanitizedHtml key={i} html={part} tag="span" />;
   });
 };
 

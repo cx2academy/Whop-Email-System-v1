@@ -918,15 +918,17 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Writ
               >
                 ← Back
               </button>
-              <button
-                id="tour-campaign-review"
-                onClick={handleSend}
-                disabled={isLoading || !savedCampaignId || !canSend}
-                className="flex items-center gap-2 rounded-lg px-8 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
-                style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.3)' }}
-              >
-                {isOptimizing ? 'Analyzing contacts...' : isLoading ? 'Sending...' : 'Send campaign'}
-              </button>
+              <div id="tour-campaign-review-container">
+                <button
+                  id="tour-campaign-review"
+                  onClick={handleSend}
+                  disabled={isLoading || !savedCampaignId || !canSend}
+                  className="flex items-center gap-2 rounded-lg px-8 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+                  style={{ background: 'var(--brand)', boxShadow: '0 2px 8px rgba(34,197,94,0.3)' }}
+                >
+                  {isOptimizing ? 'Analyzing contacts...' : isLoading ? 'Sending...' : 'Send campaign'}
+                </button>
+              </div>
             </div>
           </div>
         )}
