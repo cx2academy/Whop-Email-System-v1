@@ -33,6 +33,7 @@ export function SpotlightOverlay() {
         const bounds = element.getBoundingClientRect();
         if (bounds.width === 0 && bounds.height === 0) return false;
 
+        // Use requestAnimationFrame to ensure we don't trigger layout thrashing and get the most current values
         setRect({
           top: bounds.top,
           left: bounds.left,
@@ -41,7 +42,6 @@ export function SpotlightOverlay() {
         });
 
         if (!hasScrolled) {
-            // Scroll element into view smoothly in the center of the viewport
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             hasScrolled = true;
         }
@@ -51,15 +51,31 @@ export function SpotlightOverlay() {
       return false;
     };
 
+    // Use ResizeObserver to catch layout shifts of the target element itself
+    let resizeObserver: ResizeObserver | null = null;
+    const connectResizeObserver = () => {
+        const element = document.getElementById(activeStep.id);
+        if (element) {
+            resizeObserver = new ResizeObserver(() => {
+                updateRect();
+            });
+            resizeObserver.observe(element);
+            resizeObserver.observe(document.body); // Also observe body for global layout shifts
+        }
+    };
+
     if (!updateRect()) {
       setRect(null);
     }
+    connectResizeObserver();
 
     const poll = () => {
       retryCount++;
-      // Wait up to 10 seconds (100 retries * 100ms) for elements that take a while to appear
       if (!updateRect() && retryCount < 100) { 
-        fallbackTimeout = setTimeout(poll, 100);
+        fallbackTimeout = setTimeout(() => {
+            poll();
+            connectResizeObserver();
+        }, 100);
       }
     };
     fallbackTimeout = setTimeout(poll, 100);
@@ -67,9 +83,11 @@ export function SpotlightOverlay() {
     observer = new MutationObserver(() => {
       updateRect();
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
 
-    const onScrollOrResize = () => updateRect();
+    const onScrollOrResize = () => {
+        updateRect();
+    };
     window.addEventListener('resize', onScrollOrResize);
     window.addEventListener('scroll', onScrollOrResize, true);
 
@@ -78,6 +96,7 @@ export function SpotlightOverlay() {
       window.removeEventListener('scroll', onScrollOrResize, true);
       if (fallbackTimeout) clearTimeout(fallbackTimeout);
       if (observer) observer.disconnect();
+      if (resizeObserver) resizeObserver.disconnect();
     };
   }, [isActive, activeStep]);
 

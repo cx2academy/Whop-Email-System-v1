@@ -52,7 +52,7 @@ const DEFAULT_HTML = `<h2>Hello {{firstName | fallback: 'there'}}!</h2>\n<p>Writ
   audienceSize = 0, initial, templateInitial, startStep = 1, hasWhopApiKey = false,
 }: CampaignBuilderProps) {
   const router = useRouter();
-  const { isActive: isTourActive, endTour } = useTour();
+  const { isActive: isTourActive, endTour, nextStep } = useTour();
   const { user } = useUser();
   const [step, setStep] = useState(startStep);
   const [isLoading, setIsLoading] = useState(false);
