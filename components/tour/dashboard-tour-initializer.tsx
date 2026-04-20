@@ -57,7 +57,7 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     id: 'tour-creation-modal-overview',
     title: 'The AI Co-pilot',
     description: 'We give you two distinct paths. You can generate entire highly-optimized email sequences from a single prompt, or craft your message using the Artisan side.',
-    position: 'bottom',
+    position: 'center',
     actionType: 'view'
   },
   {
