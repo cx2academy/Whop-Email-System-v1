@@ -5,10 +5,11 @@
  * Avatar dropdown — settings + sign out. Sign out hidden by default.
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
-import { SettingsIcon, LogOutIcon } from 'lucide-react';
+import { SettingsIcon, LogOutIcon, RefreshCcwIcon } from 'lucide-react';
+import { resetTour } from '@/lib/user/actions';
 
 interface UserMenuProps {
   name: string;
@@ -19,6 +20,7 @@ interface UserMenuProps {
 export function UserMenu({ name, email, initials }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -27,6 +29,14 @@ export function UserMenu({ name, email, initials }: UserMenuProps) {
     document.addEventListener('mousedown', handle);
     return () => document.removeEventListener('mousedown', handle);
   }, []);
+
+  const handleResetTour = () => {
+      startTransition(async () => {
+          await resetTour();
+          // Hard reload the page to trigger the tour component strictly from scratch
+          window.location.href = '/dashboard';
+      });
+  };
 
   return (
     <div className="relative" ref={ref}>
@@ -64,6 +74,15 @@ export function UserMenu({ name, email, initials }: UserMenuProps) {
               <SettingsIcon className="h-4 w-4 text-zinc-400" />
               Settings
             </Link>
+            <div className="h-px bg-zinc-50 my-1" />
+            <button
+              onClick={handleResetTour}
+              disabled={isPending}
+              className="flex w-full items-center gap-3 px-4 py-2 text-[13px] text-brand transition-colors hover:bg-brand/5 disabled:opacity-50"
+            >
+              <RefreshCcwIcon className={`h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
+              Restart App Demo
+            </button>
             <div className="h-px bg-zinc-50 my-1" />
             <button
               onClick={() => signOut({ callbackUrl: '/auth/login' })}

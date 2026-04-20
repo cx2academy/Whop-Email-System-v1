@@ -78,7 +78,7 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     id: 'tour-template-course-launch',
     title: 'Proven Structures',
     description: 'Scroll down and click the "Course Launch" template to preview its layout. We have pre-built layouts configured for maximum conversion.',
-    position: 'bottom',
+    position: 'top',
     actionType: 'click'
   },
   {
@@ -89,14 +89,21 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     actionType: 'click'
   },
   {
-    id: 'tour-campaign-subject', // To be added
+    id: 'tour-campaign-subject', 
     title: 'Subject Line & Optimization',
-    description: 'Write your subject and preview text. Notice our AI deliverability gauge that helps you dodge spam filters.',
+    description: 'Write your subject and preview text. Click "AI Help" if you need some creative inspiration!',
     position: 'bottom',
     actionType: 'view'
   },
   {
-    id: 'tour-campaign-builder', // To be added
+    id: 'tour-campaign-continue-btn',
+    title: 'Move to Content',
+    description: 'Click "Continue to content" to open the drag-and-drop Visual Builder.',
+    position: 'top',
+    actionType: 'click'
+  },
+  {
+    id: 'tour-campaign-builder', 
     title: 'The Visual Builder',
     description: 'Drag and drop blocks, edit styles, and inject personalized {{variables}} like their first name.',
     position: 'left',

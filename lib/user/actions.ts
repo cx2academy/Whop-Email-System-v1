@@ -93,3 +93,20 @@ export async function markTourCompleted(): Promise<ApiResponse<null>> {
     return { success: false, error: error?.message || "Failed to mark tour as completed" };
   }
 }
+
+export async function resetTour(): Promise<ApiResponse<null>> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  try {
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { hasCompletedTour: false },
+    });
+    return { success: true, data: null };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Failed to reset tour" };
+  }
+}
