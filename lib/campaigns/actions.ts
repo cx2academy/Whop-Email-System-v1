@@ -509,6 +509,7 @@ export async function sandboxCampaignNow(
     ));
   }
 
+  revalidatePath("/dashboard/revenue");
   return { success: true, data: { totalSent, totalFailed: 0 } };
 }
 

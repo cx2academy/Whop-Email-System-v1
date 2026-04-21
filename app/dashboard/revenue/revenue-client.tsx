@@ -156,7 +156,7 @@ export function RevenueClient({
       </div>
 
       {/* ── KPI cards ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div id="tour-revenue-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total attributed',     value: current.totalRevenue, green: true },
           { label: 'Last 30 days',          value: last30Days,           green: false },
@@ -190,10 +190,11 @@ export function RevenueClient({
 
       {/* ── Top campaigns table ────────────────────────────────────────── */}
       {current.campaigns.length > 0 && (
-        <TableSection
-          title={`Top campaigns — ${MODEL_LABELS[model]}`}
-          sub={MODEL_DESCRIPTIONS[model]}
-        >
+        <div id="tour-revenue-campaigns">
+          <TableSection
+            title={`Top campaigns — ${MODEL_LABELS[model]}`}
+            sub={MODEL_DESCRIPTIONS[model]}
+          >
           <table className="w-full text-sm">
             <thead style={{ borderBottom: '1px solid var(--sidebar-border)', background: 'var(--surface-app)' }}>
               <tr>
@@ -244,6 +245,7 @@ export function RevenueClient({
             </tbody>
           </table>
         </TableSection>
+        </div>
       )}
 
       {/* ── Automations + Top subscribers ─────────────────────────────── */}
@@ -340,7 +342,8 @@ export function RevenueClient({
 
       {/* ── Recent purchases ──────────────────────────────────────────── */}
       {recentPurchases.length > 0 && (
-        <TableSection title="Recent purchases">
+        <div id="tour-revenue-purchases">
+          <TableSection title="Recent purchases">
           <table className="w-full text-sm">
             <thead style={{ borderBottom: '1px solid var(--sidebar-border)', background: 'var(--surface-app)' }}>
               <tr>
@@ -374,6 +377,7 @@ export function RevenueClient({
             </tbody>
           </table>
         </TableSection>
+        </div>
       )}
     </div>
   );

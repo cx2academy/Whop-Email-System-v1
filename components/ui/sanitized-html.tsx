@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import DOMPurify from 'isomorphic-dompurify';
 
 interface SanitizedHtmlProps {
   html: string;
@@ -17,8 +16,10 @@ export function SanitizedHtml({ html, className, tag = 'div' }: SanitizedHtmlPro
   const [sanitized, setSanitized] = useState<string>('');
 
   useEffect(() => {
-    // Sanitize only on the client where DOM is available
-    setSanitized(DOMPurify.sanitize(html));
+    // Dynamically import to ensure it's only loaded on the client
+    import('isomorphic-dompurify').then((DOMPurify) => {
+      setSanitized(DOMPurify.default.sanitize(html));
+    });
   }, [html]);
 
   const Tag = tag as any;

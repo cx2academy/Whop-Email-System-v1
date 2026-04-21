@@ -1,6 +1,5 @@
 'use client';
 
-import DOMPurify from 'dompurify';
 import { useEffect, useState } from 'react';
 
 interface EmailPreviewProps {
@@ -11,8 +10,10 @@ export function EmailPreview({ html }: EmailPreviewProps) {
   const [sanitized, setSanitized] = useState('');
 
   useEffect(() => {
-    // Only sanitize on the client where DOMPurify has access to window
-    setSanitized(DOMPurify.sanitize(html));
+    // Dynamically import to ensure it's only loaded on the client
+    import('isomorphic-dompurify').then((DOMPurify) => {
+      setSanitized(DOMPurify.default.sanitize(html));
+    });
   }, [html]);
 
   if (!sanitized) {

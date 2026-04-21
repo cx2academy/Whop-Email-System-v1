@@ -19,25 +19,29 @@ const fmt = (cents: number) => `$${(cents / CENTS).toFixed(2)}`;
 export async function getRevenueSummary() {
   const { workspaceId } = await requireWorkspaceAccess();
 
-  const gate = await checkPlanLimit({ workspaceId, feature: 'revenueAttribution' });
-  if (!gate.allowed) return gate.toActionError();
-
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
-  const sevenDaysAgo  = new Date(Date.now() - 7  * 86400000);
-
+  // Primary aggregation check (filter by a specific model to avoid 4x inflation from demo data)
   const [totalResult, last30Result, last7Result, purchaseCount] = await Promise.all([
-    db.revenueAttribution.aggregate({ where: { workspaceId }, _sum: { revenue: true } }),
-    db.revenueAttribution.aggregate({ where: { workspaceId, createdAt: { gte: thirtyDaysAgo } }, _sum: { revenue: true } }),
-    db.revenueAttribution.aggregate({ where: { workspaceId, createdAt: { gte: sevenDaysAgo } }, _sum: { revenue: true } }),
+    db.revenueAttribution.aggregate({ where: { workspaceId, attributionModel: 'last_click' }, _sum: { revenue: true } }),
+    db.revenueAttribution.aggregate({ where: { workspaceId, attributionModel: 'last_click', createdAt: { gte: new Date(Date.now() - 30 * 86400000) } }, _sum: { revenue: true } }),
+    db.revenueAttribution.aggregate({ where: { workspaceId, attributionModel: 'last_click', createdAt: { gte: new Date(Date.now() - 7 * 86400000) } }, _sum: { revenue: true } }),
     db.purchase.count({ where: { workspaceId } }),
   ]);
 
+  const totalCents = totalResult._sum.revenue ?? 0;
+
+  // Plan gate: Block if gated AND no data exists.
+  // This allow users in the tour (demo data) or those who downgraded to still see their historical data dashboard.
+  const gate = await checkPlanLimit({ workspaceId, feature: 'revenueAttribution' });
+  if (!gate.allowed && totalCents === 0) {
+    return gate.toActionError();
+  }
+
   return {
-    totalRevenue:   fmt(totalResult._sum.revenue ?? 0),
+    totalRevenue:   fmt(totalCents),
     last30Days:     fmt(last30Result._sum.revenue ?? 0),
     last7Days:      fmt(last7Result._sum.revenue ?? 0),
     totalPurchases: purchaseCount,
-    totalRevenueCents: totalResult._sum.revenue ?? 0,
+    totalRevenueCents: totalCents,
   };
 }
 

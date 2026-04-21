@@ -120,7 +120,7 @@ export const CORE_TOUR_STEPS: TourStep[] = [
     id: 'tour-campaign-review-container',
     title: 'Safe Sandbox Mode',
     description: 'We\'ve locked the audience to just YOUR email address so you can see it in action safely. Go ahead and click Send!',
-    position: 'left',
+    position: 'top',
     actionType: 'async-click'
   },
   {
