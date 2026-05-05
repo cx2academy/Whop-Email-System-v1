@@ -86,7 +86,7 @@ export default function StepBrand({ companyName: initial, onNext }: Props) {
           label="Physical Mailing Address" 
           value={address} 
           onChange={setAddress} 
-          placeholder="e.g. 123 Main St, Suite 100, New York, NY 10001" 
+          placeholder="e.g. 123 Main St, Suite 100, Austin, TX 78701" 
         />
         <p style={{ fontSize: 12, color: C.textHint, margin: '4px 0 0' }}>Required by CAN-SPAM law for the email footer.</p>
       </div>

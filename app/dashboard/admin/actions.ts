@@ -29,7 +29,7 @@ export async function getGlobalStats() {
     db.emailCampaign.count(),
     db.emailSend.count({ where: { status: 'SENT' } }),
     db.revenueAttribution.aggregate({
-      _sum: { amountCents: true },
+      _sum: { revenue: true },
     }),
     db.webhookLog.findMany({
       take: 10,
@@ -43,7 +43,7 @@ export async function getGlobalStats() {
     totalUsers,
     totalCampaigns,
     totalEmailsSent,
-    totalRevenue: (totalRevenue._sum.amountCents || 0) / 100,
+    totalRevenue: (totalRevenue._sum.revenue || 0) / 100,
     recentWebhooks,
   };
 }

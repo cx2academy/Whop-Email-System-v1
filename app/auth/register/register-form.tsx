@@ -33,6 +33,7 @@ export function RegisterForm() {
   const [heardAboutUs, setHeardAboutUs] = useState("");
 
   // Extract UTM parameters silently
+  const inviteCode = searchParams.get('invite') || '';
   const utmSource = searchParams.get('utm_source') || '';
   const utmMedium = searchParams.get('utm_medium') || '';
   const utmCampaign = searchParams.get('utm_campaign') || '';
@@ -365,6 +366,7 @@ export function RegisterForm() {
           )}
         </AnimatePresence>
 
+        <input type="hidden" name="inviteCode" value={inviteCode} />
         <input type="hidden" name="utmSource" value={utmSource} />
         <input type="hidden" name="utmMedium" value={utmMedium} />
         <input type="hidden" name="utmCampaign" value={utmCampaign} />

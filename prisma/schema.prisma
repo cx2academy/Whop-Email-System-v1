@@ -127,6 +127,8 @@ model BetaWaitlist {
   id              String   @id @default(cuid())
   name            String
   email           String   @unique
+  whopHandle      String?
+  revenueRange    String?
   reason          String   @db.Text
   acceptedPledge  Boolean  @default(false)
   status          BetaWaitlistStatus @default(PENDING)

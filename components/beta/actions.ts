@@ -26,9 +26,16 @@ export async function validateBetaCode(code: string) {
   return { success: true };
 }
 
-export async function joinWaitlist(data: { name: string, email: string, reason: string, acceptedPledge: boolean }) {
-  if (!data.name || !data.email || !data.reason) {
-    throw new Error('All fields are required.');
+export async function joinWaitlist(data: { 
+  name: string, 
+  email: string, 
+  whopHandle?: string,
+  revenueRange?: string,
+  reason: string, 
+  acceptedPledge: boolean 
+}) {
+  if (!data.name || !data.email) {
+    throw new Error('Name and email are required.');
   }
 
   try {
@@ -44,7 +51,9 @@ export async function joinWaitlist(data: { name: string, email: string, reason: 
       data: {
         name: data.name,
         email: data.email.toLowerCase(),
-        reason: data.reason,
+        whopHandle: data.whopHandle || null,
+        revenueRange: data.revenueRange || null,
+        reason: data.reason || 'Requested beta access via landing page',
         acceptedPledge: data.acceptedPledge
       }
     });

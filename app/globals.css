@@ -179,4 +179,20 @@
     50%       { opacity: 0.4; transform: scale(1.5); }
   }
   .animate-pulse-dot { animation: pulse-dot 2s ease infinite; }
+
+  /* Gradient XY Move */
+  @keyframes gradient-xy {
+    0%, 100% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+  }
+  .animate-gradient-xy {
+    animation: gradient-xy 15s ease infinite;
+    background-size: 200% 200%;
+  }
+
+  /* Fade mask */
+  .mask-fade-y {
+    mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+  }
 }
