@@ -81,22 +81,22 @@ export function PricingSection({ onWaitlistOpen }: { onWaitlistOpen?: () => void
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
       
       <div className="max-w-4xl mx-auto w-full relative z-10">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-sm font-semibold text-zinc-300 w-fit mb-6">
-            <Diamond className="w-4 h-4 text-emerald-400" />
+        <div className="text-center mb-10 md:mb-16">
+          <div className="inline-flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px] sm:text-sm font-semibold text-zinc-300 w-fit mb-4 md:mb-6">
+            <Diamond className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400" />
             Founder&apos;s Black Card Access
           </div>
-          <h2 className="text-4xl md:text-6xl font-medium text-white leading-[1.1] tracking-tight mb-6">
+          <h2 className="text-4xl md:text-6xl font-medium text-white leading-[1.1] tracking-tight mb-4 md:mb-6">
             Priced for <span className="text-zinc-500">ROI.</span>
           </h2>
-          <p className="text-zinc-400 text-lg max-w-xl mx-auto text-balance">
+          <p className="text-zinc-400 text-base md:text-lg max-w-xl mx-auto text-balance">
             Drag the slider to find the right tier for your Whop community size. Lock in early-bird rates before they disappear.
           </p>
         </div>
 
         <motion.div 
           layout
-          className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-[2rem] p-8 md:p-12 shadow-2xl relative overflow-hidden"
+          className="bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-2xl md:rounded-[2rem] p-5 sm:p-8 md:p-12 shadow-2xl relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none" />
 
@@ -154,12 +154,12 @@ export function PricingSection({ onWaitlistOpen }: { onWaitlistOpen?: () => void
             </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-[1fr_minmax(0,320px)] gap-12 relative z-10 lg:gap-16 items-stretch">
+          <div className="grid md:grid-cols-[1fr_minmax(0,320px)] gap-8 md:gap-12 relative z-10 lg:gap-16 items-stretch">
             {/* Left: Price Card */}
-            <div className="flex flex-col pt-4 md:pt-0 pr-0">
+            <div className="flex flex-col pt-2 md:pt-0 pr-0">
               <div 
                 onMouseMove={handleMouseMove}
-                className="relative p-10 rounded-3xl bg-[#111] border border-zinc-700/50 shadow-[0_20px_40px_rgba(0,0,0,0.4)] h-full flex flex-col items-center overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:border-zinc-600/50 hover:shadow-[0_30px_60px_rgba(0,0,0,0.5)]"
+                className="relative p-6 sm:p-8 md:p-10 rounded-2xl md:rounded-3xl bg-[#111] border border-zinc-700/50 shadow-[0_20px_40px_rgba(0,0,0,0.4)] h-full flex flex-col items-center overflow-hidden group transition-all duration-500 hover:scale-[1.02] hover:border-zinc-600/50 hover:shadow-[0_30px_60px_rgba(0,0,0,0.5)]"
               >
                 <div className="absolute inset-0 bg-[#0a0a0a] z-0" />
 
@@ -209,12 +209,12 @@ export function PricingSection({ onWaitlistOpen }: { onWaitlistOpen?: () => void
                 </div>
 
                 <div className="mt-auto relative z-20 w-full flex flex-col items-center flex-1">
-                  <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-6xl md:text-7xl lg:text-8xl font-medium tracking-tighter text-white">${displayPrice}</span>
-                    <span className="text-zinc-500 font-medium text-lg">/mo</span>
+                  <div className="flex items-baseline gap-1 md:gap-2 mb-3">
+                    <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-medium tracking-tighter text-white">${displayPrice}</span>
+                    <span className="text-zinc-500 font-medium text-base md:text-lg">/mo</span>
                   </div>
                   
-                  <div className="h-10 mb-8 max-w-full flex items-center justify-center relative w-full">
+                  <div className="h-12 md:h-10 mb-6 md:mb-8 max-w-full flex items-center justify-center relative w-full">
                     <AnimatePresence mode="popLayout">
                       {billingCycle === 'annual' ? (
                         <motion.div 
@@ -222,10 +222,10 @@ export function PricingSection({ onWaitlistOpen }: { onWaitlistOpen?: () => void
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          className="flex items-center gap-3 absolute justify-center w-full"
+                          className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3 absolute justify-center w-full"
                         >
-                          <span className="text-sm text-zinc-400 font-medium">Billed annually</span>
-                          <span className="border border-emerald-500/20 text-emerald-400 text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-tight">Founder&apos;s rate: Save ${monthlyPrice * 12 - annualPrice * 12}/yr</span>
+                          <span className="text-xs sm:text-sm text-zinc-400 font-medium">Billed annually</span>
+                          <span className="border border-emerald-500/20 text-emerald-400 text-[9px] sm:text-[10px] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-bold uppercase tracking-tight">Founder&apos;s rate: Save ${monthlyPrice * 12 - annualPrice * 12}/yr</span>
                         </motion.div>
                       ) : (
                         <motion.div 
@@ -233,10 +233,10 @@ export function PricingSection({ onWaitlistOpen }: { onWaitlistOpen?: () => void
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          className="text-sm text-zinc-400 font-medium flex items-center gap-3 absolute justify-center w-full"
+                          className="text-xs sm:text-sm text-zinc-400 font-medium flex flex-col sm:flex-row items-center gap-1 sm:gap-3 absolute justify-center w-full"
                         >
                           Billed monthly
-                          <span className="text-zinc-500 line-through text-[10px] font-bold uppercase tracking-tight">Legacy Value: ${Math.floor(monthlyPrice * 2.5)}/mo</span>
+                          <span className="text-zinc-500 line-through text-[9px] sm:text-[10px] font-bold uppercase tracking-tight">Legacy Value: ${Math.floor(monthlyPrice * 2.5)}/mo</span>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -244,7 +244,7 @@ export function PricingSection({ onWaitlistOpen }: { onWaitlistOpen?: () => void
                   
                   <button 
                     onClick={onWaitlistOpen}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-4 mt-auto rounded-xl font-bold bg-white text-black hover:bg-zinc-200 transition-colors group/btn"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 md:px-6 md:py-4 mt-auto rounded-lg md:rounded-xl text-sm md:text-base font-bold bg-white text-black hover:bg-zinc-200 transition-colors group/btn"
                   >
                     Apply for Black Card
                     <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />

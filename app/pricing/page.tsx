@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check, TrendingUp, ShieldCheck, Gem, Calculator } from "lucide-react";
 import Link from "next/link";
 import { SharedFooter } from "@/components/ui/shared-footer";
+import { Logo } from "@/components/ui/logo";
+import { MobileFallback } from "@/components/ui/mobile-fallback";
 
 export default function PricingPage() {
   const [revenue, setRevenue] = useState(5000);
@@ -35,7 +37,11 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans selection:bg-green-100 selection:text-green-900">
+    <>
+      <MobileFallback />
+
+      {/* Desktop Content - Hidden on mobile */}
+      <div className="hidden md:block min-h-screen bg-slate-50 font-sans selection:bg-green-100 selection:text-green-900">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -70,11 +76,11 @@ export default function PricingPage() {
               <TrendingUp className="w-3 h-3" />
               Transparency Report
             </motion.div>
-            <h1 className="text-6xl md:text-7xl font-black text-slate-900 tracking-tighter mb-8 leading-[0.9]">
+            <h1 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter mb-6 md:mb-8 leading-[0.9]">
               Zero Fee. <br />
               <span className="text-slate-400">Zero Risk.</span>
             </h1>
-            <p className="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed font-semibold">
+            <p className="text-base sm:text-lg md:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed font-semibold">
               RevTray is free during our private beta. Once we move to production, you only pay if
               we generate profit for you.
             </p>
@@ -85,20 +91,20 @@ export default function PricingPage() {
             {/* Beta Plan */}
             <motion.div
               whileHover={{ y: -8 }}
-              className="relative p-10 bg-white rounded-[3rem] border-4 border-green-500 shadow-2xl shadow-green-100"
+              className="relative p-6 sm:p-8 md:p-10 bg-white rounded-3xl md:rounded-[3rem] border-4 border-green-500 shadow-2xl shadow-green-100"
             >
-              <div className="absolute -top-5 left-1/2 -translate-x-1/2 px-6 py-2 bg-green-500 text-white text-xs font-black rounded-full uppercase tracking-widest">
+              <div className="absolute -top-4 sm:-top-5 left-1/2 -translate-x-1/2 px-4 sm:px-6 py-1.5 sm:py-2 bg-green-500 text-white text-[10px] sm:text-xs font-black rounded-full uppercase tracking-widest whitespace-nowrap">
                 Active Now
               </div>
-              <div className="mb-8">
-                <h3 className="text-2xl font-black text-slate-900 mb-2">Early Beta</h3>
-                <p className="text-slate-500 text-sm font-medium">For high-growth Whop creators.</p>
+              <div className="mb-6 md:mb-8">
+                <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-1 md:mb-2">Early Beta</h3>
+                <p className="text-slate-500 text-xs sm:text-sm font-medium">For high-growth Whop creators.</p>
               </div>
-              <div className="flex items-baseline gap-2 mb-8">
-                <span className="text-6xl font-black text-slate-900 tracking-tighter">$0</span>
-                <span className="text-slate-400 font-bold">/lifetime</span>
+              <div className="flex items-baseline gap-1 md:gap-2 mb-6 md:mb-8">
+                <span className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter">$0</span>
+                <span className="text-slate-400 text-sm md:text-base font-bold">/lifetime</span>
               </div>
-              <ul className="space-y-4 mb-10">
+              <ul className="space-y-3 sm:space-y-4 mb-8 md:mb-10">
                 {[
                   "Full AI Engine Access",
                   "Unlimited Whop Connections",
@@ -121,17 +127,17 @@ export default function PricingPage() {
             </motion.div>
 
             {/* ROI Calculator */}
-            <div className="p-10 bg-slate-900 rounded-[3rem] text-white">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 bg-white/10 rounded-2xl">
-                  <Calculator className="w-6 h-6 text-green-400" />
+            <div className="p-6 sm:p-8 md:p-10 bg-slate-900 rounded-3xl md:rounded-[3rem] text-white">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-8">
+                <div className="p-2.5 sm:p-3 bg-white/10 rounded-xl sm:rounded-2xl shrink-0">
+                  <Calculator className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                 </div>
-                <h3 className="text-xl font-bold tracking-tight">Projected Savings</h3>
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight">Projected Savings</h3>
               </div>
 
-              <div className="space-y-12">
+              <div className="space-y-8 md:space-y-12">
                 <div>
-                  <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                  <div className="flex justify-between text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 md:mb-4">
                     Monthly Whop Revenue
                     <span className="text-white">${revenue}</span>
                   </div>
@@ -146,18 +152,18 @@ export default function PricingPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6 pt-6">
-                  <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 pt-6">
+                  <div className="p-5 md:p-6 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 md:mb-2">
                       Estimated Churn
                     </div>
-                    <div className="text-2xl font-bold text-red-400">12%</div>
+                    <div className="text-xl md:text-2xl font-bold text-red-400">12%</div>
                   </div>
-                  <div className="p-6 rounded-2xl bg-green-500/10 border border-green-500/20">
-                    <div className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-2">
+                  <div className="p-5 md:p-6 rounded-2xl bg-green-500/10 border border-green-500/20">
+                    <div className="text-[9px] md:text-[10px] font-bold text-green-400 uppercase tracking-widest mb-1.5 md:mb-2">
                       Saved Revenue
                     </div>
-                    <div className="text-2xl font-bold font-mono text-green-400">
+                    <div className="text-xl md:text-2xl font-bold font-mono text-green-400">
                       +${estimatedSavings}/mo
                     </div>
                   </div>
@@ -232,14 +238,14 @@ export default function PricingPage() {
 
           {/* Final Social Proof Footer */}
           <div className="text-center">
-            <div className="inline-flex items-center gap-8 px-8 py-4 bg-white border border-slate-200 rounded-full shadow-lg">
+            <div className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-8 px-6 py-4 sm:px-8 bg-white border border-slate-200 rounded-3xl sm:rounded-full shadow-lg">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={18} className="text-green-500" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Payment Secured
                 </span>
               </div>
-              <div className="w-px h-6 bg-slate-100" />
+              <div className="w-full sm:w-px h-px sm:h-6 bg-slate-100" />
               <div className="flex items-center gap-2">
                 <Gem size={18} className="text-green-500" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -253,5 +259,6 @@ export default function PricingPage() {
 
       <SharedFooter />
     </div>
+    </>
   );
 }

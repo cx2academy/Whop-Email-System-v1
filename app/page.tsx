@@ -15,6 +15,8 @@ import { ScrollRevealText } from "@/components/ui/scroll-reveal-text";
 import { SharedFooter } from "@/components/ui/shared-footer";
 import { useBetaPopup } from "@/components/ui/beta-popup-context";
 
+import { MobileFallback } from "@/components/ui/mobile-fallback";
+
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
@@ -65,7 +67,11 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 font-body selection:bg-green-500/30">
+    <>
+      <MobileFallback />
+
+      {/* Desktop Content - Hidden on mobile */}
+      <div className="hidden md:block min-h-screen bg-white text-zinc-900 font-body selection:bg-green-500/30">
       {/* Navbar */}
       <nav
         className={`fixed top-0 left-0 right-0 z-[100] h-[72px] flex items-center justify-between px-6 transition-all duration-300 ${isScrolled ? "bg-white/80 backdrop-blur-xl border-b border-zinc-100" : "bg-transparent"}`}
@@ -145,13 +151,13 @@ export default function HomePage() {
               {/* Creator Trust Badge */}
               <motion.div
                 variants={fadeInUp}
-                className="mb-8 flex items-center gap-3 bg-white/40 border border-white/60 backdrop-blur-md px-4 py-2 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] ring-1 ring-black/5"
+                className="mb-6 md:mb-8 flex w-max items-center gap-2 md:gap-3 bg-white/40 border border-white/60 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.02)] ring-1 ring-black/5"
               >
                 <div className="flex -space-x-2">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="w-7 h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden ring-1 ring-slate-200"
+                      className="w-5 h-5 md:w-7 md:h-7 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden ring-1 ring-slate-200"
                     >
                       <img
                         src={`https://picsum.photos/seed/user${i}/40/40`}
@@ -161,17 +167,17 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 md:gap-2">
                   <div className="h-1 w-1 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                    Trusted by 42+ Whop creators
+                  <span className="text-[9px] md:text-[10px] font-bold text-slate-600 uppercase tracking-widest whitespace-nowrap">
+                    Trusted by 42+ creators
                   </span>
                 </div>
               </motion.div>
 
               <motion.h1
                 variants={fadeInUp}
-                className="text-6xl md:text-7xl lg:text-8xl font-black text-zinc-900 leading-[0.95] tracking-tight mb-8"
+                className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-zinc-900 leading-[0.95] tracking-tight mb-6 md:mb-8"
               >
                 Grow your Whop revenue on{" "}
                 <span className="relative inline-block text-transparent bg-clip-text bg-gradient-to-r from-green-600 via-emerald-400 to-teal-500 animate-gradient-xy">
@@ -187,7 +193,7 @@ export default function HomePage() {
 
               <motion.p
                 variants={fadeInUp}
-                className="text-lg md:text-xl text-zinc-500 max-w-xl mb-10 leading-relaxed font-medium"
+                className="text-base sm:text-lg md:text-xl text-zinc-500 max-w-xl mb-8 md:mb-10 leading-relaxed font-medium"
               >
                 The AI superagent that recovers churn and scales your MRR 24/7. Stop losing revenue
                 to silent cancellations.
@@ -195,19 +201,19 @@ export default function HomePage() {
 
               <motion.div
                 variants={fadeInUp}
-                className="relative flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto p-1"
+                className="relative flex flex-col items-center sm:flex-row gap-3 md:gap-4 w-full sm:w-auto p-1"
               >
                 {/* Magnetic Glow Effect */}
                 <div className="absolute inset-0 bg-green-400/20 rounded-2xl blur-3xl opacity-40 animate-pulse pointer-events-none" />
 
                 <button
                   onClick={showWaitlist}
-                  className="relative w-full sm:w-auto px-10 py-5 rounded-2xl text-lg font-black bg-zinc-900 text-white hover:bg-zinc-800 transition-all shadow-2xl shadow-green-500/20 hover:scale-[1.03] active:scale-[0.97] group overflow-hidden"
+                  className="relative w-full sm:w-auto px-8 py-4 md:px-10 md:py-5 rounded-2xl text-base md:text-lg font-black bg-zinc-900 text-white hover:bg-zinc-800 transition-all shadow-2xl shadow-green-500/20 hover:scale-[1.03] active:scale-[0.97] group overflow-hidden"
                 >
                   <div className="absolute inset-0 translate-y-full group-hover:translate-y-0 bg-green-500 transition-transform duration-300" />
-                  <span className="relative z-10">Join the Waitlist</span>
+                  <span className="relative z-10 whitespace-nowrap">Join the Waitlist</span>
                 </button>
-                <div className="p-1 px-3 bg-zinc-50/50 backdrop-blur rounded-lg border border-zinc-100 italic text-[11px] text-zinc-400 font-medium">
+                <div className="p-1 px-3 bg-zinc-50/50 backdrop-blur rounded-lg border border-zinc-100 italic text-[10px] md:text-[11px] text-zinc-400 font-medium whitespace-nowrap">
                   Invite-only early access
                 </div>
               </motion.div>
@@ -241,20 +247,20 @@ export default function HomePage() {
       </section>
 
       {/* 1. The Big Statement (Pain Point or Testimonial) - Revealing from behind */}
-      <div className="relative z-10 -mt-[100vh]">
+      <div className="relative z-10 -mt-[100vh] px-4 md:px-6">
         <ScrollRevealText
           text='"I didn&apos;t realize how much MRR I was losing to silent cancellations until RevTray recovered it."'
-          className="text-4xl md:text-6xl lg:text-7xl font-medium leading-tight tracking-tight"
+          className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-medium leading-[1.15] md:leading-tight tracking-tight text-center"
         >
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.5 }}
-            className="flex flex-col items-center gap-1"
+            className="flex flex-col items-center gap-1 mt-6 md:mt-8"
           >
-            <div className="text-base font-semibold text-zinc-900">Cooper C.</div>
-            <div className="text-sm text-zinc-500">Founder of Cx2 Wholesaling Academy</div>
+            <div className="text-sm md:text-base font-semibold text-zinc-900">Cooper C.</div>
+            <div className="text-xs md:text-sm text-zinc-500 text-center max-w-[250px] md:max-w-none">Founder of Cx2 Wholesaling Academy</div>
           </motion.div>
         </ScrollRevealText>
       </div>
@@ -268,24 +274,24 @@ export default function HomePage() {
       <PricingSection onWaitlistOpen={showWaitlist} />
 
       {/* 7. Final CTA */}
-      <section className="py-28 px-6 bg-zinc-50 border-t border-zinc-100 text-center flex flex-col items-center">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-medium text-zinc-900 leading-[1.1] tracking-tight mb-6">
+      <section className="py-20 md:py-28 px-4 md:px-6 bg-zinc-50 border-t border-zinc-100 text-center flex flex-col items-center">
+        <div className="max-w-3xl mx-auto w-full">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-medium text-zinc-900 leading-[1.1] md:leading-[1.1] tracking-tight mb-4 md:mb-6">
             Start automating your MRR recovery today.
           </h2>
-          <p className="text-zinc-500 text-lg mb-10">
+          <p className="text-zinc-500 text-base md:text-lg mb-8 md:mb-10 max-w-lg mx-auto">
             Join the waitlist and be the first to experience the Whop AI superagent.
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center w-full sm:w-auto">
             <button
               onClick={showWaitlist}
-              className="px-8 py-4 rounded-2xl text-base font-bold bg-zinc-900 text-white hover:bg-zinc-800 transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              className="w-full sm:w-auto px-6 py-3.5 md:px-8 md:py-4 rounded-xl md:rounded-2xl text-sm md:text-base font-bold bg-zinc-900 text-white hover:bg-zinc-800 transition-all shadow-xl hover:scale-[1.02] active:scale-[0.98]"
             >
               Start for free
             </button>
             <button
               onClick={showBetaPopup}
-              className="px-8 py-4 rounded-2xl text-base font-semibold bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-all shadow-sm hidden md:block"
+              className="w-full sm:w-auto px-6 py-3.5 md:px-8 md:py-4 rounded-xl md:rounded-2xl text-sm md:text-base font-semibold bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 transition-all shadow-sm block"
             >
               See our plans
             </button>
@@ -296,5 +302,6 @@ export default function HomePage() {
       {/* Footer */}
       <SharedFooter />
     </div>
+    </>
   );
 }

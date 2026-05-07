@@ -54,7 +54,7 @@ export function OriginStory() {
                Built by Whop Creators
              </div>
              
-             <h2 className="text-4xl md:text-6xl lg:text-[72px] font-medium text-zinc-900 tracking-tight leading-[1.05]">
+             <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-[72px] font-medium text-zinc-900 tracking-tight leading-[1.05]">
                Why we built <br className="hidden md:block" />
                <span className="text-zinc-400">RevTray.</span>
              </h2>
@@ -127,10 +127,10 @@ export function OriginStory() {
             headline="Building the solution."
             description="We dumped our time and resources into developing a platform that works for you. RevTray isn't just software—it's the AI-native system we desperately needed to automate our winbacks and retain our users."
             visual={
-              <div className="mt-8 p-6 lg:p-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="flex justify-between items-start mb-8 relative z-10">
-                   <div className="flex gap-4 items-center">
+              <div className="mt-6 md:mt-8 p-4 sm:p-6 lg:p-8 bg-zinc-900 border border-zinc-800 rounded-xl md:rounded-2xl shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 md:w-48 md:h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="flex justify-between items-start mb-6 md:mb-8 relative z-10 flex-col gap-3 sm:flex-row sm:items-center">
+                   <div className="flex gap-3 md:gap-4 items-center">
                      <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center shadow-inner">
                        <Sparkles className="w-6 h-6 text-emerald-400" />
                      </div>
@@ -202,7 +202,7 @@ function StoryStep({
     <motion.div 
       ref={ref}
       style={{ opacity, scale, filter: blur }}
-      className={`relative flex flex-col gap-5 md:gap-6 pl-8 md:pl-16 ${isFirst ? 'mt-10 mb-24 md:mt-[30vh] md:mb-40' : 'my-24 md:my-40'}`}
+      className={`relative flex flex-col gap-4 md:gap-6 pl-0 md:pl-16 ${isFirst ? 'mt-8 mb-20 md:mt-[30vh] md:mb-40' : 'my-20 md:my-40'}`}
     >
       {/* Node icon on mobile timeline */}
       <div className="absolute left-[-16px] md:left-[-32px] top-0 md:top-[-10px] w-8 h-8 md:w-16 md:h-16 rounded-xl bg-white border-2 md:border border-zinc-200 flex items-center justify-center shadow-sm z-10 hidden md:flex">
@@ -218,8 +218,8 @@ function StoryStep({
 
       <div className="space-y-3 md:space-y-4">
         <h4 className="text-xs md:text-sm font-bold tracking-widest uppercase text-zinc-400">{title}</h4>
-        <h3 className="text-3xl md:text-5xl lg:text-[54px] font-medium text-zinc-900 tracking-tight leading-[1.1]">{headline}</h3>
-        <p className="text-base md:text-lg lg:text-xl text-zinc-500 leading-relaxed font-medium">
+        <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-medium text-zinc-900 tracking-tight leading-[1.1]">{headline}</h3>
+        <p className="text-sm sm:text-base md:text-lg lg:text-xl text-zinc-500 leading-relaxed font-medium">
           {description}
         </p>
       </div>
