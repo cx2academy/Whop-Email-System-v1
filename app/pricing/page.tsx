@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check, TrendingUp, ShieldCheck, Gem, Calculator } from "lucide-react";
 import Link from "next/link";
 import { SharedFooter } from "@/components/ui/shared-footer";
-import { Logo } from "@/components/ui/logo";
-import { MobileFallback } from "@/components/ui/mobile-fallback";
 
 export default function PricingPage() {
   const [revenue, setRevenue] = useState(5000);
@@ -37,11 +35,7 @@ export default function PricingPage() {
   ];
 
   return (
-    <>
-      <MobileFallback />
-
-      {/* Desktop Content - Hidden on mobile */}
-      <div className="hidden md:block min-h-screen bg-slate-50 font-sans selection:bg-green-100 selection:text-green-900">
+    <div className="min-h-screen bg-slate-50 font-sans selection:bg-green-100 selection:text-green-900">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -259,6 +253,5 @@ export default function PricingPage() {
 
       <SharedFooter />
     </div>
-    </>
   );
 }

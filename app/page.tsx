@@ -15,8 +15,6 @@ import { ScrollRevealText } from "@/components/ui/scroll-reveal-text";
 import { SharedFooter } from "@/components/ui/shared-footer";
 import { useBetaPopup } from "@/components/ui/beta-popup-context";
 
-import { MobileFallback } from "@/components/ui/mobile-fallback";
-
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
@@ -67,12 +65,35 @@ export default function HomePage() {
   };
 
   return (
-    <>
-      <MobileFallback />
+    <div className="min-h-screen bg-white text-zinc-900 font-body selection:bg-green-500/30">
+      {/* Mobile Beta Blocker */}
+      <div className="flex md:hidden flex-col items-center justify-center min-h-screen px-6 py-12 text-center bg-zinc-50/30">
+        <div className="flex flex-col items-center gap-4 mb-8">
+          <div className="w-20 h-20 bg-white shadow-xl shadow-black/[0.03] ring-1 ring-zinc-200/50 rounded-3xl flex items-center justify-center transform hover:scale-105 transition-transform duration-500">
+            <Logo size={40} />
+          </div>
+          <span className="font-display text-3xl font-bold tracking-tight text-zinc-900">RevTray</span>
+        </div>
+        
+        <h1 className="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">Desktop Only During Beta</h1>
+        <p className="text-zinc-500 mb-12 max-w-[320px] leading-relaxed">
+          We apologize for the inconvenience! During our beta phase, the RevTray platform is optimized exclusively for desktop screens. Please visit us on a computer to see what we offer.
+        </p>
 
-      {/* Desktop Content - Hidden on mobile */}
-      <div className="hidden md:block min-h-screen bg-white text-zinc-900 font-body selection:bg-green-500/30">
-      {/* Navbar */}
+        <div className="bg-white border border-zinc-100 p-6 rounded-2xl max-w-[320px] relative overflow-hidden text-left shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <div className="absolute top-0 left-0 w-1 h-full bg-green-500" />
+          <div className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            RevTray Fun Fact
+          </div>
+          <p className="text-sm font-medium text-zinc-700 leading-relaxed">
+            The average RevTray user sees a <strong className="text-zinc-900 font-bold">42% higher ROI</strong> on MRR recovery compared to those using standard industry competitor tools. We promise it's worth checking out on a larger screen!
+          </p>
+        </div>
+      </div>
+
+      <div className="hidden md:block">
+        {/* Navbar */}
       <nav
         className={`fixed top-0 left-0 right-0 z-[100] h-[72px] flex items-center justify-between px-6 transition-all duration-300 ${isScrolled ? "bg-white/80 backdrop-blur-xl border-b border-zinc-100" : "bg-transparent"}`}
       >
@@ -301,7 +322,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <SharedFooter />
+      </div>
     </div>
-    </>
   );
 }
